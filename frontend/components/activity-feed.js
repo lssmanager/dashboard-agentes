@@ -34,7 +34,7 @@ class ActivityFeedComponent {
         ${Array.from(uniqueSessions.values()).slice(0, 10).map(session => `
           <div class="activity-item">
             <div class="activity-time">${this.formatTime(session.timestamp)}</div>
-            <div class="activity-agent" style="border-left: 4px solid ${agentColors[session.agent] || '#3b82f6'}">
+            <div class="activity-agent" style="border-left: 4px solid ${agentColors[session.agent] || 'var(--color-primary)'}">
               <strong>${session.agent}</strong><br>
               <code>${session.id || 'N/A'}</code>
             </div>

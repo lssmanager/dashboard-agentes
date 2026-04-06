@@ -98,7 +98,7 @@ class TopologyVisualizer {
       .enter()
       .append('line')
       .attr('class', 'link')
-      .attr('stroke', '#666')
+      .attr('stroke', '#22304A')
       .attr('stroke-width', 2)
       .attr('marker-end', 'url(#arrowhead)');
 
@@ -112,7 +112,7 @@ class TopologyVisualizer {
       .attr('orient', 'auto')
       .append('polygon')
       .attr('points', '0 0, 10 3, 0 6')
-      .attr('fill', '#666');
+      .attr('fill', '#22304A');
 
     const nodeGroup = g.selectAll('.node')
       .data(nodes)
@@ -122,15 +122,15 @@ class TopologyVisualizer {
 
     nodeGroup.append('circle')
       .attr('r', 20)
-      .attr('fill', d => agentColors[d.id] || '#3b82f6')
-      .attr('stroke', d => d.status === 'ACTIVE' ? '#10b981' : '#6b7280')
+      .attr('fill', d => agentColors[d.id] || '#3C8DFF')
+      .attr('stroke', d => d.status === 'ACTIVE' ? '#22C55E' : '#6B7A99')
       .attr('stroke-width', 3);
 
     nodeGroup.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.3em')
       .attr('font-size', '12px')
-      .attr('fill', 'white')
+      .attr('fill', '#E6EDF7')
       .attr('font-weight', 'bold')
       .text(d => d.name.substring(0, 3))
       .style('pointer-events', 'none');
@@ -158,7 +158,7 @@ class TopologyVisualizer {
       .enter()
       .append('line')
       .attr('class', 'link')
-      .attr('stroke', '#666')
+      .attr('stroke', '#22304A')
       .attr('stroke-width', 2)
       .attr('x1', d => d.source.x)
       .attr('y1', d => d.source.y)
@@ -174,15 +174,15 @@ class TopologyVisualizer {
 
     nodeGroup.append('circle')
       .attr('r', 20)
-      .attr('fill', d => agentColors[d.id] || '#3b82f6')
-      .attr('stroke', d => d.status === 'ACTIVE' ? '#10b981' : '#6b7280')
+      .attr('fill', d => agentColors[d.id] || '#3C8DFF')
+      .attr('stroke', d => d.status === 'ACTIVE' ? '#22C55E' : '#6B7A99')
       .attr('stroke-width', 3);
 
     nodeGroup.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.3em')
       .attr('font-size', '12px')
-      .attr('fill', 'white')
+      .attr('fill', '#E6EDF7')
       .attr('font-weight', 'bold')
       .text(d => d.name.substring(0, 3))
       .style('pointer-events', 'none');
@@ -195,7 +195,7 @@ class TopologyVisualizer {
         .attr('x', width / 2)
         .attr('y', 20)
         .attr('text-anchor', 'middle')
-        .attr('fill', '#f59e0b')
+        .attr('fill', '#F3B723')
         .attr('font-weight', 'bold')
         .text('⚠ Warning: >5 agents in peer-to-peer mode');
     }
@@ -216,7 +216,7 @@ class TopologyVisualizer {
       .enter()
       .append('line')
       .attr('class', 'link')
-      .attr('stroke', '#666')
+      .attr('stroke', '#22304A')
       .attr('stroke-width', 2);
 
     const nodeGroup = g.selectAll('.node')
@@ -242,15 +242,15 @@ class TopologyVisualizer {
 
     nodeGroup.append('circle')
       .attr('r', 20)
-      .attr('fill', d => agentColors[d.id] || '#3b82f6')
-      .attr('stroke', d => d.status === 'ACTIVE' ? '#10b981' : '#6b7280')
+      .attr('fill', d => agentColors[d.id] || '#3C8DFF')
+      .attr('stroke', d => d.status === 'ACTIVE' ? '#22C55E' : '#6B7A99')
       .attr('stroke-width', 3);
 
     nodeGroup.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.3em')
       .attr('font-size', '12px')
-      .attr('fill', 'white')
+      .attr('fill', '#E6EDF7')
       .attr('font-weight', 'bold')
       .text(d => d.name.substring(0, 3));
 
