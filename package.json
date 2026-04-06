@@ -1,0 +1,29 @@
+{
+  "name": "openclaw-dashboard",
+  "version": "1.0.0",
+  "description": "Real-time monitoring dashboard for OpenClaw AI agents",
+  "main": "backend/server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node backend/server.js",
+    "build": "echo 'no build step required'",
+    "dev": "NODE_ENV=development node backend/server.js"
+  },
+  "keywords": [
+    "openclaw",
+    "dashboard",
+    "agents",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "node-fetch": "^2.7.0",
+    "dotenv": "^16.3.1"
+  }
+}
