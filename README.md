@@ -37,18 +37,51 @@ A real-time monitoring dashboard for OpenClaw AI agents. Connects exclusively to
 ### Setup
 
 ```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit .env with your Gateway URL and settings
+# GATEWAY_URL=http://localhost:18789
+# PORT=3000
+
 # Install dependencies
 npm install
-
-# Set environment variables
-export GATEWAY_URL=http://localhost:18789
-export PORT=3000
 
 # Start the server
 npm start
 ```
 
 Navigate to http://localhost:3000
+
+### Environment Variables
+
+See `.env.example` for all available options. Key variables:
+
+- `GATEWAY_URL` - OpenClaw Gateway API base URL (default: `http://openclaw-gateway:18789`)
+- `PORT` - Dashboard server port (default: `3000`)
+- `REFRESH_INTERVAL` - Auto-refresh interval in ms (default: `30000`)
+- `NODE_ENV` - `development` or `production`
+
+### Debugging
+
+Open browser console (`F12` → Console tab). The app exposes debugging utilities:
+
+```javascript
+// View current app state
+window.appState
+
+// Manually trigger refresh
+window.refresh()
+
+// Switch workspace
+window.setActiveWorkspace('workspace_id')
+
+// Stop/start auto-refresh
+window.stopAutoRefresh()
+window.startAutoRefresh()
+```
+
+Check browser console logs for initialization steps and any errors.
 
 ## Deployment
 
