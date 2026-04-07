@@ -7,8 +7,6 @@
  * - Automatic discovery fallback
  */
 
-const fetch = require('node-fetch');
-
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://openclaw-gateway:18789';
 const GATEWAY_API_KEY = process.env.GATEWAY_API_KEY || '';
 const TIMEOUT = parseInt(process.env.TIMEOUT || '5000');
@@ -268,7 +266,7 @@ async function getCosts(period = '7days') {
  * Health check
  */
 async function healthCheck() {
-  const result = await gatewayGet('/api/health');
+  const result = await gatewayGet('/api/status');
   return result.data ? true : false;
 }
 

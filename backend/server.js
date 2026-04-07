@@ -19,7 +19,7 @@ app.use(express.json());
 
 // CORS configuration
 const corsOptions = {
-  origin: NODE_ENV === 'production' ? 'same-origin' : '*',
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 };
