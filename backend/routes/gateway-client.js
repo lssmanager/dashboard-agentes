@@ -1,13 +1,17 @@
 /**
- * Gateway API Client
- * Handles all communication with the OpenClaw Gateway with:
+ * Gateway API Client (WebSocket JSON-RPC 2.0)
+ * Handles all communication with the OpenClaw Gateway via WebSocket
+ * with:
  * - Circuit breaker (60s timeout after 3 failures)
  * - Retry logic (3 retries with exponential backoff)
  * - Response caching (5 minutes per endpoint)
- * - Automatic discovery fallback
+ * - Automatic error recovery
  */
 
-const GATEWAY_URL = process.env.GATEWAY_URL || 'http://openclaw-gateway:18789';
+const WebSocket = require('ws');
+const crypto = require('crypto');
+
+const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://openclaw:18789';
 const GATEWAY_API_KEY = process.env.GATEWAY_API_KEY || '';
 const TIMEOUT = parseInt(process.env.TIMEOUT || '5000');
 
@@ -22,20 +26,6 @@ const circuitBreaker = {
 // Response cache: { endpoint: { data, timestamp } }
 const responseCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-/**
- * Build authorization headers
- */
-function buildHeaders() {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  };
-  if (GATEWAY_API_KEY) {
-    headers['Authorization'] = `Bearer ${GATEWAY_API_KEY}`;
-  }
-  return headers;
-}
 
 /**
  * Check if circuit should be open
@@ -76,17 +66,21 @@ async function retryWithBackoff(fn, maxRetries = 3) {
 }
 
 /**
- * GET request to Gateway with retry and caching
+ * Call Gateway method via WebSocket JSON-RPC 2.0
  */
-async function gatewayGet(path) {
+async function callGateway(method, params = {}) {
+  // Generate unique request ID
+  const id = crypto.randomUUID();
+  const cacheKey = `${method}:${JSON.stringify(params)}`;
+
   // Check circuit breaker
   if (!checkCircuitBreaker()) {
-    console.log(`[GW] Circuit breaker OPEN, using cached data for ${path}`);
-    const cached = responseCache.get(path);
+    console.log(`[GW] Circuit breaker OPEN, using cached data for ${method}`);
+    const cached = responseCache.get(cacheKey);
     if (cached) {
       const ageMs = Date.now() - cached.timestamp;
       return {
-        data: cached.data,
+        result: cached.data,
         offline: true,
         cached: true,
         age_ms: ageMs
@@ -96,36 +90,89 @@ async function gatewayGet(path) {
   }
 
   // Check cache first
-  const cached = responseCache.get(path);
+  const cached = responseCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     const ageMs = Date.now() - cached.timestamp;
-    return { data: cached.data, cached: true, age_ms: ageMs };
+    return { result: cached.data, cached: true, age_ms: ageMs };
   }
 
-  // Fetch with retry
+  // Execute with retry
   try {
     const result = await retryWithBackoff(async () => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+      return new Promise((resolve, reject) => {
+        let connected = false;
+        let timeoutHandle = null;
+        let messageHandler = null;
 
-      try {
-        const response = await fetch(`${GATEWAY_URL}${path}`, {
-          headers: buildHeaders(),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+        try {
+          const ws = new WebSocket(GATEWAY_URL);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          timeoutHandle = setTimeout(() => {
+            ws.close();
+            reject(new Error(`WebSocket timeout after ${TIMEOUT}ms`));
+          }, TIMEOUT);
+
+          ws.on('open', () => {
+            connected = true;
+            console.log(`[GW] WebSocket connected to ${GATEWAY_URL}`);
+
+            // Send JSON-RPC 2.0 request
+            const jsonrpc = {
+              jsonrpc: '2.0',
+              id,
+              method,
+              params
+            };
+
+            console.log(`[GW] Sending request: ${method}`, params);
+            ws.send(JSON.stringify(jsonrpc));
+          });
+
+          messageHandler = (data) => {
+            try {
+              const message = JSON.parse(data);
+
+              // Check if this is our response
+              if (message.id === id) {
+                clearTimeout(timeoutHandle);
+                ws.close();
+
+                if (message.error) {
+                  console.error(`[GW] Error response for ${method}:`, message.error);
+                  reject(new Error(message.error.message || JSON.stringify(message.error)));
+                } else {
+                  console.log(`[GW] Success response for ${method}:`, message.result);
+                  resolve(message.result);
+                }
+              }
+            } catch (parseError) {
+              console.error(`[GW] Failed to parse message:`, parseError);
+            }
+          };
+
+          ws.on('message', messageHandler);
+
+          ws.on('error', (error) => {
+            clearTimeout(timeoutHandle);
+            console.error(`[GW] WebSocket error for ${method}:`, error.message);
+            reject(error);
+          });
+
+          ws.on('close', () => {
+            clearTimeout(timeoutHandle);
+            if (connected) {
+              console.log(`[GW] WebSocket closed for ${method}`);
+            }
+          });
+        } catch (error) {
+          clearTimeout(timeoutHandle);
+          reject(error);
         }
-        return await response.json();
-      } finally {
-        clearTimeout(timeoutId);
-      }
+      });
     });
 
     // Cache successful response
-    responseCache.set(path, {
+    responseCache.set(cacheKey, {
       data: result,
       timestamp: Date.now()
     });
@@ -134,7 +181,7 @@ async function gatewayGet(path) {
     circuitBreaker.failureCount = 0;
     circuitBreaker.isOpen = false;
 
-    return { data: result };
+    return { result };
   } catch (error) {
     circuitBreaker.failureCount++;
     circuitBreaker.lastFailureTime = Date.now();
@@ -144,14 +191,14 @@ async function gatewayGet(path) {
       console.log(`[GW] Circuit breaker OPEN after ${circuitBreaker.failureCount} failures`);
     }
 
-    console.error(`[GW] Request failed for ${path}: ${error.message}`);
+    console.error(`[GW] Request failed for ${method}: ${error.message}`);
 
     // Return cached data if available
-    const cached = responseCache.get(path);
+    const cached = responseCache.get(cacheKey);
     if (cached) {
       const ageMs = Date.now() - cached.timestamp;
       return {
-        data: cached.data,
+        result: cached.data,
         error: error.message,
         offline: true,
         cached: true,
@@ -180,63 +227,49 @@ function inferProvider(modelStr) {
 }
 
 /**
- * Discover agents from Gateway API
+ * Discover agents from Gateway via node.list
  */
 async function discoverAgents() {
-  // Try GET /api/agents first
-  const agentsResult = await gatewayGet('/api/agents');
-  if (agentsResult.data && Array.isArray(agentsResult.data)) {
-    return { agents: agentsResult.data, offline: agentsResult.offline };
+  const result = await callGateway('node.list');
+
+  if (result.error) {
+    console.error('[API] Failed to discover agents:', result.error);
+    return { agents: [], offline: result.offline, error: result.error };
   }
 
-  // Fallback: extract from /api/status → sessions.recent
-  const statusResult = await gatewayGet('/api/status');
-  if (!statusResult.data) {
-    return { agents: [], offline: statusResult.offline, error: statusResult.error };
-  }
-
-  const sessions = statusResult.data.sessions?.recent || [];
-  const seen = new Set();
+  const nodeList = result.result || [];
   const agents = [];
 
-  for (const session of sessions) {
-    const agentId = session.agent || 'unknown';
-    if (!seen.has(agentId)) {
-      seen.add(agentId);
-      agents.push({
-        id: agentId,
-        name: session.agent_name || agentId,
-        model: session.model || 'unknown',
-        provider: inferProvider(session.model),
-        role: 'subagent',
-        parent: null,
-        status: 'ACTIVE',
-        channels: session.channels || []
-      });
-    }
+  for (const node of nodeList) {
+    agents.push({
+      id: node.id || node.name || 'unknown',
+      name: node.name || node.id || 'Unknown Agent',
+      model: node.model || 'unknown',
+      provider: inferProvider(node.model),
+      role: node.role || 'subagent',
+      parent: node.parent_id || null,
+      status: node.status || 'ACTIVE',
+      channels: node.channels || []
+    });
   }
 
-  return { agents, offline: statusResult.offline };
+  console.log(`[API] Discovered ${agents.length} agent(s)`);
+  return { agents, offline: result.offline };
 }
 
 /**
  * Discover workspaces from Gateway API
  */
 async function discoverWorkspaces() {
-  // Try GET /api/workspaces
-  const wsResult = await gatewayGet('/api/workspaces');
-  if (wsResult.data && Array.isArray(wsResult.data)) {
-    return { workspaces: wsResult.data, offline: wsResult.offline };
-  }
-
-  // Fallback: create default workspace
+  // Gateway doesn't expose explicit workspaces endpoint
+  // Return default workspace (agents will be grouped into it)
   return {
     workspaces: [{
       id: 'default',
       name: 'Default Workspace',
       type: 'orchestrator'
     }],
-    offline: wsResult.offline
+    offline: false
   };
 }
 
@@ -244,34 +277,48 @@ async function discoverWorkspaces() {
  * Get recent sessions
  */
 async function getSessions(limit = 50) {
-  const result = await gatewayGet(`/api/sessions?limit=${limit}&order=recent`);
-  if (!result.data) {
+  const result = await callGateway('sessions.list', { limit });
+
+  if (result.error) {
+    console.error('[API] Failed to get sessions:', result.error);
     return { sessions: [], offline: result.offline };
   }
-  return { sessions: result.data.sessions || result.data || [], offline: result.offline };
+
+  const sessionList = Array.isArray(result.result) ? result.result : [];
+  const sessions = sessionList.slice(0, limit).map(session => ({
+    agent: session.agent_id || session.agent || 'unknown',
+    agent_name: session.agent_name || session.agent || 'Unknown',
+    type: session.type || 'chat',
+    status: session.status || 'active',
+    model: session.model || 'unknown',
+    channels: session.channels || [],
+    timestamp: session.timestamp || Date.now(),
+    message: session.message || session.last_message || ''
+  }));
+
+  console.log(`[API] Retrieved ${sessions.length} session(s)`);
+  return { sessions, offline: result.offline };
 }
 
 /**
  * Get cost data
  */
 async function getCosts(period = '7days') {
-  const result = await gatewayGet(`/api/costs?period=${period}`);
-  if (!result.data) {
-    return { costs: null, offline: result.offline };
-  }
-  return { costs: result.data, offline: result.offline };
+  // Gateway doesn't expose costs endpoint
+  // Return null (frontend will handle gracefully)
+  return { costs: null, offline: false };
 }
 
 /**
- * Health check
+ * Health check via config.get
  */
 async function healthCheck() {
-  const result = await gatewayGet('/api/status');
-  return result.data ? true : false;
+  const result = await callGateway('config.get');
+  return result.result ? true : false;
 }
 
 module.exports = {
-  gatewayGet,
+  callGateway,
   discoverAgents,
   discoverWorkspaces,
   getSessions,
