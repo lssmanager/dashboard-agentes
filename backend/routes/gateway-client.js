@@ -1,21 +1,21 @@
 /**
- * Gateway API Client (WebSocket JSON-RPC 2.0)
- * Handles all communication with the OpenClaw Gateway via WebSocket
- * with:
- * - Circuit breaker (60s timeout after 3 failures)
- * - Retry logic (3 retries with exponential backoff)
- * - Response caching (5 minutes per endpoint)
- * - Automatic error recovery
+ * Gateway API Client (WebSocket Protocol v1.0)
+ * OpenClaw Gateway uses proprietary frame protocol, NOT JSON-RPC 2.0
+ * Frame types: RequestFrame, ResponseFrame, EventFrame
+ * Features: Persistent connection, handshake auth, tick keepalive, multiplexed requests
  */
 
 const WebSocket = require('ws');
 const crypto = require('crypto');
+const os = require('os');
 
 const GATEWAY_URL = (process.env.GATEWAY_URL || 'ws://openclaw:18789')
   .replace(/^http:\/\//, 'ws://')
   .replace(/^https:\/\//, 'wss://');
 const GATEWAY_API_KEY = process.env.GATEWAY_API_KEY || '';
 const TIMEOUT = parseInt(process.env.TIMEOUT || '5000');
+const PROTOCOL_VERSION = 1;
+const INSTANCE_ID = crypto.randomUUID();
 
 // Circuit breaker state
 const circuitBreaker = {
@@ -25,58 +25,218 @@ const circuitBreaker = {
   resetTimeout: 60000  // 60 seconds
 };
 
-// Response cache: { endpoint: { data, timestamp } }
+// Response cache
 const responseCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Persistent WebSocket connection
 let persistentWs = null;
+let handshakeComplete = false;
+let tickIntervalMs = 30000;
+let lastTickTime = Date.now();
+let tickWatchdog = null;
+
 const pendingRequests = new Map(); // id → { resolve, reject, timeout }
+const eventListeners = new Map();  // event → callback
 
 /**
- * Get or create persistent WebSocket connection
+ * Get or create persistent WebSocket connection with handshake
  */
-function getConnection() {
-  // Return existing connection if open
-  if (persistentWs?.readyState === WebSocket.OPEN) {
+async function getConnection() {
+  // Return existing connection if open and authed
+  if (persistentWs?.readyState === WebSocket.OPEN && handshakeComplete) {
     return persistentWs;
   }
 
+  // Create new connection or return connecting one
+  if (persistentWs?.readyState === WebSocket.CONNECTING) {
+    // Wait for connection to establish
+    return new Promise((resolve, reject) => {
+      const checkInterval = setInterval(() => {
+        if (persistentWs?.readyState === WebSocket.OPEN && handshakeComplete) {
+          clearInterval(checkInterval);
+          resolve(persistentWs);
+        }
+      }, 50);
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        reject(new Error('Connection establishment timeout'));
+      }, TIMEOUT);
+    });
+  }
+
   // Create new connection
-  persistentWs = new WebSocket(GATEWAY_URL, {
-    headers: GATEWAY_API_KEY
-      ? { 'Authorization': `Bearer ${GATEWAY_API_KEY}` }
-      : {}
-  });
-
-  // Handle incoming messages
-  persistentWs.on('message', (data) => {
+  return new Promise((resolve, reject) => {
     try {
-      const msg = JSON.parse(data);
-      const pending = pendingRequests.get(msg.id);
+      persistentWs = new WebSocket(GATEWAY_URL, {
+        headers: GATEWAY_API_KEY
+          ? { 'Authorization': `Bearer ${GATEWAY_API_KEY}` }
+          : {}
+      });
 
-      if (pending) {
-        clearTimeout(pending.timeout);
-        pendingRequests.delete(msg.id);
-        pending.resolve(msg);
-      }
+      const connectionTimeout = setTimeout(() => {
+        persistentWs.close();
+        reject(new Error('Connection timeout - no challenge received'));
+      }, TIMEOUT);
+
+      persistentWs.on('open', () => {
+        console.log('[GW] WebSocket connected, awaiting challenge...');
+      });
+
+      persistentWs.on('message', (data) => {
+        try {
+          const frame = JSON.parse(data);
+
+          // Handle challenge during handshake
+          if (frame.event === 'connect.challenge' && !handshakeComplete) {
+            clearTimeout(connectionTimeout);
+            handleChallenge(frame.payload.nonce)
+              .then(() => {
+                handshakeComplete = true;
+                console.log('[GW] Handshake complete, authenticated');
+                startTickWatchdog();
+                resolve(persistentWs);
+              })
+              .catch(reject);
+            return;
+          }
+
+          // Handle tick keepalive
+          if (frame.event === 'tick') {
+            lastTickTime = Date.now();
+            return;
+          }
+
+          // Handle response frames (for requests)
+          if (frame.type === 'res' && frame.id) {
+            const pending = pendingRequests.get(frame.id);
+            if (pending) {
+              clearTimeout(pending.timeout);
+              pendingRequests.delete(frame.id);
+
+              if (frame.ok) {
+                pending.resolve(frame.payload);
+              } else {
+                pending.reject(new Error(
+                  frame.error?.message || JSON.stringify(frame.error)
+                ));
+              }
+            }
+            return;
+          }
+
+          // Handle event frames (push from Gateway)
+          if (frame.event) {
+            const listener = eventListeners.get(frame.event);
+            if (listener) listener(frame.payload);
+            return;
+          }
+        } catch (error) {
+          console.error('[GW] Failed to parse frame:', error);
+        }
+      });
+
+      persistentWs.on('error', (error) => {
+        console.error('[GW] WebSocket error:', error.message);
+        handshakeComplete = false;
+        reject(error);
+      });
+
+      persistentWs.on('close', () => {
+        console.log('[GW] WebSocket closed');
+        handshakeComplete = false;
+        stopTickWatchdog();
+        persistentWs = null;
+      });
     } catch (error) {
-      console.error('[GW] Failed to parse message:', error);
+      reject(error);
     }
   });
+}
 
-  // Handle connection close
-  persistentWs.on('close', () => {
-    console.log('[GW] WebSocket connection closed, will reconnect on next request');
-    persistentWs = null;
+/**
+ * Handle connect challenge (part of handshake)
+ */
+async function handleChallenge(nonce) {
+  return new Promise((resolve, reject) => {
+    const id = crypto.randomUUID();
+    const connectTimeout = setTimeout(() => {
+      reject(new Error('Connect handshake timeout'));
+    }, TIMEOUT);
+
+    pendingRequests.set(id, {
+      resolve: (payload) => {
+        clearTimeout(connectTimeout);
+        resolve();
+      },
+      reject: (err) => {
+        clearTimeout(connectTimeout);
+        reject(err);
+      },
+      timeout: connectTimeout
+    });
+
+    const connectFrame = {
+      type: 'req',
+      id,
+      method: 'connect',
+      params: {
+        minProtocol: PROTOCOL_VERSION,
+        maxProtocol: PROTOCOL_VERSION,
+        client: {
+          id: 'dashboard',
+          displayName: 'OpenClaw Dashboard',
+          version: '1.0.0',
+          platform: os.platform(),
+          mode: 'backend',
+          instanceId: INSTANCE_ID
+        },
+        caps: ['sessions', 'agents', 'config', 'nodes', 'chat'],
+        role: 'operator',
+        scopes: ['operator.admin'],
+        auth: {
+          token: GATEWAY_API_KEY || undefined,
+          deviceToken: null
+        },
+        device: {
+          id: INSTANCE_ID,
+          nonce
+        }
+      }
+    };
+
+    persistentWs.send(JSON.stringify(connectFrame));
+    console.log('[GW] Sent connect request with nonce');
   });
+}
 
-  // Handle connection errors
-  persistentWs.on('error', (error) => {
-    console.error('[GW] WebSocket error:', error.message);
-  });
+/**
+ * Start tick watchdog (detects connection loss)
+ */
+function startTickWatchdog() {
+  stopTickWatchdog();
+  lastTickTime = Date.now();
 
-  return persistentWs;
+  tickWatchdog = setInterval(() => {
+    const timeSinceLastTick = Date.now() - lastTickTime;
+    if (timeSinceLastTick > tickIntervalMs * 2) {
+      console.error('[GW] Tick timeout detected, closing connection');
+      if (persistentWs) {
+        persistentWs.close(4000, 'tick timeout');
+      }
+      handshakeComplete = false;
+    }
+  }, tickIntervalMs);
+}
+
+/**
+ * Stop tick watchdog
+ */
+function stopTickWatchdog() {
+  if (tickWatchdog) {
+    clearInterval(tickWatchdog);
+    tickWatchdog = null;
+  }
 }
 
 /**
@@ -107,7 +267,7 @@ async function retryWithBackoff(fn, maxRetries = 3) {
     } catch (error) {
       lastError = error;
       if (attempt < maxRetries - 1) {
-        const delay = Math.pow(3, attempt) * 100; // 100ms, 300ms, 900ms
+        const delay = Math.pow(3, attempt) * 100;
         console.log(`[GW] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -118,10 +278,9 @@ async function retryWithBackoff(fn, maxRetries = 3) {
 }
 
 /**
- * Call Gateway method via WebSocket JSON-RPC 2.0
+ * Call Gateway method via persistent WebSocket
  */
 async function callGateway(method, params = {}) {
-  // Generate unique request ID
   const id = crypto.randomUUID();
   const cacheKey = `${method}:${JSON.stringify(params)}`;
 
@@ -148,55 +307,42 @@ async function callGateway(method, params = {}) {
     return { result: cached.data, cached: true, age_ms: ageMs };
   }
 
-  // Execute with retry
   try {
     const result = await retryWithBackoff(async () => {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         const timeoutHandle = setTimeout(() => {
           pendingRequests.delete(id);
           reject(new Error(`Request timeout after ${TIMEOUT}ms`));
         }, TIMEOUT);
 
         try {
-          const ws = getConnection();
+          const ws = await getConnection();
 
-          // Helper to wait for connection and send
-          const sendRequest = () => {
-            if (ws.readyState === WebSocket.OPEN) {
-              console.log(`[GW] Sending request: ${method}`, params);
-
-              pendingRequests.set(id, {
-                resolve: (msg) => {
-                  clearTimeout(timeoutHandle);
-                  if (msg.error) {
-                    console.error(`[GW] Error response for ${method}:`, msg.error);
-                    reject(new Error(msg.error.message || JSON.stringify(msg.error)));
-                  } else {
-                    console.log(`[GW] Success response for ${method}:`, msg.result);
-                    resolve(msg.result);
-                  }
-                },
-                reject: (err) => {
-                  clearTimeout(timeoutHandle);
-                  reject(err);
-                },
-                timeout: timeoutHandle
-              });
-
-              ws.send(JSON.stringify({
-                jsonrpc: '2.0',
-                id,
-                method,
-                params
-              }));
-            } else {
-              // Still connecting, retry soon
-              setTimeout(sendRequest, 50);
-            }
+          // Send request frame
+          const frame = {
+            type: 'req',
+            id,
+            method,
+            params
           };
 
-          // Initiate send
-          sendRequest();
+          console.log(`[GW] Sending request: ${method}`, params);
+          ws.send(JSON.stringify(frame));
+
+          // Register pending request
+          pendingRequests.set(id, {
+            resolve: (payload) => {
+              clearTimeout(timeoutHandle);
+              console.log(`[GW] Success response for ${method}`);
+              resolve(payload);
+            },
+            reject: (err) => {
+              clearTimeout(timeoutHandle);
+              console.error(`[GW] Error response for ${method}:`, err.message);
+              reject(err);
+            },
+            timeout: timeoutHandle
+          });
         } catch (error) {
           clearTimeout(timeoutHandle);
           reject(error);
@@ -297,19 +443,16 @@ async function discoverAgents() {
 /**
  * Discover workspaces from Gateway API (derived from agents)
  */
-async function discoverWorkspaces() {
-  const agentsResult = await discoverAgents();
-  if (agentsResult.offline) return { workspaces: [], offline: true };
-
-  // Agrupar por parent: null = orchestrator workspace
-  const wsMap = new Map();
-  for (const agent of agentsResult.agents) {
-    const wsId = agent.parent ? 'default' : agent.id;
-    if (!wsMap.has('default')) {
-      wsMap.set('default', { id: 'default', name: 'Default Workspace', type: 'orchestrator' });
-    }
-  }
-  return { workspaces: Array.from(wsMap.values()), offline: false };
+async function discoverWorkspaces(agentsOffline = false) {
+  // Gateway doesn't expose workspaces endpoint — return default with real offline status
+  return {
+    workspaces: [{
+      id: 'default',
+      name: 'Default Workspace',
+      type: 'orchestrator'
+    }],
+    offline: agentsOffline
+  };
 }
 
 /**
