@@ -96,18 +96,23 @@ function generateAgentColors() {
 async function fetchDashboardState() {
   try {
     if (!window.gatewayClient) {
-      console.error('[APP] Gateway client not available');
+      console.error('[APP] ❌ Gateway client not available');
       return false;
     }
 
+    console.log('[APP] 📡 Fetching dashboard state from backend API...');
     const result = await gatewayClient.getDashboardState();
 
     if (result.error) {
-      console.error('[APP] Failed to fetch dashboard state:', result.error);
+      console.error('[APP] ❌ API Error:', result.error);
       return false;
     }
 
     const newState = result.data;
+    console.log('[APP] ✅ Received data from backend');
+    console.log(`[APP]   - Connected: ${newState.connected}`);
+    console.log(`[APP]   - Workspaces: ${newState.workspaces?.length || 0}`);
+    console.log(`[APP]   - Total Agents: ${Object.values(newState.agents || {}).flat().length}`);
 
     // Update connection status
     appState.connected = newState.connected;
@@ -115,12 +120,14 @@ async function fetchDashboardState() {
 
     // Handle workspace updates
     if (JSON.stringify(appState.workspaces) !== JSON.stringify(newState.workspaces)) {
+      console.log('[APP] 🔄 Workspace data changed, updating...');
       appState.workspaces = newState.workspaces;
       appState.agents = newState.agents;
 
       // Auto-select first workspace if none selected
       if (!appState.activeWorkspace && appState.workspaces.length > 0) {
         appState.activeWorkspace = appState.workspaces[0].id;
+        console.log(`[APP] 📌 Auto-selected workspace: ${appState.activeWorkspace}`);
       }
 
       // Generate agent colors
@@ -134,6 +141,7 @@ async function fetchDashboardState() {
 
     // Update sessions
     appState.sessions = newState.sessions || [];
+    console.log(`[APP]   - Sessions: ${appState.sessions.length}`);
 
     // Update costs
     appState.costs = newState.costs;
@@ -142,11 +150,12 @@ async function fetchDashboardState() {
     const topologyResult = await gatewayClient.getTopology();
     if (topologyResult.data) {
       appState.topology = topologyResult.data.workspaces || {};
+      console.log(`[APP]   - Topology loaded`);
     }
 
     return true;
   } catch (error) {
-    console.error('[APP] Error fetching dashboard state:', error);
+    console.error('[APP] 💥 Error fetching dashboard state:', error);
     return false;
   }
 }
@@ -215,14 +224,22 @@ function updateConnectionStatus() {
 }
 
 /**
- * Update last refresh time
+ * Update last refresh time and status
  */
 function updateLastRefreshTime() {
   try {
     const el = document.getElementById('lastRefresh');
     if (el) {
       const now = new Date(appState.lastFetch);
-      el.textContent = `Last refreshed: ${now.toLocaleTimeString()}`;
+      const timeStr = now.toLocaleTimeString();
+
+      if (appState.connected) {
+        el.textContent = `✅ Synced ${timeStr}`;
+        el.classList.remove('loading');
+      } else {
+        el.textContent = `⏳ Loading...`;
+        el.classList.add('loading');
+      }
     }
   } catch (error) {
     console.error('[APP] Error updating refresh time:', error);
@@ -233,7 +250,8 @@ function updateLastRefreshTime() {
  * Main refresh cycle
  */
 async function refresh() {
-  console.log('[APP] Refreshing dashboard state...');
+  console.log('[APP] Starting refresh cycle...');
+  const startTime = Date.now();
 
   const success = await fetchDashboardState();
 
@@ -241,8 +259,22 @@ async function refresh() {
     renderCurrentWorkspace();
     updateConnectionStatus();
     updateLastRefreshTime();
+    console.log(`[APP] ✅ Refresh successful (${Date.now() - startTime}ms)`);
   } else {
     updateConnectionStatus();
+    updateLastRefreshTime();
+    console.warn(`[APP] ⚠️ Refresh failed, running diagnostics...`);
+
+    // Run diagnostics on failure
+    await window.diagnosticService.runDiagnostics();
+    const statusMsg = window.diagnosticService.getStatusMessage();
+
+    if (statusMsg.severity === 'critical') {
+      console.error(`[APP] 🚨 CRITICAL: ${statusMsg.message}`);
+      window.diagnosticPanel.render(window.diagnosticService);
+    } else if (statusMsg.severity === 'warning') {
+      console.warn(`[APP] ⚠️ WARNING: ${statusMsg.message}`);
+    }
   }
 }
 
@@ -331,36 +363,54 @@ function setupEventListeners() {
  */
 async function initApp() {
   try {
-    console.log('[APP] Starting OpenClaw Dashboard...');
+    console.log('[APP] ═══════════════════════════════════════════════════');
+    console.log('[APP] 🚀 Starting OpenClaw Dashboard...');
+    console.log('[APP] ═══════════════════════════════════════════════════');
+    console.log(`[APP] Page URL: ${window.location.href}`);
+    console.log(`[APP] API Base: ${window.location.origin}`);
 
     // Wait for gateway client to be available
     if (!window.gatewayClient) {
-      console.error('[APP] Gateway client not available');
+      console.error('[APP] ❌ Gateway client not available - check gateway-client.js');
       return;
     }
+    console.log('[APP] ✅ Gateway client initialized');
 
     // Wait for components to load
+    console.log('[APP] ⏳ Waiting for components to load...');
     const componentsReady = await waitForComponents();
     if (!componentsReady) {
-      console.error('[APP] Failed to load components, exiting');
+      console.error('[APP] ❌ Failed to load components, exiting');
       return;
     }
+    console.log('[APP] ✅ All components loaded');
 
     // Initialize components
+    console.log('[APP] 🔧 Initializing components...');
     initializeComponents();
 
     // Setup event listeners
+    console.log('[APP] 📌 Setting up event listeners...');
     setupEventListeners();
 
     // Initial fetch and render
+    console.log('[APP] 📥 Running initial data fetch...');
     await refresh();
 
     // Start auto-refresh
+    console.log('[APP] 🔄 Starting auto-refresh...');
     startAutoRefresh();
 
-    console.log('[APP] Dashboard initialized successfully');
+    console.log('[APP] ═══════════════════════════════════════════════════');
+    console.log('[APP] ✅ Dashboard initialized successfully!');
+    console.log('[APP] ═══════════════════════════════════════════════════');
   } catch (error) {
-    console.error('[APP] Fatal error during initialization:', error);
+    console.error('[APP] 💥 Fatal error during initialization:', error);
+    console.error('[APP] Stack:', error.stack);
+
+    // Show diagnostic panel on fatal error
+    await window.diagnosticService?.runDiagnostics();
+    window.diagnosticPanel?.render(window.diagnosticService);
   }
 }
 

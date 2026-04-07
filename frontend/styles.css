@@ -1114,3 +1114,225 @@ section > h3 {
     font-size: var(--text-xs);
   }
 }
+
+/** ═══════════════════════════════════════════════════════════
+ * DIAGNOSTIC PANEL — Connection & Data Status
+ * ═══════════════════════════════════════════════════════════ */
+
+#diagnosticPanel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.diagnostic-content {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-body);
+}
+
+.diagnostic-critical {
+  border-color: var(--color-error);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.diagnostic-warning {
+  border-color: var(--color-warning);
+  background: rgba(243, 183, 35, 0.1);
+}
+
+.diagnostic-success {
+  border-color: var(--color-success);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.diagnostic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+  gap: var(--space-4);
+}
+
+.diagnostic-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.diagnostic-close {
+  background: none;
+  border: none;
+  font-size: var(--text-2xl);
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition);
+}
+
+.diagnostic-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.diagnostic-message {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border-left: 4px solid;
+}
+
+.diagnostic-critical .diagnostic-message {
+  border-left-color: var(--color-error);
+}
+
+.diagnostic-warning .diagnostic-message {
+  border-left-color: var(--color-warning);
+}
+
+.diagnostic-success .diagnostic-message {
+  border-left-color: var(--color-success);
+}
+
+.diagnostic-message p {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.diagnostic-details {
+  margin-bottom: var(--space-4);
+}
+
+.diagnostic-details details {
+  cursor: pointer;
+}
+
+.diagnostic-details summary {
+  padding: var(--space-3);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  color: var(--text-primary);
+  user-select: none;
+  transition: all var(--transition);
+}
+
+.diagnostic-details summary:hover {
+  background: var(--bg-elevated);
+}
+
+.diagnostic-details[open] summary {
+  margin-bottom: var(--space-3);
+  background: var(--bg-elevated);
+}
+
+.diagnostic-debug {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  overflow-x: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre;
+  margin-bottom: var(--space-3);
+}
+
+.btn-copy-debug {
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  transition: all var(--transition);
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.btn-copy-debug:hover {
+  background: var(--btn-secondary-hover);
+}
+
+.diagnostic-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.diagnostic-actions button {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: var(--text-base);
+}
+
+.btn-reload,
+.btn-diagnose {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+}
+
+.btn-reload:hover,
+.btn-diagnose:hover {
+  background: var(--btn-primary-hover);
+}
+
+.btn-reload:active,
+.btn-diagnose:active {
+  background: var(--btn-primary-active);
+}
+
+.btn-diagnose:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading indicator in lastRefresh */
+.last-refresh {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  transition: color var(--transition);
+}
+
+.last-refresh.loading {
+  animation: pulse 1.5s ease-in-out infinite;
+  color: var(--text-secondary);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
