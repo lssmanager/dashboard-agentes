@@ -29,6 +29,56 @@ const circuitBreaker = {
 const responseCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Persistent WebSocket connection
+let persistentWs = null;
+const pendingRequests = new Map(); // id → { resolve, reject, timeout }
+
+/**
+ * Get or create persistent WebSocket connection
+ */
+function getConnection() {
+  // Return existing connection if open
+  if (persistentWs?.readyState === WebSocket.OPEN) {
+    return persistentWs;
+  }
+
+  // Create new connection
+  persistentWs = new WebSocket(GATEWAY_URL, {
+    headers: GATEWAY_API_KEY
+      ? { 'Authorization': `Bearer ${GATEWAY_API_KEY}` }
+      : {}
+  });
+
+  // Handle incoming messages
+  persistentWs.on('message', (data) => {
+    try {
+      const msg = JSON.parse(data);
+      const pending = pendingRequests.get(msg.id);
+
+      if (pending) {
+        clearTimeout(pending.timeout);
+        pendingRequests.delete(msg.id);
+        pending.resolve(msg);
+      }
+    } catch (error) {
+      console.error('[GW] Failed to parse message:', error);
+    }
+  });
+
+  // Handle connection close
+  persistentWs.on('close', () => {
+    console.log('[GW] WebSocket connection closed, will reconnect on next request');
+    persistentWs = null;
+  });
+
+  // Handle connection errors
+  persistentWs.on('error', (error) => {
+    console.error('[GW] WebSocket error:', error.message);
+  });
+
+  return persistentWs;
+}
+
 /**
  * Check if circuit should be open
  */
@@ -102,74 +152,51 @@ async function callGateway(method, params = {}) {
   try {
     const result = await retryWithBackoff(async () => {
       return new Promise((resolve, reject) => {
-        let connected = false;
-        let timeoutHandle = null;
-        let messageHandler = null;
+        const timeoutHandle = setTimeout(() => {
+          pendingRequests.delete(id);
+          reject(new Error(`Request timeout after ${TIMEOUT}ms`));
+        }, TIMEOUT);
 
         try {
-          const ws = new WebSocket(GATEWAY_URL, {
-            headers: GATEWAY_API_KEY
-              ? { 'Authorization': `Bearer ${GATEWAY_API_KEY}` }
-              : {}
-          });
+          const ws = getConnection();
 
-          timeoutHandle = setTimeout(() => {
-            ws.close();
-            reject(new Error(`WebSocket timeout after ${TIMEOUT}ms`));
-          }, TIMEOUT);
+          // Helper to wait for connection and send
+          const sendRequest = () => {
+            if (ws.readyState === WebSocket.OPEN) {
+              console.log(`[GW] Sending request: ${method}`, params);
 
-          ws.on('open', () => {
-            connected = true;
-            console.log(`[GW] WebSocket connected to ${GATEWAY_URL}`);
+              pendingRequests.set(id, {
+                resolve: (msg) => {
+                  clearTimeout(timeoutHandle);
+                  if (msg.error) {
+                    console.error(`[GW] Error response for ${method}:`, msg.error);
+                    reject(new Error(msg.error.message || JSON.stringify(msg.error)));
+                  } else {
+                    console.log(`[GW] Success response for ${method}:`, msg.result);
+                    resolve(msg.result);
+                  }
+                },
+                reject: (err) => {
+                  clearTimeout(timeoutHandle);
+                  reject(err);
+                },
+                timeout: timeoutHandle
+              });
 
-            // Send JSON-RPC 2.0 request
-            const jsonrpc = {
-              jsonrpc: '2.0',
-              id,
-              method,
-              params
-            };
-
-            console.log(`[GW] Sending request: ${method}`, params);
-            ws.send(JSON.stringify(jsonrpc));
-          });
-
-          messageHandler = (data) => {
-            try {
-              const message = JSON.parse(data);
-
-              // Check if this is our response
-              if (message.id === id) {
-                clearTimeout(timeoutHandle);
-                ws.close();
-
-                if (message.error) {
-                  console.error(`[GW] Error response for ${method}:`, message.error);
-                  reject(new Error(message.error.message || JSON.stringify(message.error)));
-                } else {
-                  console.log(`[GW] Success response for ${method}:`, message.result);
-                  resolve(message.result);
-                }
-              }
-            } catch (parseError) {
-              console.error(`[GW] Failed to parse message:`, parseError);
+              ws.send(JSON.stringify({
+                jsonrpc: '2.0',
+                id,
+                method,
+                params
+              }));
+            } else {
+              // Still connecting, retry soon
+              setTimeout(sendRequest, 50);
             }
           };
 
-          ws.on('message', messageHandler);
-
-          ws.on('error', (error) => {
-            clearTimeout(timeoutHandle);
-            console.error(`[GW] WebSocket error for ${method}:`, error.message);
-            reject(error);
-          });
-
-          ws.on('close', () => {
-            clearTimeout(timeoutHandle);
-            if (connected) {
-              console.log(`[GW] WebSocket closed for ${method}`);
-            }
-          });
+          // Initiate send
+          sendRequest();
         } catch (error) {
           clearTimeout(timeoutHandle);
           reject(error);
@@ -268,63 +295,61 @@ async function discoverAgents() {
 }
 
 /**
- * Discover workspaces from Gateway API
+ * Discover workspaces from Gateway API (derived from agents)
  */
 async function discoverWorkspaces() {
-  // Gateway doesn't expose explicit workspaces endpoint
-  // Return default workspace (agents will be grouped into it)
-  return {
-    workspaces: [{
-      id: 'default',
-      name: 'Default Workspace',
-      type: 'orchestrator'
-    }],
-    offline: false
-  };
+  const agentsResult = await discoverAgents();
+  if (agentsResult.offline) return { workspaces: [], offline: true };
+
+  // Agrupar por parent: null = orchestrator workspace
+  const wsMap = new Map();
+  for (const agent of agentsResult.agents) {
+    const wsId = agent.parent ? 'default' : agent.id;
+    if (!wsMap.has('default')) {
+      wsMap.set('default', { id: 'default', name: 'Default Workspace', type: 'orchestrator' });
+    }
+  }
+  return { workspaces: Array.from(wsMap.values()), offline: false };
 }
 
 /**
- * Get recent sessions
+ * Get recent sessions (with silent fallback)
  */
 async function getSessions(limit = 50) {
-  const result = await callGateway('sessions.list', { limit });
+  try {
+    const result = await callGateway('sessions.list', { limit });
 
-  if (result.error) {
-    console.error('[API] Failed to get sessions:', result.error);
-    return { sessions: [], offline: result.offline };
+    if (result.offline || result.error) {
+      console.warn('[API] Sessions endpoint offline or errored, returning empty');
+      return { sessions: [], offline: result.offline };
+    }
+
+    const sessionList = Array.isArray(result.result) ? result.result : [];
+    const sessions = sessionList.slice(0, limit).map(session => ({
+      agent: session.agent_id || session.agent || 'unknown',
+      agent_name: session.agent_name || session.agent || 'Unknown',
+      type: session.type || 'chat',
+      status: session.status || 'active',
+      model: session.model || 'unknown',
+      channels: session.channels || [],
+      timestamp: session.timestamp || Date.now(),
+      message: session.message || session.last_message || ''
+    }));
+
+    console.log(`[API] Retrieved ${sessions.length} session(s)`);
+    return { sessions, offline: result.offline };
+  } catch (error) {
+    console.warn(`[API] Sessions.list not available: ${error.message}, returning empty`);
+    return { sessions: [], offline: false };
   }
-
-  const sessionList = Array.isArray(result.result) ? result.result : [];
-  const sessions = sessionList.slice(0, limit).map(session => ({
-    agent: session.agent_id || session.agent || 'unknown',
-    agent_name: session.agent_name || session.agent || 'Unknown',
-    type: session.type || 'chat',
-    status: session.status || 'active',
-    model: session.model || 'unknown',
-    channels: session.channels || [],
-    timestamp: session.timestamp || Date.now(),
-    message: session.message || session.last_message || ''
-  }));
-
-  console.log(`[API] Retrieved ${sessions.length} session(s)`);
-  return { sessions, offline: result.offline };
 }
 
 /**
- * Get cost data
- */
-async function getCosts(period = '7days') {
-  // Gateway doesn't expose costs endpoint
-  // Return null (frontend will handle gracefully)
-  return { costs: null, offline: false };
-}
-
-/**
- * Health check via config.get
+ * Health check via node.list
  */
 async function healthCheck() {
-  const result = await callGateway('config.get');
-  return result.result ? true : false;
+  const result = await callGateway('node.list');
+  return !!(result.result && !result.offline);
 }
 
 module.exports = {
@@ -332,7 +357,6 @@ module.exports = {
   discoverAgents,
   discoverWorkspaces,
   getSessions,
-  getCosts,
   healthCheck,
   inferProvider
 };

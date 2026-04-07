@@ -10,7 +10,6 @@ const {
   discoverAgents,
   discoverWorkspaces,
   getSessions,
-  getCosts,
   healthCheck,
   inferProvider
 } = require('./gateway-client');
@@ -132,7 +131,6 @@ router.get('/dashboard/state', async (req, res) => {
     const agentsResult = await discoverAgents();
     const workspacesResult = await discoverWorkspaces();
     const sessionsResult = await getSessions(50);
-    const costsResult = await getCosts('7days');
 
     // Load local topology
     const localData = loadLocalTopology();
@@ -163,7 +161,6 @@ router.get('/dashboard/state', async (req, res) => {
       workspaces: merged.workspaces,
       agents: merged.agents,
       sessions,
-      costs: costsResult.costs,
       lastFetch: Date.now()
     });
   } catch (error) {
