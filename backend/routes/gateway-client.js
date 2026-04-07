@@ -11,7 +11,9 @@
 const WebSocket = require('ws');
 const crypto = require('crypto');
 
-const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://openclaw:18789';
+const GATEWAY_URL = (process.env.GATEWAY_URL || 'ws://openclaw:18789')
+  .replace(/^http:\/\//, 'ws://')
+  .replace(/^https:\/\//, 'wss://');
 const GATEWAY_API_KEY = process.env.GATEWAY_API_KEY || '';
 const TIMEOUT = parseInt(process.env.TIMEOUT || '5000');
 
@@ -105,7 +107,11 @@ async function callGateway(method, params = {}) {
         let messageHandler = null;
 
         try {
-          const ws = new WebSocket(GATEWAY_URL);
+          const ws = new WebSocket(GATEWAY_URL, {
+            headers: GATEWAY_API_KEY
+              ? { 'Authorization': `Bearer ${GATEWAY_API_KEY}` }
+              : {}
+          });
 
           timeoutHandle = setTimeout(() => {
             ws.close();
@@ -237,7 +243,11 @@ async function discoverAgents() {
     return { agents: [], offline: result.offline, error: result.error };
   }
 
-  const nodeList = result.result || [];
+  const raw = result.result;
+  const nodeList = Array.isArray(raw) ? raw
+    : Array.isArray(raw?.nodes) ? raw.nodes
+    : Array.isArray(raw?.agents) ? raw.agents
+    : [];
   const agents = [];
 
   for (const node of nodeList) {
