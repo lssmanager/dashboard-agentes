@@ -71,3 +71,5 @@ class CostsPanelComponent {
     this.container.innerHTML = html;
   }
 }
+
+window.CostsPanelComponent = CostsPanelComponent;

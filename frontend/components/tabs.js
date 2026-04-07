@@ -35,3 +35,5 @@ class TabsComponent {
     }
   }
 }
+
+window.TabsComponent = TabsComponent;

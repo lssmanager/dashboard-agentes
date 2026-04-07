@@ -21,3 +21,5 @@ class ConnectionBadge {
     }
   }
 }
+
+window.ConnectionBadge = ConnectionBadge;

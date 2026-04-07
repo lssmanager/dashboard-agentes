@@ -64,3 +64,5 @@ class SummaryCardsComponent {
     `).join('');
   }
 }
+
+window.SummaryCardsComponent = SummaryCardsComponent;

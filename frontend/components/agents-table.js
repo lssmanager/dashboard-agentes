@@ -75,3 +75,5 @@ class AgentsTableComponent {
     this.container.appendChild(table);
   }
 }
+
+window.AgentsTableComponent = AgentsTableComponent;

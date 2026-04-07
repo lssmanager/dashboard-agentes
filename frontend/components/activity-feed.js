@@ -50,3 +50,5 @@ class ActivityFeedComponent {
     this.container.innerHTML = html;
   }
 }
+
+window.ActivityFeedComponent = ActivityFeedComponent;

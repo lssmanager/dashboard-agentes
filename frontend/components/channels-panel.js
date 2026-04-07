@@ -47,3 +47,5 @@ class ChannelsPanelComponent {
     this.container.innerHTML = html;
   }
 }
+
+window.ChannelsPanelComponent = ChannelsPanelComponent;

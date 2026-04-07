@@ -260,3 +260,5 @@ class TopologyVisualizer {
     return simulation;
   }
 }
+
+window.TopologyVisualizer = TopologyVisualizer;
