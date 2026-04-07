@@ -29,7 +29,7 @@ let components = {
 };
 
 // Config
-const REFRESH_INTERVAL = parseInt(process.env.REFRESH_INTERVAL || '30000');
+const REFRESH_INTERVAL = 30000; // 30 seconds
 let refreshInterval = null;
 
 /**
@@ -253,9 +253,7 @@ function startAutoRefresh() {
   if (refreshInterval) clearInterval(refreshInterval);
   refresh(); // Immediate refresh
   refreshInterval = setInterval(() => {
-    if (appState.connected) {
-      refresh();
-    }
+    refresh();
   }, REFRESH_INTERVAL);
   console.log(`[APP] Auto-refresh started (interval: ${REFRESH_INTERVAL}ms)`);
 }

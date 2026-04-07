@@ -66,7 +66,12 @@ function mergeData(apiAgents, apiWorkspaces, localData) {
   };
 
   // Ensure apiWorkspaces is an array
-  const workspaceList = Array.isArray(apiWorkspaces) ? apiWorkspaces : [];
+  let workspaceList = Array.isArray(apiWorkspaces) ? apiWorkspaces : [];
+
+  // If no workspaces but we have agents, create default workspace
+  if (workspaceList.length === 0 && apiAgents.length > 0) {
+    workspaceList.push({ id: 'default', name: 'Default Workspace', type: 'orchestrator' });
+  }
 
   for (const apiWs of workspaceList) {
     const wsId = apiWs.id || 'default';
