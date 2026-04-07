@@ -250,7 +250,7 @@ function sendConnectRequest(resolve, reject, connectionTimeout) {
       minProtocol: PROTOCOL_VERSION,
       maxProtocol: PROTOCOL_VERSION,
       client: {
-        id: 'openclaw-dashboard',
+        id: 'gateway-client',
         displayName: 'OpenClaw Dashboard',
         version: '1.0.0',
         platform: os.platform(),
