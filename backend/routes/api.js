@@ -11,7 +11,8 @@ const {
   discoverWorkspaces,
   getSessions,
   healthCheck,
-  inferProvider
+  inferProvider,
+  getDiagnostics
 } = require('./gateway-client');
 
 const router = express.Router();
@@ -288,6 +289,19 @@ router.get('/health', async (req, res) => {
       status: 'error',
       error: error.message
     });
+  }
+});
+
+/**
+ * GET /api/diagnostics
+ * Deep diagnostic: shows GATEWAY_URL, connection state, last errors
+ */
+router.get('/diagnostics', async (req, res) => {
+  try {
+    const diag = await getDiagnostics();
+    res.json(diag);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

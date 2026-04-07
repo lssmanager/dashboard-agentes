@@ -9,9 +9,20 @@ const WebSocket = require('ws');
 const crypto = require('crypto');
 const os = require('os');
 
-const GATEWAY_URL = (process.env.GATEWAY_URL || 'ws://openclaw:18789')
+const RAW_GATEWAY_URL = process.env.GATEWAY_URL || 'ws://openclaw:18789';
+const GATEWAY_URL = RAW_GATEWAY_URL
   .replace(/^http:\/\//, 'ws://')
   .replace(/^https:\/\//, 'wss://');
+
+// Diagnostic state
+const diagnosticState = {
+  lastError: null,
+  lastErrorTime: null,
+  connectionAttempts: 0,
+  lastConnectionAttempt: null,
+  handshakeErrors: [],
+  wsReadyState: null,
+};
 const GATEWAY_API_KEY = process.env.GATEWAY_API_KEY || '';
 const TIMEOUT = parseInt(process.env.TIMEOUT || '5000');
 const PROTOCOL_VERSION = 1;
@@ -79,6 +90,10 @@ async function getConnection() {
         reject(new Error('Connection timeout - no challenge received'));
       }, TIMEOUT);
 
+      diagnosticState.connectionAttempts++;
+      diagnosticState.lastConnectionAttempt = new Date().toISOString();
+      console.log(`[GW] Connecting to: ${GATEWAY_URL}`);
+
       persistentWs.on('open', () => {
         console.log('[GW] WebSocket connected, awaiting challenge...');
       });
@@ -137,13 +152,23 @@ async function getConnection() {
       });
 
       persistentWs.on('error', (error) => {
-        console.error('[GW] WebSocket error:', error.message);
+        console.error('[GW] WebSocket error:', error.message, error.code || '');
+        diagnosticState.lastError = `${error.message} (code: ${error.code || 'none'})`;
+        diagnosticState.lastErrorTime = new Date().toISOString();
+        diagnosticState.handshakeErrors.push({
+          time: new Date().toISOString(),
+          message: error.message,
+          code: error.code || null
+        });
+        if (diagnosticState.handshakeErrors.length > 10) diagnosticState.handshakeErrors.shift();
         handshakeComplete = false;
         reject(error);
       });
 
-      persistentWs.on('close', () => {
-        console.log('[GW] WebSocket closed');
+      persistentWs.on('close', (code, reason) => {
+        console.log(`[GW] WebSocket closed: code=${code} reason=${reason || 'none'}`);
+        diagnosticState.lastError = `WS closed: code=${code} reason=${reason || 'none'}`;
+        diagnosticState.lastErrorTime = new Date().toISOString();
         handshakeComplete = false;
         stopTickWatchdog();
         persistentWs = null;
@@ -495,11 +520,83 @@ async function healthCheck() {
   return !!(result.result && !result.offline);
 }
 
+/**
+ * Deep diagnostics for /api/diagnostics
+ */
+async function getDiagnostics() {
+  // Also try an HTTP health check on the same host
+  let httpHealth = null;
+  const httpUrl = RAW_GATEWAY_URL
+    .replace(/^ws:\/\//, 'http://')
+    .replace(/^wss:\/\//, 'https://');
+  try {
+    const http = require('http');
+    httpHealth = await new Promise((resolve) => {
+      const req = http.get(`${httpUrl}/health`, { timeout: 3000 }, (res) => {
+        let body = '';
+        res.on('data', (d) => body += d);
+        res.on('end', () => resolve({ status: res.statusCode, body: body.substring(0, 500) }));
+      });
+      req.on('error', (e) => resolve({ error: e.message, code: e.code }));
+      req.on('timeout', () => { req.destroy(); resolve({ error: 'timeout' }); });
+    });
+  } catch (e) {
+    httpHealth = { error: e.message };
+  }
+
+  // DNS check
+  let dnsResult = null;
+  try {
+    const dns = require('dns');
+    const url = new URL(GATEWAY_URL.replace('ws://', 'http://').replace('wss://', 'https://'));
+    dnsResult = await new Promise((resolve) => {
+      dns.lookup(url.hostname, (err, address, family) => {
+        if (err) resolve({ error: err.message, code: err.code });
+        else resolve({ address, family });
+      });
+    });
+  } catch (e) {
+    dnsResult = { error: e.message };
+  }
+
+  return {
+    config: {
+      GATEWAY_URL,
+      RAW_GATEWAY_URL,
+      GATEWAY_API_KEY_SET: !!GATEWAY_API_KEY,
+      GATEWAY_API_KEY_LENGTH: GATEWAY_API_KEY ? GATEWAY_API_KEY.length : 0,
+      TIMEOUT,
+    },
+    connection: {
+      wsReadyState: persistentWs?.readyState ?? 'no_socket',
+      wsReadyStateLabel: persistentWs ? ['CONNECTING','OPEN','CLOSING','CLOSED'][persistentWs.readyState] : 'no_socket',
+      handshakeComplete,
+      connectionAttempts: diagnosticState.connectionAttempts,
+      lastConnectionAttempt: diagnosticState.lastConnectionAttempt,
+    },
+    errors: {
+      lastError: diagnosticState.lastError,
+      lastErrorTime: diagnosticState.lastErrorTime,
+      recentErrors: diagnosticState.handshakeErrors,
+    },
+    circuitBreaker: { ...circuitBreaker },
+    cache: {
+      entries: responseCache.size,
+    },
+    network: {
+      dns: dnsResult,
+      httpHealthCheck: httpHealth,
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+
 module.exports = {
   callGateway,
   discoverAgents,
   discoverWorkspaces,
   getSessions,
   healthCheck,
-  inferProvider
+  inferProvider,
+  getDiagnostics
 };
