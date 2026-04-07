@@ -1336,3 +1336,29 @@ section > h3 {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
 }
+
+/* Logs Panel */
+.logs-section { margin-top: 2rem; }
+.logs-diagnostics { background: var(--bg-card, #1a1f2e); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+.logs-diagnostics h3 { margin: 0 0 0.75rem; font-size: 0.9rem; opacity: 0.7; }
+.diag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; }
+.diag-item { display: flex; justify-content: space-between; padding: 0.35rem 0.5rem; background: rgba(255,255,255,0.03); border-radius: 4px; font-size: 0.8rem; }
+.diag-item.diag-full { grid-column: 1 / -1; flex-direction: column; }
+.diag-label { opacity: 0.6; font-weight: 500; }
+.diag-value { font-family: monospace; word-break: break-all; }
+.diag-error { color: #ef4444; }
+.diag-pre { background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; overflow-x: auto; font-size: 0.75rem; margin-top: 0.25rem; white-space: pre-wrap; }
+.logs-container { background: var(--bg-card, #1a1f2e); border-radius: 8px; padding: 1rem; }
+.logs-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.logs-header h3 { margin: 0; font-size: 0.9rem; opacity: 0.7; }
+.btn-refresh-logs { background: rgba(255,255,255,0.1); border: none; color: inherit; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.btn-refresh-logs:hover { background: rgba(255,255,255,0.2); }
+.logs-output { max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; line-height: 1.6; }
+.log-entry { padding: 0.15rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.log-time { opacity: 0.4; margin-right: 0.5rem; }
+.log-level { font-weight: 600; margin-right: 0.25rem; }
+.log-info .log-level { color: #3b82f6; }
+.log-warn .log-level { color: #f59e0b; }
+.log-error { background: rgba(239,68,68,0.08); }
+.log-error .log-level { color: #ef4444; }
+.log-msg { word-break: break-all; }

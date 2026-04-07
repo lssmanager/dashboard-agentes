@@ -205,6 +205,11 @@ function renderCurrentWorkspace() {
     if (components.activity) {
       components.activity.render(appState.sessions, appState.agentColors);
     }
+
+    // Render logs panel
+    if (window.logsPanel) {
+      window.logsPanel.render();
+    }
   } catch (error) {
     console.error('[APP] Error rendering workspace:', error);
   }
@@ -322,6 +327,10 @@ function initializeComponents() {
     components.channels = new ChannelsPanelComponent();
     components.costs = new CostsPanelComponent();
     components.activity = new ActivityFeedComponent();
+    // Logs panel (optional, doesn't block init)
+    if (window.LogsPanelComponent) {
+      window.logsPanel = new LogsPanelComponent();
+    }
     console.log('[APP] All components initialized');
   } catch (error) {
     console.error('[APP] Error initializing components:', error);

@@ -19,6 +19,28 @@ const WebSocket = require('ws');
 const crypto = require('crypto');
 const os = require('os');
 
+// Circular log buffer
+const logBuffer = [];
+const LOG_BUFFER_MAX = 100;
+
+function gwLog(level, msg, data) {
+  const entry = { time: new Date().toISOString(), level, msg };
+  if (data !== undefined) entry.data = data;
+  logBuffer.push(entry);
+  if (logBuffer.length > LOG_BUFFER_MAX) logBuffer.shift();
+  if (level === 'error') {
+    console.error(`[GW] [${level}] ${msg}`, data !== undefined ? data : '');
+  } else if (level === 'warn') {
+    console.warn(`[GW] [${level}] ${msg}`, data !== undefined ? data : '');
+  } else {
+    console.log(`[GW] [${level}] ${msg}`, data !== undefined ? data : '');
+  }
+}
+
+function getLogBuffer() {
+  return logBuffer.slice();
+}
+
 const RAW_GATEWAY_URL = process.env.GATEWAY_URL || 'ws://openclaw:18789';
 const GATEWAY_URL = RAW_GATEWAY_URL
   .replace(/^http:\/\//, 'ws://')
@@ -37,6 +59,7 @@ const diagnosticState = {
   handshakeErrors: [],
   lastFrameReceived: null,
   lastFrameSent: null,
+  lastConnectResponse: null,
 };
 
 // Circuit breaker
@@ -97,7 +120,7 @@ async function getConnection() {
   return new Promise((resolve, reject) => {
     diagnosticState.connectionAttempts++;
     diagnosticState.lastConnectionAttempt = new Date().toISOString();
-    console.log(`[GW] Connecting to: ${GATEWAY_URL} (attempt #${diagnosticState.connectionAttempts})`);
+    gwLog('info', `Connecting to: ${GATEWAY_URL} (attempt #${diagnosticState.connectionAttempts})`);
 
     try {
       persistentWs = new WebSocket(GATEWAY_URL, {
@@ -111,7 +134,7 @@ async function getConnection() {
           : connectNonce
             ? 'Timeout - nonce received but connect not sent'
             : 'Timeout - no connect.challenge received from Gateway';
-        console.error(`[GW] ${msg}`);
+        gwLog('error', msg);
         diagnosticState.lastError = msg;
         diagnosticState.lastErrorTime = new Date().toISOString();
         try { persistentWs.close(); } catch {}
@@ -119,7 +142,7 @@ async function getConnection() {
       }, TIMEOUT);
 
       persistentWs.on('open', () => {
-        console.log('[GW] WebSocket connected, waiting for connect.challenge...');
+        gwLog('info', 'WebSocket connected, waiting for connect.challenge...');
         // Gateway should send connect.challenge event automatically after open
       });
 
@@ -134,13 +157,13 @@ async function getConnection() {
             const nonce = frame.payload?.nonce;
             if (!nonce || typeof nonce !== 'string') {
               const err = 'connect.challenge missing nonce';
-              console.error(`[GW] ${err}`);
+              gwLog('error', err);
               diagnosticState.lastError = err;
               reject(new Error(err));
               return;
             }
             connectNonce = nonce.trim();
-            console.log('[GW] Received connect.challenge, sending connect request...');
+            gwLog('info', 'Received connect.challenge, sending connect request...');
             sendConnectRequest(resolve, reject, connectionTimeout);
             return;
           }
@@ -149,6 +172,9 @@ async function getConnection() {
           if (frame.type === 'res' && frame.id) {
             const pending = pendingRequests.get(frame.id);
             if (pending) {
+              // Store full frame before processing
+              diagnosticState.lastConnectResponse = { ok: frame.ok, error: frame.error, payload: frame.payload, id: frame.id, receivedAt: new Date().toISOString() };
+              gwLog('info', 'Received connect response frame', { ok: frame.ok, error: frame.error });
               clearTimeout(pending.timeout);
               pendingRequests.delete(frame.id);
               if (frame.ok) {
@@ -173,12 +199,12 @@ async function getConnection() {
             return;
           }
         } catch (error) {
-          console.error('[GW] Failed to parse frame:', error.message);
+          gwLog('error', 'Failed to parse frame', { message: error.message });
         }
       });
 
       persistentWs.on('error', (error) => {
-        console.error('[GW] WebSocket error:', error.message, error.code || '');
+        gwLog('error', `WebSocket error: ${error.message}`, { code: error.code || 'none' });
         diagnosticState.lastError = `${error.message} (code: ${error.code || 'none'})`;
         diagnosticState.lastErrorTime = new Date().toISOString();
         diagnosticState.handshakeErrors.push({
@@ -193,7 +219,7 @@ async function getConnection() {
 
       persistentWs.on('close', (code, reason) => {
         const reasonText = reason ? Buffer.from(reason).toString('utf8') : 'none';
-        console.log(`[GW] WebSocket closed: code=${code} reason=${reasonText}`);
+        gwLog('info', `WebSocket closed: code=${code} reason=${reasonText}`);
         diagnosticState.lastError = `WS closed: code=${code} reason=${reasonText}`;
         diagnosticState.lastErrorTime = new Date().toISOString();
         handshakeComplete = false;
@@ -247,7 +273,7 @@ function sendConnectRequest(resolve, reject, connectionTimeout) {
     resolve: (payload) => {
       clearTimeout(connectionTimeout);
       handshakeComplete = true;
-      console.log('[GW] ✅ Connect handshake complete! Authenticated as operator.');
+      gwLog('info', 'Connect handshake complete! Authenticated as operator.');
       if (payload?.tick?.intervalMs) {
         startTickWatchdog(payload.tick.intervalMs);
       } else {
@@ -257,7 +283,7 @@ function sendConnectRequest(resolve, reject, connectionTimeout) {
     },
     reject: (err) => {
       clearTimeout(connectionTimeout);
-      console.error('[GW] ❌ Connect rejected:', err.message);
+      gwLog('error', `Connect rejected: ${err.message}`);
       diagnosticState.lastError = `Connect rejected: ${err.message}`;
       diagnosticState.lastErrorTime = new Date().toISOString();
       reject(err);
@@ -270,7 +296,7 @@ function sendConnectRequest(resolve, reject, connectionTimeout) {
 
   diagnosticState.lastFrameSent = { type: 'req', method: 'connect', time: new Date().toISOString() };
   persistentWs.send(JSON.stringify(connectFrame));
-  console.log('[GW] Sent connect request with token auth');
+  gwLog('info', 'Sent connect request with token auth');
 }
 
 /**
@@ -281,7 +307,7 @@ function startTickWatchdog(intervalMs = 30000) {
   lastTickTime = Date.now();
   tickWatchdog = setInterval(() => {
     if (Date.now() - lastTickTime > intervalMs * 3) {
-      console.error('[GW] Tick timeout, closing connection');
+      gwLog('error', 'Tick timeout, closing connection');
       if (persistentWs) persistentWs.close(4000, 'tick timeout');
       handshakeComplete = false;
     }
@@ -352,7 +378,7 @@ async function callGateway(method, params = {}) {
       const frame = { type: 'req', id, method, params };
       diagnosticState.lastFrameSent = { type: 'req', method, time: new Date().toISOString() };
       ws.send(JSON.stringify(frame));
-      console.log(`[GW] → ${method}`);
+      gwLog('info', `→ ${method}`);
     });
 
     // Cache response
@@ -366,9 +392,9 @@ async function callGateway(method, params = {}) {
     circuitBreaker.lastFailureTime = Date.now();
     if (circuitBreaker.failureCount >= 3) {
       circuitBreaker.isOpen = true;
-      console.log(`[GW] Circuit breaker OPEN after ${circuitBreaker.failureCount} failures`);
+      gwLog('warn', `Circuit breaker OPEN after ${circuitBreaker.failureCount} failures`);
     }
-    console.error(`[GW] ❌ ${method} failed: ${error.message}`);
+    gwLog('error', `${method} failed: ${error.message}`);
 
     const cached = responseCache.get(cacheKey);
     if (cached) return { result: cached.data, error: error.message, offline: true, cached: true };
@@ -398,7 +424,7 @@ async function discoverAgents() {
   const result = await callGateway('agents.list');
 
   if (result.error && !result.result) {
-    console.error('[API] Failed to discover agents:', result.error);
+    gwLog('error', `Failed to discover agents: ${result.error}`);
     return { agents: [], offline: result.offline, error: result.error };
   }
 
@@ -420,7 +446,7 @@ async function discoverAgents() {
     lastActive: agent.lastActive || agent.lastActiveAt || null,
   }));
 
-  console.log(`[API] Discovered ${agents.length} agent(s)`);
+  gwLog('info', `Discovered ${agents.length} agent(s)`);
   return { agents, offline: result.offline };
 }
 
@@ -466,10 +492,10 @@ async function getSessions(limit = 50) {
       message: session.message || session.lastMessage || '',
     }));
 
-    console.log(`[API] Retrieved ${sessions.length} session(s)`);
+    gwLog('info', `Retrieved ${sessions.length} session(s)`);
     return { sessions, offline: result.offline };
   } catch (error) {
-    console.warn(`[API] sessions.list error: ${error.message}`);
+    gwLog('warn', `sessions.list error: ${error.message}`);
     return { sessions: [], offline: false };
   }
 }
@@ -540,6 +566,7 @@ async function getDiagnostics() {
       lastConnectionAttempt: diagnosticState.lastConnectionAttempt,
       lastFrameReceived: diagnosticState.lastFrameReceived,
       lastFrameSent: diagnosticState.lastFrameSent,
+      lastConnectResponse: diagnosticState.lastConnectResponse,
     },
     errors: {
       lastError: diagnosticState.lastError,
@@ -548,6 +575,7 @@ async function getDiagnostics() {
     },
     circuitBreaker: { ...circuitBreaker },
     cache: { entries: responseCache.size },
+    logs: logBuffer.slice(-20),
     network: {
       dns: dnsResult,
       httpHealthCheck: httpHealth,
@@ -563,5 +591,6 @@ module.exports = {
   getSessions,
   healthCheck,
   inferProvider,
-  getDiagnostics
+  getDiagnostics,
+  getLogBuffer
 };

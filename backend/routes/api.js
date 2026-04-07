@@ -12,7 +12,8 @@ const {
   getSessions,
   healthCheck,
   inferProvider,
-  getDiagnostics
+  getDiagnostics,
+  getLogBuffer
 } = require('./gateway-client');
 
 const router = express.Router();
@@ -303,6 +304,15 @@ router.get('/diagnostics', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+/**
+ * GET /api/logs
+ * Returns the gateway log buffer
+ */
+router.get('/logs', (req, res) => {
+  const logs = getLogBuffer ? getLogBuffer() : [];
+  res.json({ logs });
 });
 
 module.exports = router;
