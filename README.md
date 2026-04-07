@@ -1,335 +1,286 @@
 # OpenClaw Dashboard
 
-A real-time monitoring dashboard for OpenClaw AI agents. Connects exclusively to the OpenClaw Gateway via REST API, with zero hardcoded agent data.
+Real-time monitoring dashboard for OpenClaw AI agents. Connects to the OpenClaw Gateway via WebSocket Protocol v3, with zero hardcoded agent data.
+
+**Live:** https://cost.socialstudies.cloud  
+**Gateway:** https://open.socialstudies.cloud (Cloudflare Access protected)
+
+---
+
+## Architecture
+
+```
+Browser (user on internet)
+    │
+    │ HTTPS
+    ▼
+Cloudflare → Traefik → Express (port 3000)
+                          │
+                          │  serves frontend/ as static files
+                          │  serves /api/* routes
+                          │
+                          │  WebSocket (internal Docker network)
+                          ▼
+                     OpenClaw Gateway (ws://openclaw:18789)
+```
+
+**Key design decision:** The browser NEVER connects directly to the Gateway. The Express backend acts as a proxy — it maintains a persistent WebSocket connection to the Gateway over the internal Docker network, and the frontend only talks to its own backend via REST (`/api/dashboard/state`, `/api/topology`, etc.).
+
+This solves the network problem: the Gateway runs on a private Docker network (`openclawnet`) and is not directly reachable from the internet. The dashboard backend, running in the same Docker network, bridges the gap.
+
+### Backend: Node.js + Express
+
+- **Gateway client** (`backend/routes/gateway-client.js`): Persistent WebSocket connection with OpenClaw Protocol v3 handshake, circuit breaker, retry logic, response caching, and diagnostic logging
+- **API routes** (`backend/routes/api.js`): Dashboard state, topology, YAML generation, health check, diagnostics, and gateway log endpoints
+- **Persistent storage**: Topology configuration only (not agent data) in `/app/data/workspaces-topology.json`
+
+### Frontend: Vanilla JavaScript + D3.js
+
+- State-driven rendering with in-memory state management
+- No frameworks, no build step — just static HTML/JS/CSS served by Express
+- Component architecture with `window.*` registration for lazy validation
+- D3.js force-directed graph for topology visualization
+- Auto-refresh every 30 seconds (configurable)
+- Dark theme with custom CSS
+
+### Deployment: Nixpacks (Coolify)
+
+- No Dockerfile needed — Nixpacks auto-detects Node.js
+- Start command: `node backend/server.js`
+- Network: must be on the same Docker network as OpenClaw (`openclawnet`)
+- Persistent volume for `/app/data`
+
+---
+
+## OpenClaw Gateway Protocol v3
+
+The dashboard implements the official OpenClaw WebSocket protocol, based on the source code at:
+- [`scripts/dev/gateway-ws-client.ts`](https://github.com/openclaw/openclaw/blob/main/scripts/dev/gateway-ws-client.ts) — reference client
+- [`scripts/dev/gateway-smoke.ts`](https://github.com/openclaw/openclaw/blob/main/scripts/dev/gateway-smoke.ts) — handshake example
+- [`src/gateway/client.ts`](https://github.com/openclaw/openclaw/blob/main/src/gateway/client.ts) — official GatewayClient
+- [`src/gateway/protocol/client-info.ts`](https://github.com/openclaw/openclaw/blob/main/src/gateway/protocol/client-info.ts) — valid client IDs
+- [`src/gateway/method-scopes.ts`](https://github.com/openclaw/openclaw/blob/main/src/gateway/method-scopes.ts) — available RPC methods
+
+### Connection Flow
+
+```
+1. Client opens WebSocket to ws://openclaw:18789
+2. Gateway sends:  { type: "event", event: "connect.challenge", payload: { nonce: "..." } }
+3. Client sends:   { type: "req", id: "...", method: "connect", params: {
+                       minProtocol: 3, maxProtocol: 3,
+                       client: { id: "gateway-client", mode: "backend", ... },
+                       auth: { token: "<GATEWAY_API_KEY>" },
+                       role: "operator",
+                       scopes: ["operator.read", "operator.admin"]
+                     }}
+4. Gateway responds: { type: "res", id: "...", ok: true, payload: { ... } }
+5. Client can now send RPC requests (health, agents.list, sessions.list, etc.)
+```
+
+### Critical: Valid Client IDs
+
+The Gateway validates `client.id` against a strict allowlist. Only these values are accepted:
+
+| ID | Use Case |
+|---|---|
+| `gateway-client` | Backend clients (this dashboard) |
+| `cli` | CLI tools |
+| `openclaw-control-ui` | Control UI (browser) |
+| `webchat-ui` | Webchat interface |
+| `openclaw-ios` | iOS app |
+| `openclaw-android` | Android app |
+| `openclaw-macos` | macOS app |
+| `node-host` | Node host |
+| `test` | Testing |
+
+Using any other value (e.g., `"openclaw-dashboard"`) results in:
+```
+INVALID_REQUEST: at /client/id: must be equal to constant; must match a schema in anyOf
+```
+
+### RPC Methods Used
+
+| Method | Scope | Purpose |
+|---|---|---|
+| `health` | `operator.read` | Gateway health check |
+| `agents.list` | `operator.read` | Discover all configured agents |
+| `sessions.list` | `operator.read` | Recent chat sessions |
+| `usage.cost` | `operator.read` | Token usage and costs |
+| `status` | `operator.read` | Full gateway status |
+
+---
 
 ## Features
 
 - **Auto-Discovery**: Agents and workspaces discovered dynamically from Gateway API
 - **Real-Time Monitoring**: Live agent status, sessions, and costs
 - **Interactive Topology**: D3.js visualization with 3 layout modes (orchestrator, peer-to-peer, hierarchical)
-- **Graceful Disconnection**: Cached data fallback when Gateway is unreachable
-- **Dark Theme**: Modern, responsive UI with dark mode
-- **Mobile Friendly**: Works on desktop, tablet, and mobile devices
+- **Gateway Logs Panel**: Real-time diagnostic logs showing connection state, errors, and handshake details
+- **Graceful Disconnection**: Circuit breaker + cached data fallback when Gateway is unreachable
+- **Dark Theme**: Modern, responsive UI
 
-## Architecture
+---
 
-**Backend**: Node.js + Express
-- Gateway client with circuit breaker, retry logic, and response caching
-- API routes for dashboard state, topology, and YAML generation
-- Persistent storage for topology configuration only (not agent data)
+## Environment Variables
 
-**Frontend**: Vanilla JavaScript + D3.js
-- State-driven rendering with in-memory state management
-- No external CSS frameworks (custom dark theme)
-- Auto-refresh every 30 seconds (configurable)
+Configure in Coolify (or `.env` for local dev):
 
-**Deployment**: Nixpacks-compatible (Coolify, Railway)
-- No Dockerfile or docker-compose needed
-- Environment variables configured in deployment UI
-- Persistent volume for `/app/data`
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `GATEWAY_URL` | Yes | `ws://openclaw:18789` | Gateway WebSocket URL (internal Docker network) |
+| `GATEWAY_API_KEY` | Yes | — | Gateway auth token (`gateway.auth.token` from `openclaw.json`) |
+| `PORT` | No | `3000` | Express server port |
+| `TIMEOUT` | No | `10000` | WebSocket request timeout (ms) |
+| `DATA_FILE` | No | `/app/data/workspaces-topology.json` | Topology storage path |
+| `NODE_ENV` | No | `production` | Environment |
 
-## Quick Start (Local Development)
+### Finding Your Gateway API Key
 
-### Prerequisites
-- Node.js 18+
-- Running OpenClaw Gateway (or mock it for testing)
-
-### Setup
+The `GATEWAY_API_KEY` must match the token configured in OpenClaw:
 
 ```bash
-# Copy environment template
-cp .env.example .env
+# On the machine running OpenClaw:
+openclaw config get gateway.auth.token
 
-# Edit .env with your Gateway URL and settings
-# GATEWAY_URL=http://localhost:18789
-# PORT=3000
-
-# Install dependencies
-npm install
-
-# Start the server
-npm start
+# Or check the config file directly:
+cat ~/.openclaw/openclaw.json | grep token
 ```
 
-Navigate to http://localhost:3000
-
-### Environment Variables
-
-See `.env.example` for all available options. Key variables:
-
-- `GATEWAY_URL` - OpenClaw Gateway API base URL (default: `http://openclaw-gateway:18789`)
-- `PORT` - Dashboard server port (default: `3000`)
-- `REFRESH_INTERVAL` - Auto-refresh interval in ms (default: `30000`)
-- `NODE_ENV` - `development` or `production`
-
-### Debugging
-
-Open browser console (`F12` → Console tab). The app exposes debugging utilities:
-
-```javascript
-// View current app state
-window.appState
-
-// Manually trigger refresh
-window.refresh()
-
-// Switch workspace
-window.setActiveWorkspace('workspace_id')
-
-// Stop/start auto-refresh
-window.stopAutoRefresh()
-window.startAutoRefresh()
-```
-
-Check browser console logs for initialization steps and any errors.
-
-## Deployment
-
-### Using Nixpacks (Coolify/Railway)
-
-1. **Push repo to Git** (GitHub, GitLab, etc.)
-2. **Create new service in Coolify/Railway**
-3. **Select Git repository** and this project
-4. **Configure Environment Variables:**
-   - `GATEWAY_URL` = `http://openclaw-gateway:18789` (or FQDN)
-   - `GATEWAY_API_KEY` = `<Bearer token if needed>`
-   - `REFRESH_INTERVAL` = `30000`
-   - `TIMEOUT` = `5000`
-   - `PORT` = `3000`
-   - `NODE_ENV` = `production`
-
-5. **Add Persistent Storage:**
-   - Mount `/app/data` volume
-   - This preserves topology configuration across redeployments
-
-6. **Configure Network:**
-   - Attach to same Docker network as openclaw-gateway
-   - Services can reference each other by service name
-
-7. **Deploy** - Nixpacks automatically builds and starts the dashboard
+---
 
 ## API Endpoints
 
-### Dashboard State
-```
-GET /api/dashboard/state
-Returns: { connected, workspaces, agents, sessions, costs, lastFetch }
-```
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/dashboard/state` | GET | Full dashboard state (agents, workspaces, sessions, costs) |
+| `/api/topology` | GET | Local topology configuration |
+| `/api/topology` | POST | Update topology (type, parentChildMap) |
+| `/api/agents/yaml` | POST | Generate YAML snippet for a new agent |
+| `/api/health` | GET | Gateway connection health check |
+| `/api/diagnostics` | GET | Deep diagnostics (DNS, HTTP, WebSocket state, errors, last connect response) |
+| `/api/logs` | GET | Gateway log buffer (last 100 entries) |
 
-### Topology Configuration
-```
-GET /api/topology
-Returns: topology JSON (topology type + parent relationships)
+---
 
-POST /api/topology
-Body: { workspaceId, type, parentChildMap, description }
-Returns: updated topology
-```
+## Diagnostics
 
-### YAML Generation
-```
-POST /api/agents/yaml
-Body: { id, name, model, provider, role, parentId, channels }
-Returns: { yaml }
-```
-
-### Health Check
-```
-GET /api/health
-Returns: { status, timestamp }
-```
-
-## Data Storage
-
-### Local Persistence (`/app/data/workspaces-topology.json`)
-
-Stores ONLY topology configuration - NOT agent models or session data:
+The `/api/diagnostics` endpoint provides deep visibility into the Gateway connection:
 
 ```json
 {
-  "workspaces": {
-    "workspace_id": {
-      "type": "orchestrator",
-      "description": "optional",
-      "parentChildMap": {
-        "agent_main": ["agent_sub1", "agent_sub2"]
-      }
-    }
+  "config": {
+    "GATEWAY_URL": "ws://openclaw:18789",
+    "GATEWAY_API_KEY_SET": true,
+    "GATEWAY_API_KEY_LENGTH": 48,
+    "PROTOCOL_VERSION": 3
   },
-  "last_cache": {
-    "agents": [...],        // populated on refresh
-    "workspaces": [...],    // populated on refresh
-    "timestamp": 0
+  "connection": {
+    "wsReadyState": "OPEN",
+    "handshakeComplete": true,
+    "connectionAttempts": 1,
+    "lastConnectResponse": { "ok": true, "payload": { "..." } }
+  },
+  "network": {
+    "dns": { "address": "10.0.8.4", "family": 4 },
+    "httpHealthCheck": { "status": 200, "body": "{\"ok\":true,\"status\":\"live\"}" }
   }
 }
 ```
 
-**Agent Models, Providers, Session Data**: Always fetched fresh from Gateway API on refresh, never stored locally.
+The Logs panel at the bottom of the dashboard displays this information visually, along with a scrollable log of all Gateway connection events.
 
-## Gateway API Integration
-
-### Required Endpoints
-
-The dashboard calls these Gateway endpoints:
-
-- `GET /api/health` - Connectivity check
-- `GET /api/agents` - Full agent list (or falls back to `/api/status`)
-- `GET /api/workspaces` - Workspace list
-- `GET /api/sessions?limit=50&order=recent` - Recent session activity
-- `GET /api/costs?period=7days` - 7-day cost breakdown
-- `GET /api/status` - Fallback for agent discovery if `/api/agents` returns 404
-
-### Fallback Strategy
-
-If Gateway endpoints are unavailable:
-1. Dashboard shows red "OFFLINE" badge
-2. All agents display as "OFFLINE" status
-3. Cached data from last successful fetch is displayed
-4. Dashboard continues polling every 30s for reconnection
-5. On reconnect, data automatically refreshes
-
-### Provider Detection
-
-Models are mapped to providers automatically:
-- `gpt-*` → openai
-- `grok-*` → xai
-- `claude-*` → anthropic
-- `minimax/*` → minimax
-- `unsloth/*` → lmstudio
-
-## Configuration
-
-### Environment Variables
-
-```bash
-GATEWAY_URL              # Gateway API base URL (default: http://openclaw-gateway:18789)
-GATEWAY_API_KEY          # Optional Bearer token for Gateway authentication
-REFRESH_INTERVAL         # Auto-refresh interval in ms (default: 30000)
-TIMEOUT                  # Request timeout in ms (default: 5000)
-PORT                     # Server port (default: 3000)
-DATA_FILE                # Path to topology JSON (default: /app/data/workspaces-topology.json)
-NODE_ENV                 # "development" or "production"
-```
-
-### Port Forwarding
-
-For local development with Docker:
-```bash
-docker run -p 3000:3000 \
-  -e GATEWAY_URL=http://host.docker.internal:18789 \
-  openclaw-dashboard
-```
-
-## UI Components
-
-### Summary Cards
-- Active Agents (last hour)
-- Total Subagents
-- Hierarchical Connections
-- Peer Connections
-- External Channels
-
-### Topology Visualization
-- **Orchestrator**: Central main agent with subagents arranged below
-- **Peer-to-Peer**: Circular layout with full interconnection
-- **Hierarchical**: Tree layout with multiple levels
-- Zoom and pan support
-- Hover for detailed tooltips
-- Color-coded by agent
-
-### Agents Table
-- Sortable columns
-- Live/activity status color coding
-- Model, provider, channels per agent
-
-### Channels Panel
-- List of all configured channels
-- Agents per channel
-
-### Costs Panel
-- 7-day total spend
-- Token counts (input/output)
-- Daily bar chart
-
-### Activity Feed
-- Last 10 unique sessions
-- Timestamps in local time
-- Agent color coding
-
-## Security
-
-- API keys only used in backend (never sent to frontend)
-- All agent/workspace names sanitized before DOM insertion (XSS prevention)
-- CORS configured to same-origin in production
-- Rate limit: 10 requests/second to backend API
-- No localStorage (state in-memory only)
-- No authentication UI (assumed secured by network)
-
-## Development
-
-### File Structure
-```
-openclaw-dashboard/
-├── backend/
-│   ├── server.js         # Express entry point
-│   └── routes/
-│       ├── api.js        # Dashboard API endpoints
-│       └── gateway-client.js  # Gateway HTTP client
-├── frontend/
-│   ├── index.html        # Main HTML
-│   ├── app.js            # State management
-│   ├── services/
-│   │   └── gateway-client.js  # Fetch wrapper
-│   ├── components/       # UI components
-│   └── styles.css        # Dark theme styles
-├── data/
-│   └── workspaces-topology.json  # Local topology cache
-├── package.json
-└── nixpacks.toml         # Nixpacks build config
-```
-
-### Adding Components
-
-1. Create new file in `frontend/components/`
-2. Implement class with `render(data)` method
-3. Import in `frontend/index.html` before `app.js`
-4. Initialize in `initializeComponents()` in `app.js`
-
-### Testing Locally
-
-```bash
-# Terminal 1: Start Gateway (or mock)
-# Terminal 2: Start Dashboard
-npm start
-
-# Terminal 3: Test API endpoints
-curl http://localhost:3000/api/health
-curl http://localhost:3000/api/dashboard/state
-```
+---
 
 ## Troubleshooting
 
-### Dashboard shows OFFLINE
-- Check `GATEWAY_URL` environment variable
-- Verify Gateway is running and accessible
-- Check network connectivity and firewall rules
-- Review browser console for error messages
+### Components not loading (timeout)
+Each component JS file must register its class on `window`:
+```js
+// At the end of each component file:
+window.ConnectionBadge = ConnectionBadge;
+```
 
-### Agents not appearing
-- Verify Gateway API returns `/api/agents` or `/api/status`
-- Check agent model names for provider detection
-- Refresh dashboard manually or wait 30s for auto-refresh
+### D3.js blocked by CSP
+Use jsDelivr CDN (passes most CSP configs) or serve locally:
+```html
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+```
 
-### Data not persisting
-- Verify persistent volume mounted to `/app/data`
-- Check file permissions in data directory
-- Ensure `DATA_FILE` path is correct
+### Gateway unreachable
+1. Check `/api/diagnostics` — DNS must resolve, HTTP health must return 200
+2. Verify the dashboard container is on the `openclawnet` Docker network
+3. Verify `GATEWAY_API_KEY` matches `openclaw config get gateway.auth.token`
 
-### Performance issues
-- Reduce `REFRESH_INTERVAL` if needed (impacts API calls)
-- Limit agent count if topology visualization is slow
-- Check network latency to Gateway
+### Connect rejected (INVALID_REQUEST)
+The `client.id` must be one of the official values (see table above). This dashboard uses `gateway-client`.
 
-## License
+### Connect rejected (AUTH_TOKEN_MISMATCH)
+The `GATEWAY_API_KEY` doesn't match. Regenerate with:
+```bash
+openclaw doctor --generate-gateway-token
+```
+Then update the variable in Coolify and redeploy.
 
-MIT
+---
+
+## File Structure
+
+```
+├── backend/
+│   ├── server.js                  # Express entry point
+│   └── routes/
+│       ├── api.js                 # REST API routes
+│       └── gateway-client.js      # OpenClaw WebSocket client (Protocol v3)
+├── frontend/
+│   ├── index.html                 # Main HTML
+│   ├── app.js                     # App state + refresh logic
+│   ├── styles.css                 # Dark theme CSS
+│   ├── components/
+│   │   ├── connection-badge.js    # Connection status indicator
+│   │   ├── tabs.js                # Workspace tabs
+│   │   ├── summary-cards.js       # Metric cards
+│   │   ├── topology-visualizer.js # D3.js force graph
+│   │   ├── agents-table.js        # Agent list table
+│   │   ├── channels-panel.js      # Channel overview
+│   │   ├── costs-panel.js         # Usage costs
+│   │   ├── activity-feed.js       # Recent sessions
+│   │   ├── logs-panel.js          # Gateway logs & diagnostics
+│   │   ├── diagnostic-panel.js    # Error diagnostic overlay
+│   │   ├── modals.js              # Create workspace/agent modals
+│   │   └── theme-toggle.js        # Dark/light mode
+│   └── services/
+│       ├── gateway-client.js      # Frontend REST client (fetch wrapper)
+│       └── diagnostic-service.js  # Frontend diagnostic checks
+├── package.json
+├── nixpacks.toml
+└── .env.example
+```
+
+---
+
+## Agents (Current Configuration)
+
+| Agent | Model | Provider | Role |
+|---|---|---|---|
+| Clawdia | minimax/minimax-m2.7 | Minimax | Default |
+| Atlas | gpt-5.4 | OpenAI | Orchestrator |
+| Nova | unsloth/qwen3.5-27b | LM Studio | Subagent |
+| Intel | grok-4-1-fast | XAI | Subagent |
+
+---
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+
+# For local development, create .env:
+cp .env.example .env
+# Edit .env with your Gateway URL and API key
+```
+
+For local development without a Gateway, the dashboard gracefully shows "Gateway Unreachable" and the diagnostic panel.
