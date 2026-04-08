@@ -273,7 +273,16 @@ function sendConnectRequest(resolve, reject, connectionTimeout) {
     resolve: (payload) => {
       clearTimeout(connectionTimeout);
       handshakeComplete = true;
-      gwLog('info', 'Connect handshake complete! Authenticated as operator.');
+      // Store granted scopes and session info from connect response
+      diagnosticState.connectPayload = payload;
+      diagnosticState.grantedScopes = payload?.scopes || payload?.session?.scopes || [];
+      diagnosticState.sessionId = payload?.session?.id || payload?.sessionId || null;
+      diagnosticState.protocolVersion = payload?.protocol || payload?.protocolVersion || null;
+      gwLog('info', 'Connect handshake complete! Authenticated as operator.', {
+        grantedScopes: diagnosticState.grantedScopes,
+        sessionId: diagnosticState.sessionId,
+        protocol: diagnosticState.protocolVersion,
+      });
       if (payload?.tick?.intervalMs) {
         startTickWatchdog(payload.tick.intervalMs);
       } else {
@@ -567,6 +576,10 @@ async function getDiagnostics() {
       lastFrameReceived: diagnosticState.lastFrameReceived,
       lastFrameSent: diagnosticState.lastFrameSent,
       lastConnectResponse: diagnosticState.lastConnectResponse,
+      grantedScopes: diagnosticState.grantedScopes || [],
+      requestedScopes: ['operator.read', 'operator.write', 'operator.admin', 'operator.approvals', 'operator.pairing'],
+      sessionId: diagnosticState.sessionId || null,
+      connectPayload: diagnosticState.connectPayload || null,
     },
     errors: {
       lastError: diagnosticState.lastError,

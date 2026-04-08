@@ -330,6 +330,7 @@ function initializeComponents() {
     // Logs panel (optional, doesn't block init)
     if (window.LogsPanelComponent) {
       window.logsPanel = new LogsPanelComponent();
+      window.logsPanel.startStreaming();
     }
     console.log('[APP] All components initialized');
   } catch (error) {
