@@ -260,7 +260,7 @@ function sendConnectRequest(resolve, reject, connectionTimeout) {
       locale: 'en-US',
       userAgent: 'openclaw-dashboard/1.0.0',
       role: 'operator',
-      scopes: ['operator.read', 'operator.admin'],
+      scopes: ['operator.read', 'operator.write', 'operator.admin', 'operator.approvals', 'operator.pairing'],
       caps: [],
       auth: {
         token: GATEWAY_API_KEY || undefined,
