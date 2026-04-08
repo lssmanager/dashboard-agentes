@@ -123,9 +123,17 @@ async function getConnection() {
     gwLog('info', `Connecting to: ${GATEWAY_URL} (attempt #${diagnosticState.connectionAttempts})`);
 
     try {
+      // Origin header must match the Gateway host for Control UI origin check.
+      // The Gateway's checkBrowserOrigin() rejects connections without a valid Origin.
+      // Since we're connecting from a Docker container on the same network,
+      // we set origin to the Gateway's own address.
+      const gatewayHttpUrl = GATEWAY_URL.replace('ws://', 'http://').replace('wss://', 'https://');
       persistentWs = new WebSocket(GATEWAY_URL, {
         handshakeTimeout: 8000,
         maxPayload: 25 * 1024 * 1024,
+        headers: {
+          'Origin': gatewayHttpUrl,
+        },
       });
 
       const connectionTimeout = setTimeout(() => {
