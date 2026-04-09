@@ -12,6 +12,7 @@ const {
   getSessions,
   healthCheck,
   inferProvider,
+  normalizeModelString,
   getDiagnostics,
   getLogBuffer
 } = require('./gateway-client');
@@ -92,15 +93,23 @@ function mergeData(apiAgents, apiWorkspaces, localData) {
       const agentId = apiAgent.id || apiAgent.name;
       const localAgent = localWs.agents?.[agentId] || {};
 
+      const normalizedModel = normalizeModelString(apiAgent.model) || 'unknown';
+      const normalizedChannels = Array.isArray(apiAgent.channels) ? apiAgent.channels : [];
+      const normalizedStatus = typeof apiAgent.status === 'string'
+        ? apiAgent.status
+        : apiAgent.status != null
+          ? String(apiAgent.status?.label || apiAgent.status)
+          : 'ACTIVE';
+
       const agent = {
         id: agentId,
         name: apiAgent.name || agentId,
-        model: apiAgent.model || 'unknown',
-        provider: apiAgent.provider || inferProvider(apiAgent.model),
+        model: normalizedModel,
+        provider: apiAgent.provider || inferProvider(normalizedModel),
         role: localAgent.role || apiAgent.role || 'subagent',
         parent: localAgent.parent || apiAgent.parent || null,
-        status: apiAgent.status || 'ACTIVE',
-        channels: apiAgent.channels || [],
+        status: normalizedStatus,
+        channels: normalizedChannels,
         lastActive: apiAgent.lastActive || null
       };
 
