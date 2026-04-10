@@ -422,9 +422,24 @@ async function callGateway(method, params = {}) {
 /**
  * Infer provider from model name
  */
+function normalizeModelString(modelValue) {
+  if (!modelValue) return '';
+  if (typeof modelValue === 'string') return modelValue;
+  if (typeof modelValue === 'object') {
+    const candidate = modelValue.id
+      || modelValue.name
+      || modelValue.model
+      || modelValue.slug
+      || modelValue.label;
+    return typeof candidate === 'string' ? candidate : String(candidate ?? modelValue);
+  }
+  return String(modelValue);
+}
+
 function inferProvider(modelStr) {
-  if (!modelStr) return 'unknown';
-  const model = modelStr.toLowerCase();
+  const normalized = normalizeModelString(modelStr);
+  if (!normalized) return 'unknown';
+  const model = typeof normalized === 'string' ? normalized.toLowerCase() : String(normalized).toLowerCase();
   if (model.includes('gpt') || model.includes('openai') || model.includes('o1') || model.includes('o3')) return 'openai';
   if (model.includes('grok') || model.includes('xai')) return 'xai';
   if (model.includes('claude') || model.includes('anthropic')) return 'anthropic';
@@ -451,17 +466,28 @@ async function discoverAgents() {
     : Array.isArray(raw?.agents) ? raw.agents
     : [];
 
-  const agents = agentList.map(agent => ({
-    id: agent.id || agent.agentId || agent.name || 'unknown',
-    name: agent.name || agent.displayName || agent.id || 'Unknown Agent',
-    model: agent.model || agent.defaultModel || 'unknown',
-    provider: inferProvider(agent.model || agent.defaultModel),
-    role: agent.role || (agent.isDefault ? 'orchestrator' : 'subagent'),
-    parent: agent.parentId || agent.parent || null,
-    status: agent.status || 'ACTIVE',
-    channels: agent.channels || [],
-    lastActive: agent.lastActive || agent.lastActiveAt || null,
-  }));
+  const agents = agentList.map(agent => {
+    const rawModel = agent.model || agent.defaultModel || 'unknown';
+    const normalizedModel = normalizeModelString(rawModel) || 'unknown';
+    const normalizedStatus = typeof agent.status === 'string'
+      ? agent.status
+      : agent.status != null
+        ? String(agent.status?.label || agent.status)
+        : 'ACTIVE';
+    const normalizedChannels = Array.isArray(agent.channels) ? agent.channels : [];
+
+    return {
+      id: agent.id || agent.agentId || agent.name || 'unknown',
+      name: agent.name || agent.displayName || agent.id || 'Unknown Agent',
+      model: normalizedModel,
+      provider: inferProvider(normalizedModel),
+      role: agent.role || (agent.isDefault ? 'orchestrator' : 'subagent'),
+      parent: agent.parentId || agent.parent || null,
+      status: normalizedStatus,
+      channels: normalizedChannels,
+      lastActive: agent.lastActive || agent.lastActiveAt || null,
+    };
+  });
 
   gwLog('info', `Discovered ${agents.length} agent(s)`);
   return { agents, offline: result.offline };
@@ -612,6 +638,7 @@ module.exports = {
   getSessions,
   healthCheck,
   inferProvider,
+  normalizeModelString,
   getDiagnostics,
   getLogBuffer
 };

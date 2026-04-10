@@ -52,9 +52,10 @@ class DiagnosticService {
     this.diagnostics.dataLoading = true;
 
     // 3. Extract gateway info from response
-    const gatewayUrl = stateResult.data.gatewayUrl || 'unknown';
+    const gatewayUrl = stateResult.data.gatewayUrl || stateResult.data.diagnostics?.config?.GATEWAY_URL || 'unknown';
     this.diagnostics.gatewayUrl = gatewayUrl;
-    this.diagnostics.gatewayReachable = stateResult.data.connected;
+    this.diagnostics.gatewayReachable = !!stateResult.data.connected;
+    this.diagnostics.offline = !!stateResult.data.offline;
 
     // 4. Check data availability
     const workspaces = stateResult.data.workspaces || [];
@@ -67,6 +68,8 @@ class DiagnosticService {
     if (!this.diagnostics.dataAvailable) {
       if (stateResult.data.connected) {
         this.diagnostics.lastError = 'Connected to Gateway but no workspaces or agents found. Check openclaw.yaml configuration.';
+      } else if (stateResult.data.offline) {
+        this.diagnostics.lastError = 'Gateway is unreachable. Dashboard backend is up, but live data is unavailable.';
       } else {
         this.diagnostics.lastError = 'Gateway is unreachable. Check GATEWAY_URL and network connectivity.';
       }
@@ -153,7 +156,7 @@ class DiagnosticService {
         status: 'GATEWAY_UNREACHABLE',
         title: '⚠️ Gateway Offline',
         message: `OpenClaw Gateway (${this.diagnostics.gatewayUrl}) is not responding. Using cached data if available.`,
-        severity: 'warning'
+        severity: this.diagnostics.dataAvailable ? 'warning' : 'critical'
       };
     }
 

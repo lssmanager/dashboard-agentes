@@ -9,7 +9,20 @@ const cors = require('cors');
 const path = require('path');
 const apiRoutes = require('./routes/api');
 
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = 3000;
+const envPort = parseInt(process.env.PORT || '', 10);
+const gatewayPort = (() => {
+  try {
+    const gatewayUrl = process.env.GATEWAY_URL || 'ws://openclaw:18789';
+    return new URL(gatewayUrl.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:')).port || '80';
+  } catch {
+    return '18789';
+  }
+})();
+
+const PORT = Number.isInteger(envPort) && envPort > 0 && String(envPort) !== String(gatewayPort)
+  ? envPort
+  : DEFAULT_PORT;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 const app = express();
@@ -59,8 +72,11 @@ app.listen(PORT, '0.0.0.0', () => {
 ║  Environment: ${NODE_ENV.toUpperCase().padEnd(24)}║
 ╚════════════════════════════════════════╝
   `);
-  console.log(`Gateway: ${process.env.GATEWAY_URL || 'http://openclaw-gateway:18789'}`);
+  console.log(`Gateway: ${process.env.GATEWAY_URL || 'ws://openclaw:18789'}`);
   console.log(`Data Directory: ${process.env.DATA_FILE || '/app/data/workspaces-topology.json'}`);
+  if (process.env.PORT && String(process.env.PORT) === String(gatewayPort)) {
+    console.warn(`[SERVER] Ignoring PORT=${process.env.PORT} because it conflicts with the Gateway port. Using ${PORT} instead.`);
+  }
 });
 
 // Graceful shutdown

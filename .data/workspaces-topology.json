@@ -1,0 +1,14 @@
+{
+  "workspaces": {},
+  "last_cache": {
+    "agents": [],
+    "workspaces": [
+      {
+        "id": "default",
+        "name": "Default Workspace",
+        "type": "orchestrator"
+      }
+    ],
+    "timestamp": 1775774330508
+  }
+}
