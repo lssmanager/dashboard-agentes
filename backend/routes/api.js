@@ -67,29 +67,95 @@ function mergeData(apiAgents, apiWorkspaces, localData) {
     agents: {}
   };
 
-  // Ensure apiWorkspaces is an array
-  let workspaceList = Array.isArray(apiWorkspaces) ? apiWorkspaces : [];
+  const normalizedWorkspaceMap = new Map();
+  const sourceWorkspaces = Array.isArray(apiWorkspaces) ? apiWorkspaces : [];
 
-  // If no workspaces but we have agents, create default workspace
-  if (workspaceList.length === 0 && apiAgents.length > 0) {
-    workspaceList.push({ id: 'default', name: 'Default Workspace', type: 'orchestrator' });
+  for (const apiWs of sourceWorkspaces) {
+    const wsId = apiWs?.id || 'default';
+    normalizedWorkspaceMap.set(wsId, {
+      id: wsId,
+      name: apiWs?.name || wsId,
+      path: apiWs?.path || null,
+      type: apiWs?.type || 'workspace'
+    });
   }
+
+  for (const apiAgent of apiAgents) {
+    const wsId = apiAgent.workspaceId || 'default';
+    if (!normalizedWorkspaceMap.has(wsId)) {
+      normalizedWorkspaceMap.set(wsId, {
+        id: wsId,
+        name: apiAgent.workspaceName || wsId,
+        path: apiAgent.workspacePath || null,
+        type: apiAgent.workspaceType || 'workspace'
+      });
+    }
+  }
+
+  if (normalizedWorkspaceMap.size === 1 && normalizedWorkspaceMap.has('default')) {
+    const fallbackGroups = new Map();
+    for (const apiAgent of apiAgents) {
+      const fallbackKey = apiAgent.workspacePath || apiAgent.workspaceName || apiAgent.id || 'default';
+      if (!fallbackGroups.has(fallbackKey)) {
+        fallbackGroups.set(fallbackKey, {
+          id: apiAgent.workspaceId && apiAgent.workspaceId !== 'default' ? apiAgent.workspaceId : String(fallbackKey),
+          name: apiAgent.workspaceName || apiAgent.name || String(fallbackKey),
+          path: apiAgent.workspacePath || null,
+          type: apiAgent.workspaceType || 'workspace'
+        });
+      }
+    }
+
+    if (fallbackGroups.size > 1) {
+      normalizedWorkspaceMap.clear();
+      for (const [fallbackKey, workspace] of fallbackGroups.entries()) {
+        const normalizedId = workspace.path
+          ? String(workspace.path).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : String(workspace.id || fallbackKey).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'default';
+        normalizedWorkspaceMap.set(normalizedId, {
+          ...workspace,
+          id: normalizedId
+        });
+      }
+
+      apiAgents = apiAgents.map(agent => {
+        const fallbackKey = agent.workspacePath || agent.workspaceName || agent.id || 'default';
+        const workspace = fallbackGroups.get(fallbackKey);
+        const normalizedId = workspace?.path
+          ? String(workspace.path).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+          : String(workspace?.id || fallbackKey).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'default';
+        return {
+          ...agent,
+          workspaceId: normalizedId,
+          workspaceName: workspace?.name || agent.workspaceName || normalizedId,
+          workspacePath: workspace?.path || agent.workspacePath || null
+        };
+      });
+    }
+  }
+
+  if (normalizedWorkspaceMap.size === 0 && apiAgents.length > 0) {
+    normalizedWorkspaceMap.set('default', { id: 'default', name: 'Default Workspace', type: 'orchestrator', path: null });
+  }
+
+  const workspaceList = Array.from(normalizedWorkspaceMap.values());
 
   for (const apiWs of workspaceList) {
     const wsId = apiWs.id || 'default';
     const localWs = localData.workspaces?.[wsId] || {};
+    const workspaceAgents = apiAgents.filter(agent => (agent.workspaceId || 'default') === wsId);
 
     const workspace = {
       id: wsId,
       name: apiWs.name || wsId,
+      path: apiWs.path || null,
       type: localWs.type || apiWs.type || 'orchestrator',
       description: localWs.description || apiWs.description || '',
       parentChildMap: localWs.parentChildMap || {},
       agents: []
     };
 
-    // Add agents to this workspace
-    for (const apiAgent of apiAgents) {
+    for (const apiAgent of workspaceAgents) {
       const agentId = apiAgent.id || apiAgent.name;
       const localAgent = localWs.agents?.[agentId] || {};
 
@@ -110,7 +176,10 @@ function mergeData(apiAgents, apiWorkspaces, localData) {
         parent: localAgent.parent || apiAgent.parent || null,
         status: normalizedStatus,
         channels: normalizedChannels,
-        lastActive: apiAgent.lastActive || null
+        lastActive: apiAgent.lastActive || null,
+        workspaceId: wsId,
+        workspaceName: apiWs.name || wsId,
+        workspacePath: apiWs.path || null
       };
 
       workspace.agents.push(agent);
@@ -119,6 +188,8 @@ function mergeData(apiAgents, apiWorkspaces, localData) {
     merged.workspaces.push(workspace);
     merged.agents[wsId] = workspace.agents;
   }
+
+  merged.workspaces.sort((a, b) => a.name.localeCompare(b.name));
 
   // Update last_cache with API data
   merged.last_cache = {
