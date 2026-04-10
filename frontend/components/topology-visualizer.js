@@ -5,7 +5,7 @@
 
 class TopologyVisualizer {
   constructor() {
-    this.container = document.getElementById('topologyMap');
+    this.container = null;
     this.layout = 'orchestrator';
     this.svg = null;
     this.zoom = null;
@@ -24,11 +24,12 @@ class TopologyVisualizer {
   }
 
   render(workspace, topology, agentColors) {
+    this.container = document.getElementById('topologyMap');
     if (!this.container) return;
 
     this.container.innerHTML = '';
 
-    const width = this.container.clientWidth;
+    const width = Math.max(this.container.clientWidth || 0, 320);
     const height = 400;
 
     // Create SVG
@@ -54,6 +55,16 @@ class TopologyVisualizer {
       status: a.status,
       model: a.model
     }));
+
+    if (nodes.length === 0) {
+      g.append('text')
+        .attr('x', width / 2)
+        .attr('y', height / 2)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#9AA7BD')
+        .text('No agents to display');
+      return null;
+    }
 
     // Create links based on topology
     const links = [];

@@ -111,12 +111,13 @@ async function fetchDashboardState() {
     const newState = result.data;
     console.log('[APP] ✅ Received data from backend');
     console.log(`[APP]   - Connected: ${newState.connected}`);
+    console.log(`[APP]   - Offline: ${!!newState.offline}`);
     console.log(`[APP]   - Workspaces: ${newState.workspaces?.length || 0}`);
     console.log(`[APP]   - Total Agents: ${Object.values(newState.agents || {}).flat().length}`);
 
     // Update connection status
-    appState.connected = newState.connected;
-    appState.lastFetch = newState.lastFetch;
+    appState.connected = !!newState.connected;
+    appState.lastFetch = newState.lastFetch || Date.now();
 
     // Handle workspace updates
     if (JSON.stringify(appState.workspaces) !== JSON.stringify(newState.workspaces)) {
@@ -151,6 +152,10 @@ async function fetchDashboardState() {
     if (topologyResult.data) {
       appState.topology = topologyResult.data.workspaces || {};
       console.log(`[APP]   - Topology loaded`);
+    }
+
+    if (window.diagnosticPanel?.isVisible) {
+      window.diagnosticPanel.hide();
     }
 
     return true;
@@ -241,8 +246,11 @@ function updateLastRefreshTime() {
       if (appState.connected) {
         el.textContent = `✅ Synced ${timeStr}`;
         el.classList.remove('loading');
+      } else if (appState.lastFetch) {
+        el.textContent = `⚠️ Offline, last sync ${timeStr}`;
+        el.classList.remove('loading');
       } else {
-        el.textContent = `⏳ Loading...`;
+        el.textContent = '⏳ Loading...';
         el.classList.add('loading');
       }
     }
@@ -277,8 +285,13 @@ async function refresh() {
     if (statusMsg.severity === 'critical') {
       console.error(`[APP] 🚨 CRITICAL: ${statusMsg.message}`);
       window.diagnosticPanel.render(window.diagnosticService);
-    } else if (statusMsg.severity === 'warning') {
-      console.warn(`[APP] ⚠️ WARNING: ${statusMsg.message}`);
+    } else {
+      if (window.diagnosticPanel?.isVisible) {
+        window.diagnosticPanel.hide();
+      }
+      if (statusMsg.severity === 'warning') {
+        console.warn(`[APP] ⚠️ WARNING: ${statusMsg.message}`);
+      }
     }
   }
 }

@@ -165,10 +165,13 @@ router.get('/dashboard/state', async (req, res) => {
     }
     const sessions = Array.from(uniqueSessions.values()).slice(0, 10);
 
+    const offline = !!(agentsResult.offline || workspacesResult.offline);
+
     // Response
     res.json({
-      connected: isHealthy && !agentsResult.offline,
-      offline: agentsResult.offline || workspacesResult.offline,
+      connected: isHealthy && !offline,
+      offline,
+      gatewayUrl: process.env.GATEWAY_URL || 'ws://openclaw:18789',
       workspaces: merged.workspaces,
       agents: merged.agents,
       sessions,
