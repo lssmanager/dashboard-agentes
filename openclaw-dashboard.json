@@ -1,0 +1,228 @@
+// ~/.openclaw/openclaw-dashboard.json
+// CLUSTER: dashboard-agentes
+// Guild: 1488331895598219294
+// Workspace aislado: ~/.openclaw/workspace-dashboard
+
+{
+  gateway: {
+    mode: "local",
+    bind: "loopback",
+    auth: { mode: "token", token: "REEMPLAZAR-openssl-rand-hex-32" },
+  },
+
+  agents: {
+    list: [
+
+      // MAIN — fallback global (workspace raíz, compartido)
+      {
+        id: "main",
+        name: "Main",
+        workspace: "~/.openclaw/workspace",
+        model: "openai/gpt-5.4",
+        modelFallback: [
+          "github-copilot/gpt-4.1",
+          "deepseek/deepseek-chat",
+          "openrouter/nvidia/nemotron-3-super:free",
+        ],
+        tools: { profile: "coding" },
+      },
+
+      // ── CLUSTER dashboard-agentes ───────────────────────
+      // agents/orquestador-panel  → Panel 🗂️     #panel     1491563594184130723
+      // agents/dev-panel          → Dev Panel 💻  #devia     1491582962637209750
+      // agents/connectivity-panel → Conn 🔌      #contreras 1491583250974511244
+      // agents/monitoring-panel   → Monitor 📊   #monica    1491583332478095400
+      // agents/ui-fixer-panel     → subagente (sessions_spawn)
+      // agents/api-coder-panel    → subagente (sessions_spawn)
+      // agents/ws-probe-panel     → subagente (sessions_spawn)
+      // agents/cost-watcher-panel → subagente (sessions_spawn)
+
+      {
+        id: "orquestador-panel",
+        name: "Panel 🗂️",
+        workspace: "~/.openclaw/workspace-dashboard",
+        agentDir: "~/.openclaw/workspace-dashboard/dashboard-agentes/agents/orquestador-panel",
+        model: "openai/gpt-5.4-mini",
+        modelFallback: [
+          "github-copilot/gpt-4.1",
+          "deepseek/deepseek-chat",
+          "openrouter/meta-llama/llama-3.3-70b:free",
+        ],
+        tools: {
+          profile: "coding",
+          allow: ["sessions_spawn", "sessions_send", "subagents", "group:memory"],
+          deny: ["group:runtime"],
+          fs: { workspaceOnly: true },
+          exec: { security: "deny", ask: "always" },
+        },
+      },
+
+      {
+        id: "dev-panel",
+        name: "Dev Panel 💻",
+        workspace: "~/.openclaw/workspace-dashboard",
+        agentDir: "~/.openclaw/workspace-dashboard/dashboard-agentes/agents/dev-panel",
+        model: "openai/gpt-5.3-codex",
+        modelFallback: [
+          "deepseek/deepseek-reasoner",
+          "openrouter/qwen/qwen-code:free",
+          "openrouter/gpt-oss-120b:free",
+        ],
+        tools: {
+          profile: "coding",
+          allow: ["group:fs", "group:runtime", "group:web"],
+          fs: { workspaceOnly: true },
+          exec: { security: "sandbox", ask: "never" },
+        },
+      },
+
+      {
+        id: "connectivity-panel",
+        name: "Conn 🔌",
+        workspace: "~/.openclaw/workspace-dashboard",
+        agentDir: "~/.openclaw/workspace-dashboard/dashboard-agentes/agents/connectivity-panel",
+        model: "openai/gpt-5.4-mini",
+        modelFallback: [
+          "github-copilot/gpt-4.1",
+          "deepseek/deepseek-chat",
+          "openrouter/meta-llama/llama-3.3-70b:free",
+        ],
+        tools: {
+          profile: "coding",
+          allow: ["group:web", "group:runtime", "group:fs"],
+          fs: { workspaceOnly: true },
+          exec: { security: "sandbox", ask: "never" },
+        },
+      },
+
+      {
+        id: "monitoring-panel",
+        name: "Monitor 📊",
+        workspace: "~/.openclaw/workspace-dashboard",
+        agentDir: "~/.openclaw/workspace-dashboard/dashboard-agentes/agents/monitoring-panel",
+        model: "openai/gpt-5.4-mini",
+        modelFallback: [
+          "github-copilot/gpt-4.1",
+          "deepseek/deepseek-chat",
+          "openrouter/meta-llama/llama-3.3-70b:free",
+        ],
+        tools: {
+          profile: "coding",
+          allow: ["group:web", "group:runtime", "group:memory"],
+          fs: { workspaceOnly: true },
+          exec: { security: "sandbox", ask: "never" },
+        },
+      },
+
+      // ── Subagentes — sin binding, solo via sessions_spawn ──
+
+      {
+        id: "ui-fixer-panel",
+        name: "UI Fixer 🎨",
+        workspace: "~/.openclaw/workspace-dashboard",
+        agentDir: "~/.openclaw/workspace-dashboard/dashboard-agentes/agents/ui-fixer-panel",
+        model: "openai/gpt-5.3-codex",
+        modelFallback: [
+          "deepseek/deepseek-reasoner",
+          "openrouter/qwen/qwen-code:free",
+          "openrouter/gpt-oss-120b:free",
+        ],
+        tools: {
+          profile: "coding",
+          allow: ["group:fs", "group:runtime", "group:ui"],
+          fs: { workspaceOnly: true },
+          exec: { security: "sandbox", ask: "never" },
+        },
+      },
+
+      {
+        id: "api-coder-panel",
+        name: "API Coder 🔗",
+        workspace: "~/.openclaw/workspace-dashboard",
+        agentDir: "~/.openclaw/workspace-dashboard/dashboard-agentes/agents/api-coder-panel",
+        model: "openai/gpt-5.3-codex",
+        modelFallback: [
+          "deepseek/deepseek-reasoner",
+          "openrouter/qwen/qwen-code:free",
+          "openrouter/gpt-oss-120b:free",
+        ],
+        tools: {
+          profile: "coding",
+          allow: ["group:fs", "group:runtime", "group:web"],
+          fs: { workspaceOnly: true },
+          exec: { security: "sandbox", ask: "never" },
+        },
+      },
+
+      {
+        id: "ws-probe-panel",
+        name: "WS Probe 🔍",
+        workspace: "~/.openclaw/workspace-dashboard",
+        agentDir: "~/.openclaw/workspace-dashboard/dashboard-agentes/agents/ws-probe-panel",
+        model: "openai/gpt-5.4-mini",
+        modelFallback: [
+          "github-copilot/gpt-4.1",
+          "deepseek/deepseek-chat",
+          "openrouter/meta-llama/llama-3.3-70b:free",
+        ],
+        tools: {
+          profile: "coding",
+          allow: ["group:web", "group:runtime"],
+          fs: { workspaceOnly: true },
+          exec: { security: "sandbox", ask: "never" },
+        },
+      },
+
+      {
+        id: "cost-watcher-panel",
+        name: "Cost Watcher 💰",
+        workspace: "~/.openclaw/workspace-dashboard",
+        agentDir: "~/.openclaw/workspace-dashboard/dashboard-agentes/agents/cost-watcher-panel",
+        model: "openai/gpt-5.4-mini",
+        modelFallback: [
+          "github-copilot/gpt-4.1",
+          "deepseek/deepseek-chat",
+          "openrouter/meta-llama/llama-3.3-70b:free",
+        ],
+        tools: {
+          profile: "minimal",
+          allow: ["group:memory", "gateway"],
+          deny: ["group:runtime", "group:fs", "sessions_spawn"],
+          exec: { security: "deny", ask: "always" },
+        },
+      },
+
+    ],
+  },
+
+  bindings: [
+    // Agentes principales con canal propio
+    { agentId: "orquestador-panel",   match: { channel: "discord", guildId: "1488331895598219294", peer: "1491563594184130723" } },
+    { agentId: "dev-panel",           match: { channel: "discord", guildId: "1488331895598219294", peer: "1491582962637209750" } },
+    { agentId: "connectivity-panel",  match: { channel: "discord", guildId: "1488331895598219294", peer: "1491583250974511244" } },
+    { agentId: "monitoring-panel",    match: { channel: "discord", guildId: "1488331895598219294", peer: "1491583332478095400" } },
+    // Subagentes — sin binding (solo sessions_spawn, sin canal Discord)
+    // fallback al main para todo lo demás del guild
+    { agentId: "main", match: { channel: "discord", guildId: "1488331895598219294" } },
+  ],
+
+  session: { dmScope: "per-channel-peer" },
+
+  sandbox: {
+    mode: "all",
+    scope: "agent",
+    workspaceAccess: "rw",
+    docker: {
+      setupCommand: "apt-get update -qq && apt-get install -y git curl nodejs npm",
+    },
+  },
+
+  channels: {
+    discord: {
+      dmPolicy: "pairing",
+      guilds: {
+        "1488331895598219294": { requireMention: true },
+      },
+    },
+  },
+}
