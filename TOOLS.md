@@ -1,40 +1,54 @@
 # TOOLS.md - Local Notes
 
-Skills define _how_ tools work. This file is for _your_ specifics — the stuff that's unique to your setup.
+_Configuración específica del entorno del cluster panel. Aquí van los detalles que son únicos de este setup._
 
-## What Goes Here
+## Cluster: panel
 
-Things like:
+### Agentes Principales
 
-- Camera names and locations
-- SSH hosts and aliases
-- Preferred voices for TTS
-- Speaker/room names
-- Device nicknames
-- Anything environment-specific
+| ID | Nombre | Canal | Canal ID | Modelo |
+|----|--------|-------|----------|--------|
+| orquestador-panel | Panel 🗂️ | #panel | 1491563594184130723 | gpt-5.4-mini |
+| dev-panel | Dev Panel 💻 | #devia | 1491582962637209750 | gpt-5.3-codex |
+| connectivity-panel | Conn 🔌 | #contreras | 1491583250974511244 | gpt-5.4-mini |
+| monitoring-panel | Monitor 📊 | #monica | 1491583332478095400 | gpt-5.4-mini |
 
-## Examples
+### Subagentes (sin canal propio)
 
-```markdown
-### Cameras
+| ID | Nombre | Especialidad |
+|----|--------|-------------|
+| ui-fixer-panel | UI Fixer 🎨 | Frontend, CSS, componentes UI |
+| api-coder-panel | API Coder 🔗 | Rutas API, lógica backend |
+| ws-probe-panel | WS Probe 🔍 | WebSocket, diagnósticos de red |
+| cost-watcher-panel | Cost Watcher 💰 | Costos API, optimización tokens |
 
-- living-room → Main area, 180° wide angle
-- front-door → Entrance, motion-triggered
+## Fallbacks por Modelo
 
-### SSH
-
-- home-server → 192.168.1.100, user: admin
-
-### TTS
-
-- Preferred voice: "Nova" (warm, slightly British)
-- Default speaker: Kitchen HomePod
+```
+gpt-5.4       → github-copilot/gpt-4.1 → deepseek/deepseek-chat → openrouter/nvidia/nemotron-3-super:free
+gpt-5.4-mini  → github-copilot/gpt-4.1 → deepseek/deepseek-chat → openrouter/meta-llama/llama-3.3-70b:free
+gpt-5.3-codex → deepseek/deepseek-reasoner → openrouter/qwen/qwen-code:free → openrouter/gpt-oss-120b:free
 ```
 
-## Why Separate?
+## Infraestructura
 
-Skills are shared. Your setup is yours. Keeping them apart means you can update skills without losing your notes, and share skills without leaking your infrastructure.
+```
+Gateway URL:    ws://openclaw:18789
+Data file:      /app/data/workspaces-topology.json
+Deploy:         Coolify + Nixpacks
+Proxy:          Traefik + Cloudflare
+Discord:        Bot conectado al cluster panel
+```
+
+## Canales Discord → Canal ID
+
+```
+#panel     → 1491563594184130723  (Panel — Orquestador)
+#devia     → 1491582962637209750  (Dev Panel)
+#contreras → 1491583250974511244  (Conn)
+#monica    → 1491583332478095400  (Monitor)
+```
 
 ---
 
-Add whatever helps you do your job. This is your cheat sheet.
+_Mantén este archivo actualizado cuando cambien IDs, modelos o canales._
