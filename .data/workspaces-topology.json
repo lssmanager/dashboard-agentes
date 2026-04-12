@@ -1,14 +1,143 @@
 {
-  "workspaces": {},
+  "workspaces": {
+    "panel": {
+      "id": "panel",
+      "name": "Panel Cluster",
+      "type": "orchestrator",
+      "agents": [
+        {
+          "id": "orquestador-panel",
+          "name": "Panel 🗂️",
+          "type": "principal",
+          "role": "orchestrator",
+          "model": "gpt-5.4-mini",
+          "fallbacks": [
+            "github-copilot/gpt-4.1",
+            "deepseek/deepseek-chat",
+            "openrouter/meta-llama/llama-3.3-70b:free"
+          ],
+          "discord_channel": "panel",
+          "discord_channel_id": "1491563594184130723"
+        },
+        {
+          "id": "dev-panel",
+          "name": "Dev Panel 💻",
+          "type": "principal",
+          "role": "development",
+          "model": "gpt-5.3-codex",
+          "fallbacks": [
+            "deepseek/deepseek-reasoner",
+            "openrouter/qwen/qwen-code:free",
+            "openrouter/gpt-oss-120b:free"
+          ],
+          "discord_channel": "devia",
+          "discord_channel_id": "1491582962637209750"
+        },
+        {
+          "id": "connectivity-panel",
+          "name": "Conn 🔌",
+          "type": "principal",
+          "role": "connectivity",
+          "model": "gpt-5.4-mini",
+          "fallbacks": [
+            "github-copilot/gpt-4.1",
+            "deepseek/deepseek-chat",
+            "openrouter/meta-llama/llama-3.3-70b:free"
+          ],
+          "discord_channel": "contreras",
+          "discord_channel_id": "1491583250974511244"
+        },
+        {
+          "id": "monitoring-panel",
+          "name": "Monitor 📊",
+          "type": "principal",
+          "role": "monitoring",
+          "model": "gpt-5.4-mini",
+          "fallbacks": [
+            "github-copilot/gpt-4.1",
+            "deepseek/deepseek-chat",
+            "openrouter/meta-llama/llama-3.3-70b:free"
+          ],
+          "discord_channel": "monica",
+          "discord_channel_id": "1491583332478095400"
+        },
+        {
+          "id": "ui-fixer-panel",
+          "name": "UI Fixer 🎨",
+          "type": "subagent",
+          "role": "ui-frontend",
+          "model": "gpt-5.4-mini",
+          "fallbacks": [
+            "github-copilot/gpt-4.1",
+            "deepseek/deepseek-chat",
+            "openrouter/meta-llama/llama-3.3-70b:free"
+          ],
+          "discord_channel": null,
+          "discord_channel_id": null
+        },
+        {
+          "id": "api-coder-panel",
+          "name": "API Coder 🔗",
+          "type": "subagent",
+          "role": "api-backend",
+          "model": "gpt-5.3-codex",
+          "fallbacks": [
+            "deepseek/deepseek-reasoner",
+            "openrouter/qwen/qwen-code:free",
+            "openrouter/gpt-oss-120b:free"
+          ],
+          "discord_channel": null,
+          "discord_channel_id": null
+        },
+        {
+          "id": "ws-probe-panel",
+          "name": "WS Probe 🔍",
+          "type": "subagent",
+          "role": "websocket-diagnostics",
+          "model": "gpt-5.4-mini",
+          "fallbacks": [
+            "github-copilot/gpt-4.1",
+            "deepseek/deepseek-chat",
+            "openrouter/meta-llama/llama-3.3-70b:free"
+          ],
+          "discord_channel": null,
+          "discord_channel_id": null
+        },
+        {
+          "id": "cost-watcher-panel",
+          "name": "Cost Watcher 💰",
+          "type": "subagent",
+          "role": "cost-monitoring",
+          "model": "gpt-5.4-mini",
+          "fallbacks": [
+            "github-copilot/gpt-4.1",
+            "deepseek/deepseek-chat",
+            "openrouter/meta-llama/llama-3.3-70b:free"
+          ],
+          "discord_channel": null,
+          "discord_channel_id": null
+        }
+      ]
+    }
+  },
   "last_cache": {
-    "agents": [],
+    "agents": [
+      { "id": "orquestador-panel", "name": "Panel 🗂️", "status": "unknown" },
+      { "id": "dev-panel", "name": "Dev Panel 💻", "status": "unknown" },
+      { "id": "connectivity-panel", "name": "Conn 🔌", "status": "unknown" },
+      { "id": "monitoring-panel", "name": "Monitor 📊", "status": "unknown" },
+      { "id": "ui-fixer-panel", "name": "UI Fixer 🎨", "status": "unknown" },
+      { "id": "api-coder-panel", "name": "API Coder 🔗", "status": "unknown" },
+      { "id": "ws-probe-panel", "name": "WS Probe 🔍", "status": "unknown" },
+      { "id": "cost-watcher-panel", "name": "Cost Watcher 💰", "status": "unknown" }
+    ],
     "workspaces": [
       {
-        "id": "default",
-        "name": "Default Workspace",
+        "id": "panel",
+        "name": "Panel Cluster",
         "type": "orchestrator"
       }
     ],
-    "timestamp": 1775774330508
+    "timestamp": 1744495200000
   }
 }
