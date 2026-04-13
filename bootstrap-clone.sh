@@ -1,79 +1,113 @@
 #!/usr/bin/env bash
 # bootstrap-clone.sh — Cluster dashboard-agentes
-# Clona el repo en workspace-dashboard y copia los archivos de identidad
-# a las rutas exactas que OpenClaw espera (agentDir de cada agente).
 #
-# Uso:
+# Usa `gh` (GitHub CLI) en lugar de `git` directo para evitar problemas
+# de credenciales HTTPS en entornos donde gh ya está autenticado.
+#
+# PREREQUISITO: gh auth status  →  debe mostrar cuenta activa
+#
+# Uso (primera vez o cualquier momento):
+#   bash <(gh api repos/lssmanager/dashboard-agentes/contents/bootstrap-clone.sh --jq '.content' | base64 -d)
+#
+# O si el repo ya está clonado:
 #   bash ~/.openclaw/workspace-dashboard/dashboard-agentes/bootstrap-clone.sh
-# O bien desde cualquier lugar:
-#   bash <(curl -fsSL https://raw.githubusercontent.com/lssmanager/dashboard-agentes/main/bootstrap-clone.sh)
 
 set -euo pipefail
 
+REPO_SLUG="lssmanager/dashboard-agentes"
 WORKSPACE="$HOME/.openclaw/workspace-dashboard"
-REPO_URL="https://github.com/lssmanager/dashboard-agentes.git"
 REPO_DIR="$WORKSPACE/dashboard-agentes"
 
-echo "🔧 Bootstrap Cluster dashboard-agentes"
-echo "   Workspace: $WORKSPACE"
+echo ""
+echo "🦞  Bootstrap — Cluster dashboard-agentes"
+echo "   Workspace : $WORKSPACE"
+echo "   Repo dir  : $REPO_DIR"
+echo ""
 
-# 1. Crear workspace si no existe
+# ── 0. Verificar gh disponible y autenticado ──────────────────────────────────
+if ! command -v gh &>/dev/null; then
+  echo "❌  gh (GitHub CLI) no encontrado."
+  echo "    Instalar: https://cli.github.com"
+  exit 1
+fi
+if ! gh auth status &>/dev/null; then
+  echo "❌  gh no está autenticado. Ejecutar: gh auth login"
+  exit 1
+fi
+echo "✅  gh autenticado como: $(gh api user --jq '.login')"
+echo ""
+
+# ── 1. Crear workspace ────────────────────────────────────────────────────────
 mkdir -p "$WORKSPACE"
 
-# 2. Clonar o actualizar el repo
+# ── 2. Clonar o sincronizar con gh ────────────────────────────────────────────
 if [ -d "$REPO_DIR/.git" ]; then
-  echo "📦 Actualizando repo existente..."
-  git -C "$REPO_DIR" pull --ff-only
+  echo "📦 Repo ya existe. Sincronizando con gh repo sync..."
+  cd "$REPO_DIR"
+  gh repo sync
+  cd - >/dev/null
+  echo "✅  Sync completado."
 else
-  echo "📦 Clonando repo..."
-  git clone "$REPO_URL" "$REPO_DIR"
+  echo "📦 Clonando con gh repo clone..."
+  gh repo clone "$REPO_SLUG" "$REPO_DIR"
+  echo "✅  Clone completado."
 fi
 
-# 3. Lista de agentes con sus directorios de destino
-# Formato: AGENT_ID:SUBDIR_EN_REPO
-declare -A AGENTS
-AGENTS=(
-  [orquestador-panel]="agents/orquestador-panel"
-  [dev-panel]="agents/dev-panel"
-  [connectivity-panel]="agents/connectivity-panel"
-  [monitoring-panel]="agents/monitoring-panel"
-  [ui-fixer-panel]="agents/ui-fixer-panel"
-  [api-coder-panel]="agents/api-coder-panel"
-  [ws-probe-panel]="agents/ws-probe-panel"
-  [cost-watcher-panel]="agents/cost-watcher-panel"
-)
+# ── 3. AgentDirs — mapeo agentId → subdirectorio dentro del repo ──────────────
+# Estos paths deben coincidir exactamente con agentDir en openclaw.json
+# Principales (con canal Discord)
+PRINCIPALES="orquestador-panel dev-panel connectivity-panel monitoring-panel"
+# Subagentes (sin canal, invocados vía sessions_spawn)
+SUBAGENTES="ui-fixer-panel api-coder-panel ws-probe-panel cost-watcher-panel"
 
-# 4. Archivos de identidad a copiar
-FILES=(AGENTS.md SOUL.md IDENTITY.md TOOLS.md USER.md HEARTBEAT.md BOOTSTRAP.md)
+get_subdir() {
+  echo "agents/$1"
+}
 
-# 5. Para cada agente: verificar que los archivos existen en el repo
+# ── 4. Archivos de identidad que OpenClaw inyecta como contexto ───────────────
+BOOTSTRAP_FILES=(AGENTS.md SOUL.md IDENTITY.md TOOLS.md USER.md HEARTBEAT.md BOOTSTRAP.md)
+
+# ── 5. Auditoría por agente ────────────────────────────────────────────────────
 echo ""
-echo "🤖 Verificando archivos por agente..."
-for AGENT_ID in "${!AGENTS[@]}"; do
-  AGENT_SUBDIR="${AGENTS[$AGENT_ID]}"
-  SRC_DIR="$REPO_DIR/$AGENT_SUBDIR"
-  echo ""
-  echo "  [$AGENT_ID] → $SRC_DIR"
-  for FILE in "${FILES[@]}"; do
-    if [ -f "$SRC_DIR/$FILE" ]; then
-      echo "    ✅ $FILE"
+echo "🤖 Auditando archivos de identidad por agente..."
+echo ""
+
+ALL_OK=true
+
+for AGENT_ID in $PRINCIPALES $SUBAGENTES; do
+  SUBDIR=$(get_subdir "$AGENT_ID")
+  AGENT_PATH="$REPO_DIR/$SUBDIR"
+  echo "  [$AGENT_ID]"
+  echo "    agentDir → $AGENT_PATH"
+  for FILE in "${BOOTSTRAP_FILES[@]}"; do
+    if [ -f "$AGENT_PATH/$FILE" ]; then
+      echo "    ✅  $FILE"
     else
-      echo "    ⚠️  FALTA: $FILE (agentDir lo necesita)"
+      echo "    ⚠️   FALTA: $FILE"
+      ALL_OK=false
     fi
   done
+  echo ""
+done
+
+# ── 6. Resultado ─────────────────────────────────────────────────────────────
+if [ "$ALL_OK" = true ]; then
+  echo "✅  Todos los archivos de identidad presentes. Cluster listo."
+else
+  echo "⚠️   Faltan archivos en algunos agentDirs."
+  echo "    Verifica que existan en el repo: https://github.com/$REPO_SLUG"
+fi
+
+echo ""
+echo "📋 AgentDirs activos:"
+for AGENT_ID in $PRINCIPALES $SUBAGENTES; do
+  echo "   $AGENT_ID  →  $REPO_DIR/agents/$AGENT_ID"
 done
 
 echo ""
-echo "✅ Bootstrap completo."
+echo "💡 OpenClaw lee los archivos DIRECTAMENTE desde el repo clonado."
+echo "   Para actualizar: cd $REPO_DIR && gh repo sync"
 echo ""
-echo "📋 AgentDirs configurados en openclaw.json:"
-for AGENT_ID in "${!AGENTS[@]}"; do
-  AGENT_SUBDIR="${AGENTS[$AGENT_ID]}"
-  echo "   $AGENT_ID → $REPO_DIR/$AGENT_SUBDIR"
-done
-echo ""
-echo "💡 Los agentDirs en openclaw.json YA apuntan a estas rutas."
-echo "   No se necesita copiar — OpenClaw lee directamente desde el repo clonado."
-echo ""
-echo "🔄 Para recargar el gateway después de un git pull:"
+echo "🔄 Para recargar el gateway sin reiniciar:"
 echo "   kill -USR1 \$(pgrep -f openclaw-gateway)"
+echo ""
