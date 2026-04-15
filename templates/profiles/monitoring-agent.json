@@ -1,0 +1,13 @@
+{
+  "id": "monitoring-agent",
+  "name": "Monitoring Agent",
+  "category": "monitoring",
+  "description": "Provide visibility into system health, anomalies, and operational signals with precision and low noise.",
+  "defaultModel": "openai/gpt-5.4-mini",
+  "defaultSkills": ["health.read", "logs.analyze", "usage.cost.read"],
+  "defaultPolicies": ["safe-operator"],
+  "routines": ["system-check", "anomaly-scan"],
+  "tags": ["monitoring", "health", "diagnostics"],
+  "visibility": "public",
+  "priority": 3
+}

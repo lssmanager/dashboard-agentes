@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openclaw.studio/schemas/policy.schema.json",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "toolAllowlist",
+    "toolDenylist",
+    "channelRules",
+    "enabled"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "toolAllowlist": { "type": "array", "items": { "type": "string" } },
+    "toolDenylist": { "type": "array", "items": { "type": "string" } },
+    "channelRules": { "type": "object" },
+    "sandboxMode": { "type": "string", "enum": ["strict", "relaxed"] },
+    "maxTokensPerTurn": { "type": "integer" },
+    "modelConstraint": {
+      "type": "object",
+      "required": ["allow"],
+      "properties": {
+        "allow": { "type": "array", "items": { "type": "string" } },
+        "deny": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "enabled": { "type": "boolean" },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  },
+  "additionalProperties": false
+}

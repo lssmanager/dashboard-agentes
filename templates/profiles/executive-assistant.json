@@ -1,0 +1,13 @@
+{
+  "id": "executive-assistant",
+  "name": "Executive Assistant",
+  "category": "support",
+  "description": "Support executive communication, scheduling, and coordination tasks with high context awareness.",
+  "defaultModel": "openai/gpt-5.4-mini",
+  "defaultSkills": ["calendar.read", "tasks.manage", "notes.capture"],
+  "defaultPolicies": ["safe-operator"],
+  "routines": ["morning-brief", "task-prep", "followup-sweep"],
+  "tags": ["communication", "coordination", "support"],
+  "visibility": "public",
+  "priority": 2
+}

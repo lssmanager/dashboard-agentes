@@ -1,0 +1,13 @@
+{
+  "id": "dev-agent",
+  "name": "Dev Agent",
+  "category": "engineering",
+  "description": "Handle development tasks, debugging, and code generation with focus on correctness and maintainability.",
+  "defaultModel": "openai/gpt-5.3-codex",
+  "defaultSkills": ["code.search", "code.edit", "tests.run"],
+  "defaultPolicies": ["safe-operator"],
+  "routines": ["task-prep", "eod-review"],
+  "tags": ["development", "code-quality", "engineering"],
+  "visibility": "public",
+  "priority": 3
+}

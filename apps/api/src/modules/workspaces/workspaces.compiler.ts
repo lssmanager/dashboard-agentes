@@ -1,0 +1,33 @@
+import { DeployableArtifact } from '../../../../../packages/core-types/src';
+import { compileOpenClawWorkspace } from '../../../../../packages/workspace-engine/src';
+import { AgentsRepository } from '../agents/agents.repository';
+import { FlowsRepository } from '../flows/flows.repository';
+import { PoliciesRepository } from '../policies/policies.repository';
+import { ProfilesService } from '../profiles/profiles.service';
+import { SkillsRepository } from '../skills/skills.repository';
+import { WorkspacesRepository } from './workspaces.repository';
+
+export class WorkspacesCompiler {
+  private readonly workspacesRepo = new WorkspacesRepository();
+  private readonly agentsRepo = new AgentsRepository();
+  private readonly skillsRepo = new SkillsRepository();
+  private readonly flowsRepo = new FlowsRepository();
+  private readonly policiesRepo = new PoliciesRepository();
+  private readonly profilesService = new ProfilesService();
+
+  compileCurrent(): { artifacts: DeployableArtifact[]; diagnostics: string[] } {
+    const workspace = this.workspacesRepo.getCurrent();
+    if (!workspace) {
+      return { artifacts: [], diagnostics: ['Workspace spec not found'] };
+    }
+
+    return compileOpenClawWorkspace({
+      workspace,
+      agents: this.agentsRepo.list(),
+      skills: this.skillsRepo.list(),
+      flows: this.flowsRepo.list(),
+      profiles: this.profilesService.getAll(),
+      policies: this.policiesRepo.list(),
+    });
+  }
+}

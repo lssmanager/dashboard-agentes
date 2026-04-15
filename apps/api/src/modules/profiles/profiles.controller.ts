@@ -1,0 +1,17 @@
+import { Router } from 'express';
+
+import { ProfilesService } from './profiles.service';
+
+export function registerProfilesRoutes(router: Router) {
+  const service = new ProfilesService();
+
+  router.get('/profiles', async (_req, res) => {
+    try {
+      const profiles = await service.getAll();
+      res.json(profiles);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: 'Failed to load profiles', details: message });
+    }
+  });
+}

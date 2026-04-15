@@ -1,0 +1,13 @@
+{
+  "id": "daily-task-manager",
+  "name": "Daily Task Manager",
+  "category": "operations",
+  "description": "Ensure daily execution discipline by organizing tasks, prioritizing work, and preventing slippage.",
+  "defaultModel": "openai/gpt-5.4-mini",
+  "defaultSkills": ["tasks.manage", "calendar.read"],
+  "defaultPolicies": ["safe-operator"],
+  "routines": ["morning-brief", "task-prep", "eod-review"],
+  "tags": ["task-execution", "planning", "discipline"],
+  "visibility": "public",
+  "priority": 2
+}

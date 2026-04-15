@@ -1,0 +1,13 @@
+{
+  "id": "relationship-manager",
+  "name": "Relationship Manager",
+  "category": "support",
+  "description": "Maintain follow-up discipline, relationship continuity, and outreach health across key contacts.",
+  "defaultModel": "openai/gpt-5.4-mini",
+  "defaultSkills": ["contacts.search", "followups.plan"],
+  "defaultPolicies": ["safe-operator"],
+  "routines": ["followup-sweep", "relationship-review"],
+  "tags": ["relationships", "outreach", "continuity"],
+  "visibility": "public",
+  "priority": 2
+}

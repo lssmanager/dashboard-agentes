@@ -1,0 +1,13 @@
+{
+  "id": "chief-of-staff",
+  "name": "Chief of Staff",
+  "category": "operations",
+  "description": "Operational orchestrator profile focused on priorities, follow-ups, task preparation, and executive summaries.",
+  "defaultModel": "openai/gpt-5.4-mini",
+  "defaultSkills": ["status.read", "tasks.manage", "notes.capture"],
+  "defaultPolicies": ["safe-operator"],
+  "routines": ["morning-brief", "eod-review", "followup-sweep", "task-prep"],
+  "tags": ["orchestration", "follow-ups", "leadership"],
+  "visibility": "public",
+  "priority": 1
+}

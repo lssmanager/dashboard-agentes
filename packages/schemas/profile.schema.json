@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openclaw.studio/schemas/profile.schema.json",
+  "type": "object",
+  "required": ["id", "name", "description", "defaultSkills", "routines"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "category": { "type": "string", "enum": ["operations", "support", "engineering", "monitoring"] },
+    "defaultModel": { "type": "string" },
+    "defaultSkills": { "type": "array", "items": { "type": "string" } },
+    "defaultPolicies": { "type": "array", "items": { "type": "string" } },
+    "defaultRoutingRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "when", "priority"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "when": { "type": "string" },
+          "priority": { "type": "integer" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "routines": { "type": "array", "items": { "type": "string" } },
+    "tags": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

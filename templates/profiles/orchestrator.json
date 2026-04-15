@@ -1,0 +1,13 @@
+{
+  "id": "orchestrator",
+  "name": "Orchestrator",
+  "category": "operations",
+  "description": "Route tasks across agents and coordinate execution flows with delegation as primary pattern.",
+  "defaultModel": "openai/gpt-5.4",
+  "defaultSkills": ["routing.apply", "status.read"],
+  "defaultPolicies": ["safe-operator"],
+  "routines": ["task-prep", "followup-sweep"],
+  "tags": ["orchestration", "delegation", "routing"],
+  "visibility": "public",
+  "priority": 1
+}

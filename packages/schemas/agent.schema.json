@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openclaw.studio/schemas/agent.schema.json",
+  "type": "object",
+  "required": [
+    "id",
+    "workspaceId",
+    "name",
+    "role",
+    "description",
+    "instructions",
+    "model",
+    "skillRefs",
+    "tags",
+    "visibility",
+    "executionMode",
+    "handoffRules",
+    "channelBindings",
+    "isEnabled"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "workspaceId": { "type": "string" },
+    "name": { "type": "string" },
+    "role": { "type": "string" },
+    "description": { "type": "string" },
+    "instructions": { "type": "string" },
+    "model": { "type": "string" },
+    "skillRefs": { "type": "array", "items": { "type": "string" } },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "visibility": { "type": "string", "enum": ["private", "workspace", "public"] },
+    "executionMode": { "type": "string", "enum": ["direct", "orchestrated", "handoff"] },
+    "handoffRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "targetAgentId", "when"],
+        "properties": {
+          "id": { "type": "string" },
+          "targetAgentId": { "type": "string" },
+          "when": { "type": "string" },
+          "description": { "type": "string" },
+          "priority": { "type": "number" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "channelBindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "channel", "route", "enabled"],
+        "properties": {
+          "id": { "type": "string" },
+          "channel": { "type": "string" },
+          "route": { "type": "string" },
+          "enabled": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "policyBindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["policyId", "mode"],
+        "properties": {
+          "policyId": { "type": "string" },
+          "mode": { "type": "string", "enum": ["enforce", "warn"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "isEnabled": { "type": "boolean" },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  },
+  "additionalProperties": false
+}

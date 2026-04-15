@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openclaw.studio/schemas/workspace.schema.json",
+  "type": "object",
+  "required": [
+    "id",
+    "slug",
+    "name",
+    "agentIds",
+    "skillIds",
+    "flowIds",
+    "profileIds",
+    "policyRefs",
+    "routingRules",
+    "routines",
+    "tags",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "slug": { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "owner": { "type": "string" },
+    "defaultModel": { "type": "string" },
+    "agentIds": { "type": "array", "items": { "type": "string" } },
+    "skillIds": { "type": "array", "items": { "type": "string" } },
+    "flowIds": { "type": "array", "items": { "type": "string" } },
+    "profileIds": { "type": "array", "items": { "type": "string" } },
+    "policyRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "scope"],
+        "properties": {
+          "id": { "type": "string" },
+          "scope": { "type": "string", "enum": ["workspace", "agent", "flow"] },
+          "targetId": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "routingRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "to", "when", "priority"],
+        "properties": {
+          "id": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "when": { "type": "string" },
+          "priority": { "type": "integer" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "routines": { "type": "array", "items": { "type": "string" } },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openclaw.studio/schemas/skill.schema.json",
+  "type": "object",
+  "required": ["id", "name", "description", "version", "category", "permissions", "functions"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "version": { "type": "string" },
+    "category": { "type": "string" },
+    "permissions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "functions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "inputSchema": { "type": "object" },
+          "outputSchema": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "plugin": {
+      "type": "object",
+      "required": ["provider", "pluginId"],
+      "properties": {
+        "provider": { "type": "string" },
+        "pluginId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  },
+  "additionalProperties": false
+}
