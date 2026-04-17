@@ -7,6 +7,7 @@ import {
   AlertCircle,
   MessageSquare,
   Landmark,
+  Circle,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -69,9 +70,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-6 py-6 border-t border-slate-800 text-xs text-slate-400">
-        <p>Backend online</p>
-        <p className="mt-2 text-slate-500">🟢 API responding</p>
+      <div className="px-6 py-4 border-t border-slate-800">
+        <div className="flex items-center gap-2">
+          <Circle size={8} className="fill-emerald-500 text-emerald-500 flex-shrink-0" />
+          <span className="text-xs text-slate-400">API responding</span>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useStudioState } from '../../../lib/StudioStateContext';
 import { MessageSquare } from 'lucide-react';
+import { PageHeader, Card, Badge } from '../../../components';
 
 export default function SessionsPage() {
   const { state } = useStudioState();
@@ -8,14 +9,14 @@ export default function SessionsPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Sessions</h1>
-        <p className="text-slate-600 mt-1">Runtime session history and metrics</p>
-      </div>
+      <PageHeader
+        title="Sessions"
+        description="Runtime session history and metrics"
+        icon={MessageSquare}
+      />
 
       {/* Sessions Table */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <Card className="p-0 overflow-hidden">
         {sessions.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -49,9 +50,7 @@ export default function SessionsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      <span className="inline-block bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-medium">
-                        Active
-                      </span>
+                      <Badge variant="success">Active</Badge>
                     </td>
                   </tr>
                 ))}
@@ -65,19 +64,19 @@ export default function SessionsPage() {
             <p className="text-slate-600 text-sm mt-2">Sessions will appear here when agents start processing</p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <Card className="p-4">
           <p className="text-sm text-slate-600">Total Sessions</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">{sessions.length}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-sm text-slate-600">Active Now</p>
           <p className="text-2xl font-bold text-emerald-600 mt-1">{sessions.length}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-sm text-slate-600">Avg Messages/Session</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">
             {sessions.length > 0
@@ -87,7 +86,7 @@ export default function SessionsPage() {
                 )
               : '—'}
           </p>
-        </div>
+        </Card>
       </div>
     </div>
   );
