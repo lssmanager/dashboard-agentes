@@ -1,13 +1,24 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
+import { usePreferences } from '../lib/usePreferences';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { sidebarCollapsed, setSidebarCollapsed } = usePreferences();
+  const [sidebarOpen, setSidebarOpen] = useState(!sidebarCollapsed);
+
+  // Sync sidebar state to preferences
+  useEffect(() => {
+    setSidebarCollapsed(!sidebarOpen);
+  }, [sidebarOpen, setSidebarCollapsed]);
+
+  const handleToggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -22,7 +33,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="flex-1 flex flex-col ml-0 md:ml-0">
         {/* Header */}
         <header className="bg-white border-b border-slate-200 h-16 flex items-center px-6 sticky top-0 z-30">
-          <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
+          <Header onToggleSidebar={handleToggleSidebar} sidebarOpen={sidebarOpen} />
         </header>
 
         {/* Page content */}

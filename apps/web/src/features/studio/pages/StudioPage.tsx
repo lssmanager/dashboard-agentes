@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 import { applyDeploy, getDeployPreview } from '../../../lib/api';
 import { useStudioState } from '../../../lib/StudioStateContext';
+import { usePreferences } from '../../../lib/usePreferences';
 import { AgentSpec, DeployPreview } from '../../../lib/types';
 import { StudioCanvas } from '../components/StudioCanvas';
 import { StudioInspector } from '../components/StudioInspector';
@@ -11,11 +11,21 @@ import { StudioToolbar } from '../components/StudioToolbar';
 
 export default function StudioPage() {
   const { state, refresh } = useStudioState();
+  const { selectedAgentId, setSelectedAgentId } = usePreferences();
   const [preview, setPreview] = useState<DeployPreview | null>(null);
   const [busy, setBusy] = useState(false);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(state.agents[0]?.id ?? null);
 
-  const selectedAgent = state.agents.find((a) => a.id === selectedAgentId) || state.agents[0];
+  // Initialize selectedAgentId from preferences or first agent
+  const [agentId, setAgentId] = useState<string | null>(selectedAgentId || state.agents[0]?.id || null);
+
+  // Update preferences when agent changes
+  useEffect(() => {
+    if (agentId) {
+      setSelectedAgentId(agentId);
+    }
+  }, [agentId, setSelectedAgentId]);
+
+  const selectedAgent = state.agents.find((a) => a.id === agentId) || state.agents[0];
 
   async function load() {
     setBusy(true);
@@ -69,12 +79,12 @@ export default function StudioPage() {
 
       {/* Agent Selector */}
       <div className="px-4 py-3 bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-slate-600">Current Agent:</span>
             <select
-              value={selectedAgentId || ''}
-              onChange={(e) => setSelectedAgentId(e.target.value)}
+              value={agentId || ''}
+              onChange={(e) => setAgentId(e.target.value)}
               className="px-3 py-1 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {state.agents.map((agent) => (
