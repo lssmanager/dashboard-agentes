@@ -15,6 +15,7 @@ export class WorkspacesRepository {
   }
 
   save(workspace: WorkspaceSpec): WorkspaceSpec {
-    return this.store.write(workspace);
+    this.store.write(workspace);
+    return workspace;
   }
 }
