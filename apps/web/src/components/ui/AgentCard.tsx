@@ -1,4 +1,4 @@
-import { Wrench, Circle } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { AgentSpec } from '../../lib/types';
 
 // Deterministic avatar color from agent id
@@ -47,26 +47,41 @@ export function AgentCard({ agent, selected, onClick }: AgentCardProps) {
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
-      className={`group cursor-pointer rounded-xl p-4 border transition-all duration-150 outline-none
+      className={`group cursor-pointer p-4 border transition-all duration-150 outline-none
         ${selected
           ? 'border-[var(--color-primary)] shadow-[0_0_0_3px_var(--color-primary-soft)]'
           : 'border-[var(--card-border)] hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-md)]'
         }`}
-      style={{ background: 'var(--card-bg)' }}
+      style={{ background: 'var(--card-bg)', borderRadius: 'var(--radius-lg)', boxShadow: selected ? undefined : 'var(--shadow-sm)' }}
     >
       {/* Top row: avatar + status dot */}
       <div className="flex items-start justify-between mb-3">
-        {/* Avatar */}
+        {/* Avatar — 42px rounded square */}
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-heading font-semibold flex-shrink-0"
-          style={{ background: bg }}
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 'var(--radius-md)',
+            background: bg,
+            color: '#fff',
+            display: 'grid',
+            placeItems: 'center',
+            fontFamily: 'var(--font-heading)',
+            fontWeight: 800,
+            fontSize: 16,
+            flexShrink: 0,
+          }}
         >
           {initial}
         </div>
         {/* Status dot */}
-        <Circle
-          size={8}
-          className={enabled ? 'fill-emerald-500 text-emerald-500' : 'fill-slate-300 text-slate-300'}
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 'var(--radius-full)',
+            background: enabled ? 'var(--color-success)' : 'var(--text-muted)',
+          }}
         />
       </div>
 

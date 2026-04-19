@@ -95,7 +95,7 @@ export default function OverviewPage() {
           <WorkspaceSummaryCard workspace={workspace} />
         ) : (
           <SectionCard title="Workspace" icon={<Package size={16} />}>
-            <p className="text-sm text-slate-400">No workspace loaded.</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No workspace loaded.</p>
           </SectionCard>
         )}
 
@@ -124,16 +124,28 @@ export default function OverviewPage() {
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 transition-all group"
+                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border transition-all group"
+                style={{
+                  borderColor: 'var(--border-secondary)',
+                  background: 'var(--bg-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = 'var(--color-primary-soft)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = 'var(--bg-secondary)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-secondary)';
+                }}
               >
                 <div className="flex items-center gap-3">
-                  <Icon size={16} className="text-blue-600 flex-shrink-0" />
+                  <Icon size={16} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
                   <div className="text-left">
-                    <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{label}</p>
-                    <p className="text-xs text-slate-400">{sub}</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>
                   </div>
                 </div>
-                <ArrowRight size={14} className="text-slate-300 group-hover:text-blue-400 flex-shrink-0" />
+                <ArrowRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               </button>
             ))}
           </div>

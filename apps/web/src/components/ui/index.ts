@@ -5,4 +5,5 @@ export { DiagnosticsPanel } from './DiagnosticsPanel';
 export { LoadingState } from './LoadingState';
 export { SectionCard } from './SectionCard';
 export { AgentCard } from './AgentCard';
+export { FlowCard } from './FlowCard';
 export { EmptySection } from './EmptySection';

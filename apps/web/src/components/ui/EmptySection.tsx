@@ -11,25 +11,73 @@ interface EmptySectionProps {
 
 export function EmptySection({ icon: Icon, title, description, ctaLabel, onCta }: EmptySectionProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-      <Icon size={48} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
-      <div className="space-y-1">
-        <p className="text-base font-heading font-semibold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-heading)' }}>
-          {title}
-        </p>
-        {description && (
-          <p className="text-sm max-w-xs" style={{ color: 'var(--text-muted)' }}>
-            {description}
-          </p>
-        )}
+    <div
+      style={{
+        border: '2px dashed var(--border-primary)',
+        borderRadius: 'var(--radius-xl)',
+        background: 'linear-gradient(180deg, var(--card-bg), var(--bg-secondary))',
+        padding: '48px 24px',
+        display: 'grid',
+        placeItems: 'center',
+        textAlign: 'center',
+        gap: 16,
+      }}
+    >
+      {/* Icon box */}
+      <div
+        style={{
+          width: 68,
+          height: 68,
+          borderRadius: 'var(--radius-lg)',
+          background: 'var(--color-primary-soft)',
+          display: 'grid',
+          placeItems: 'center',
+        }}
+      >
+        <Icon size={28} style={{ color: 'var(--color-primary)' }} />
       </div>
+
+      {/* Title */}
+      <h3
+        style={{
+          fontFamily: 'var(--font-heading)',
+          fontSize: 'var(--text-xl)',
+          fontWeight: 600,
+          color: 'var(--text-primary)',
+          margin: 0,
+        }}
+      >
+        {title}
+      </h3>
+
+      {/* Description */}
+      {description && (
+        <p style={{ color: 'var(--text-muted)', maxWidth: '42ch', lineHeight: 1.55, fontSize: 'var(--text-sm)' }}>
+          {description}
+        </p>
+      )}
+
+      {/* CTA */}
       {ctaLabel && onCta && (
         <button
           onClick={onCta}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-          style={{ background: 'var(--color-primary)' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-primary-hover)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-primary)'; }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 16px',
+            borderRadius: 'var(--radius-md)',
+            border: 'none',
+            fontSize: 'var(--text-sm)',
+            fontFamily: 'var(--font-heading)',
+            fontWeight: 500,
+            color: 'var(--btn-primary-text)',
+            background: 'var(--btn-primary-bg)',
+            cursor: 'pointer',
+            transition: 'background var(--transition)',
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--btn-primary-hover)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--btn-primary-bg)'; }}
         >
           {ctaLabel}
         </button>
