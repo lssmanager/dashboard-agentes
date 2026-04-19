@@ -11,7 +11,9 @@ import { MainLayout } from './layouts/MainLayout';
 import { LoadingState } from './components/ui/LoadingState';
 import { OnboardingDrawer } from './features/onboarding/components/OnboardingDrawer';
 import OverviewPage from './features/overview/pages/OverviewPage';
-import StudioPage from './features/studio/pages/StudioPage';
+import AgencyBuilderPage from './features/studio/pages/AgencyBuilderPage';
+import AgencyTopologyPage from './features/studio/pages/AgencyTopologyPage';
+import WorkspaceStudioPage from './features/studio/pages/WorkspaceStudioPage';
 import WorkspacesPage from './features/workspaces/pages/WorkspacesPage';
 import AgentListPage from './features/agents/pages/AgentListPage';
 import AgentEditorPage from './features/agents/pages/AgentEditorPage';
@@ -169,7 +171,10 @@ export function App() {
             <Routes>
               <Route element={<MainLayout />}>
                 <Route path="/"            element={<OverviewPage />} />
-                <Route path="/studio"      element={<StudioPage />} />
+                <Route path="/agency-builder" element={<AgencyBuilderPage />} />
+                <Route path="/workspace-studio" element={<WorkspaceStudioPage />} />
+                <Route path="/agency-topology" element={<AgencyTopologyPage />} />
+                <Route path="/studio"      element={<Navigate to="/workspace-studio" replace />} />
                 <Route path="/workspaces"  element={<WorkspacesPage />} />
                 <Route path="/agents/new"  element={<AgentEditorPage />} />
                 <Route path="/agents/:id" element={<AgentEditorPage />} />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { applyDeploy, getDeployPreview } from '../../../lib/api';
+import { applyCoreFiles, previewCoreFiles } from '../../../lib/api';
 import { useStudioState } from '../../../lib/StudioStateContext';
 import { usePreferences } from '../../../lib/usePreferences';
 import { AgentSpec, DeployPreview } from '../../../lib/types';
@@ -35,16 +35,19 @@ export default function StudioPage() {
   }
 
   async function previewDiff() {
-    try { setPreview(await getDeployPreview()); }
+    try { setPreview(await previewCoreFiles()); }
     catch (err) { setToast({ type: 'error', message: err instanceof Error ? err.message : 'Failed to load preview' }); }
   }
 
   async function deploy() {
     setBusy(true);
     try {
-      await applyDeploy({ applyRuntime: true });
+      const result = await applyCoreFiles({ applyRuntime: true });
+      if (!result.ok) {
+        throw new Error((result.diagnostics ?? []).join(', ') || 'Core files apply failed');
+      }
       await refresh();
-      setPreview(await getDeployPreview());
+      setPreview(await previewCoreFiles());
       setToast({ type: 'success', message: 'Deployment applied successfully' });
     } catch (err) {
       setToast({ type: 'error', message: err instanceof Error ? err.message : 'Deployment failed' });

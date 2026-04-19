@@ -33,9 +33,16 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
     id?: string; channel?: string; status?: string;
   }[];
 
-  if (pathname.startsWith('/agents') || pathname.startsWith('/studio')) {
+  if (
+    pathname.startsWith('/agents') ||
+    pathname.startsWith('/studio') ||
+    pathname.startsWith('/workspace-studio')
+  ) {
     return {
-      label:     pathname.startsWith('/studio') ? 'Studio' : 'Agents',
+      label:
+        pathname.startsWith('/studio') || pathname.startsWith('/workspace-studio')
+          ? 'Workspace Studio'
+          : 'Agents',
       newPath:   '/agents',
       items:     agents.map((a) => ({
         id:   a.id,
@@ -44,6 +51,32 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
         dot:  dotOf(a.isEnabled),
       })),
       emptyText: 'No agents yet',
+    };
+  }
+  if (pathname.startsWith('/agency-builder')) {
+    const ws = state.workspace;
+    return {
+      label: 'Agency Builder',
+      items: ws ? [{
+        id: ws.id,
+        name: ws.name,
+        sub: ws.defaultModel,
+        dot: 'blue',
+      }] : [],
+      emptyText: 'No agency data loaded',
+    };
+  }
+  if (pathname.startsWith('/agency-topology')) {
+    const ws = state.workspace;
+    return {
+      label: 'Agency Topology',
+      items: ws ? [{
+        id: ws.id,
+        name: ws.name,
+        sub: 'Fail-closed runtime controls',
+        dot: 'amber',
+      }] : [],
+      emptyText: 'No topology nodes available',
     };
   }
   if (pathname.startsWith('/profiles')) {

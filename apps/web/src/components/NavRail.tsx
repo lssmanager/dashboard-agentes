@@ -2,6 +2,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Cpu,
+  Building2,
+  Network,
   Package,
   Users,
   BookOpen,
@@ -19,7 +21,9 @@ import { useStudioState } from '../lib/StudioStateContext';
 
 const NAV = [
   { label: 'Overview',    path: '/',            Icon: LayoutDashboard },
-  { label: 'Studio',      path: '/studio',      Icon: Cpu },
+  { label: 'Agency Builder',  path: '/agency-builder',  Icon: Building2 },
+  { label: 'Workspace Studio', path: '/workspace-studio', Icon: Cpu },
+  { label: 'Agency Topology',  path: '/agency-topology', Icon: Network },
   { label: 'Workspaces',  path: '/workspaces',  Icon: Package },
   { label: 'Agents',      path: '/agents',      Icon: Users },
   { label: 'Profiles',    path: '/profiles',    Icon: BookOpen },

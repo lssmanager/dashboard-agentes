@@ -1,4 +1,5 @@
 export * from './agent-spec';
+export * from './canonical-studio-state';
 export * from './command-spec';
 export * from './deployable-artifact';
 export * from './effective-config';
@@ -9,6 +10,7 @@ export * from './profile-spec';
 export * from './routine-spec';
 export * from './run-spec';
 export * from './skill-spec';
+export * from './tool-spec';
 export * from './version-snapshot';
 export * from './workspace-config';
 export * from './workspace-spec';

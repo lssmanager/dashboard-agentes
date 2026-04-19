@@ -92,7 +92,26 @@ export function registerRunsRoutes(router: Router) {
     if (!run) {
       return res.status(404).json({ ok: false, error: 'Run not found' });
     }
-    return res.json({ runId: run.id, flowId: run.flowId, status: run.status, steps: run.steps });
+    const replayMetadata = service.getReplayMetadata(req.params.id);
+    return res.json({
+      runId: run.id,
+      flowId: run.flowId,
+      status: run.status,
+      steps: run.steps,
+      topologyEvents: replayMetadata?.topologyEvents ?? [],
+      handoffs: replayMetadata?.handoffs ?? [],
+      redirects: replayMetadata?.redirects ?? [],
+      stateTransitions: replayMetadata?.stateTransitions ?? [],
+      replay: replayMetadata?.replay ?? {},
+    });
+  });
+
+  router.get('/runs/:id/replay-metadata', (req, res) => {
+    const replayMetadata = service.getReplayMetadata(req.params.id);
+    if (!replayMetadata) {
+      return res.status(404).json({ ok: false, error: 'Run not found' });
+    }
+    return res.json(replayMetadata);
   });
 
   // ── Sprint 7: Operations Advanced ──────────────────────────────────

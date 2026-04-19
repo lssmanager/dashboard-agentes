@@ -421,3 +421,279 @@ export type CommandSpecInput = z.infer<typeof commandSpecSchema>;
 export type WorkspaceConfigInput = z.infer<typeof workspaceConfigSchema>;
 export type VersionSnapshotInput = z.infer<typeof versionSnapshotSchema>;
 export type EffectiveConfigInput = z.infer<typeof effectiveConfigSchema>;
+
+// Canonical Studio (Compat + Adapter)
+export const canonicalNodeLevelEnum = z.enum([
+  'agency',
+  'department',
+  'workspace',
+  'agent',
+  'subagent',
+]);
+
+export const topologyRuntimeActionEnum = z.enum([
+  'connect',
+  'disconnect',
+  'pause',
+  'reactivate',
+  'redirect',
+  'continue',
+]);
+
+export const topologyActionStatusEnum = z.enum([
+  'applied',
+  'unsupported_by_runtime',
+  'rejected',
+]);
+
+export const sessionExecutionStateEnum = z.enum([
+  'active',
+  'idle',
+  'paused',
+  'closed',
+  'unknown',
+]);
+
+export const coreFileTargetEnum = z.enum([
+  'BOOTSTRAP',
+  'IDENTITY',
+  'TOOLS',
+  'USER',
+  'HEARTBEAT',
+  'MEMORY',
+  'SOUL',
+  'AGENT_MD',
+]);
+
+export const topologyNodeRefSchema = z.object({
+  level: canonicalNodeLevelEnum,
+  id: z.string().min(1),
+});
+
+export const agencySpecSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  departmentIds: z.array(z.string()),
+  tags: z.array(z.string()),
+});
+
+export const departmentSpecSchema = z.object({
+  id: z.string().min(1),
+  agencyId: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  workspaceIds: z.array(z.string()),
+  tags: z.array(z.string()),
+});
+
+export const canonicalWorkspaceSpecSchema = workspaceSpecSchema.extend({
+  departmentId: z.string().min(1),
+});
+
+export const toolFunctionSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1),
+  inputSchema: z.record(z.string(), z.unknown()).optional(),
+  outputSchema: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const toolSpecSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().min(1),
+  version: z.string().min(1),
+  category: z.string().min(1),
+  permissions: z.array(z.string()).default([]),
+  functions: z.array(toolFunctionSchema),
+  plugin: z
+    .object({
+      provider: z.string().min(1),
+      pluginId: z.string().min(1),
+      displayName: z.string().optional(),
+      version: z.string().optional(),
+    })
+    .optional(),
+  files: z.array(z.string()).optional(),
+  dependencies: z.array(z.string()).optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export const connectionSpecSchema = z.object({
+  id: z.string().min(1),
+  agencyId: z.string().min(1),
+  from: topologyNodeRefSchema,
+  to: topologyNodeRefSchema,
+  state: z.enum(['connected', 'disconnected', 'paused']),
+  direction: z.enum(['unidirectional', 'bidirectional']),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
+export const topologyActionRequestSchema = z.object({
+  action: topologyRuntimeActionEnum,
+  from: topologyNodeRefSchema,
+  to: topologyNodeRefSchema.optional(),
+  reason: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const topologyActionResultSchema = z.object({
+  action: topologyRuntimeActionEnum,
+  status: topologyActionStatusEnum,
+  message: z.string().min(1),
+  runtimeSupported: z.boolean(),
+  requestedAt: z.string().min(1),
+  appliedAt: z.string().optional(),
+  errorCode: z.string().optional(),
+});
+
+export const channelBindingSchema = z.object({
+  id: z.string().min(1),
+  channel: z.string().min(1),
+  route: z.string().min(1),
+  enabled: z.boolean(),
+  sourceLevel: canonicalNodeLevelEnum,
+  sourceId: z.string().min(1),
+});
+
+export const sessionRefSchema = z.object({
+  id: z.string().min(1),
+  channel: z.string().optional(),
+  workspaceId: z.string().optional(),
+  departmentId: z.string().optional(),
+  agencyId: z.string().optional(),
+});
+
+export const sessionStateSchema = z.object({
+  ref: sessionRefSchema,
+  status: sessionExecutionStateEnum,
+  lastEventAt: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const runtimeCapabilityMatrixSchema = z.object({
+  source: z.enum(['gateway_capabilities', 'status_inference', 'unknown']),
+  topology: z.object({
+    connect: z.boolean(),
+    disconnect: z.boolean(),
+    pause: z.boolean(),
+    reactivate: z.boolean(),
+    redirect: z.boolean(),
+    continue: z.boolean(),
+  }),
+  inspection: z.object({
+    sessions: z.boolean(),
+    channels: z.boolean(),
+    topology: z.boolean(),
+  }),
+});
+
+export const topologyLinkStateSchema = z.object({
+  linkId: z.string().min(1),
+  runtimeState: z.enum(['connected', 'disconnected', 'paused', 'unknown']),
+  runtimeSupported: z.boolean(),
+  lastObservedAt: z.string().min(1),
+});
+
+export const coreFileDiffSchema = z.object({
+  path: z.string().min(1),
+  status: z.enum(['added', 'updated', 'deleted', 'unchanged']),
+  before: z.string().optional(),
+  after: z.string().optional(),
+});
+
+export const coreFilesLifecycleStateSchema = z.object({
+  targets: z.array(coreFileTargetEnum),
+  supportedLifecycle: z.array(z.enum(['preview', 'diff', 'apply', 'rollback'])),
+});
+
+export const builderAgentFunctionOutputSchema = z.object({
+  entityId: z.string().min(1),
+  entityLevel: canonicalNodeLevelEnum,
+  entityName: z.string().min(1),
+  whatItDoes: z.string().min(1),
+  inputs: z.array(z.string()),
+  outputs: z.array(z.string()),
+  skills: z.array(z.string()),
+  tools: z.array(z.string()),
+  collaborators: z.array(z.string()),
+  proposedCoreFileDiffs: z.array(coreFileDiffSchema),
+});
+
+export const replayMetadataSchema = z.object({
+  topologyEvents: z.array(z.record(z.string(), z.unknown())),
+  handoffs: z.array(z.record(z.string(), z.unknown())),
+  redirects: z.array(z.record(z.string(), z.unknown())),
+  stateTransitions: z.array(z.record(z.string(), z.unknown())),
+  replay: z.object({
+    sourceRunId: z.string().optional(),
+    replayType: z.string().optional(),
+  }),
+});
+
+export const canonicalStudioStateSchema = z.object({
+  agency: agencySpecSchema,
+  departments: z.array(departmentSpecSchema),
+  workspaces: z.array(canonicalWorkspaceSpecSchema),
+  agents: z.array(agentSpecSchema),
+  subagents: z.array(agentSpecSchema),
+  catalog: z.object({
+    skills: z.array(skillSpecSchema),
+    tools: z.array(toolSpecSchema),
+  }),
+  flows: z.array(flowSpecSchema),
+  topology: z.object({
+    connections: z.array(connectionSpecSchema),
+    links: z.array(topologyLinkStateSchema),
+    failClosed: z.literal(true),
+    supportedActions: z.array(topologyRuntimeActionEnum),
+  }),
+  runtimeControl: z.object({
+    capabilityMatrix: runtimeCapabilityMatrixSchema,
+    sessions: z.array(sessionStateSchema),
+    channelBindings: z.array(channelBindingSchema),
+  }),
+  coreFiles: coreFilesLifecycleStateSchema,
+  runtime: z.object({
+    health: z.record(z.string(), z.unknown()).and(z.object({ ok: z.boolean() })),
+    diagnostics: z.record(z.string(), z.unknown()),
+    sessions: z.object({
+      ok: z.boolean(),
+      payload: z.array(z.unknown()).optional(),
+    }),
+  }),
+  compatibility: z.object({
+    strategy: z.literal('compat_adapter'),
+    source: z.literal('legacy_studio_state'),
+    adaptedAt: z.string().min(1),
+  }),
+  generatedAt: z.string().min(1),
+});
+
+export const canonicalStudioEntitySchemas = {
+  agency: agencySpecSchema,
+  department: departmentSpecSchema,
+  workspace: canonicalWorkspaceSpecSchema,
+  connection: connectionSpecSchema,
+  topologyActionRequest: topologyActionRequestSchema,
+  topologyActionResult: topologyActionResultSchema,
+  builderAgentFunctionOutput: builderAgentFunctionOutputSchema,
+  replayMetadata: replayMetadataSchema,
+  runtimeCapabilityMatrix: runtimeCapabilityMatrixSchema,
+  sessionState: sessionStateSchema,
+  channelBinding: channelBindingSchema,
+  topologyLinkState: topologyLinkStateSchema,
+  canonicalStudioState: canonicalStudioStateSchema,
+} as const;
+
+export type CanonicalStudioStateInput = z.infer<typeof canonicalStudioStateSchema>;
+export type TopologyActionRequestInput = z.infer<typeof topologyActionRequestSchema>;
+export type TopologyActionResultInput = z.infer<typeof topologyActionResultSchema>;
+export type BuilderAgentFunctionOutputInput = z.infer<typeof builderAgentFunctionOutputSchema>;
+export type ReplayMetadataInput = z.infer<typeof replayMetadataSchema>;
+export type RuntimeCapabilityMatrixInput = z.infer<typeof runtimeCapabilityMatrixSchema>;
+export type SessionStateInput = z.infer<typeof sessionStateSchema>;
+export type ChannelBindingInput = z.infer<typeof channelBindingSchema>;
+export type TopologyLinkStateInput = z.infer<typeof topologyLinkStateSchema>;

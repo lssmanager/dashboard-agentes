@@ -1,4 +1,27 @@
-import { AgentSpec, DeployPreview, EffectiveConfig, FlowSpec, HookSpec, RunSpec, SkillSpec, StudioStateResponse, VersionSnapshot, WorkspaceSpec } from './types';
+import {
+  AgentSpec,
+  BuilderAgentFunctionOutput,
+  CanonicalNodeLevel,
+  CanonicalStudioStateResponse,
+  CoreFilesDiffResponse,
+  CoreFilesPreviewResponse,
+  DeployPreview,
+  EffectiveConfig,
+  FlowSpec,
+  HookSpec,
+  ReplayMetadataResponse,
+  RuntimeCapabilityMatrix,
+  SessionState,
+  TopologyLinkState,
+  RunSpec,
+  SkillSpec,
+  StudioStateResponse,
+  TopologyActionResult,
+  TopologyNodeRef,
+  TopologyRuntimeAction,
+  VersionSnapshot,
+  WorkspaceSpec,
+} from './types';
 
 const API_BASE = '/api/studio/v1';
 
@@ -15,6 +38,11 @@ export async function getStudioState() {
   return parseJson<StudioStateResponse>(response);
 }
 
+export async function getCanonicalStudioState() {
+  const response = await fetch(`${API_BASE}/studio/canonical-state`);
+  return parseJson<CanonicalStudioStateResponse>(response);
+}
+
 export async function getDeployPreview() {
   const response = await fetch(`${API_BASE}/deploy/preview`);
   return parseJson<DeployPreview>(response);
@@ -27,6 +55,82 @@ export async function applyDeploy(payload: { applyRuntime?: boolean }) {
     body: JSON.stringify(payload),
   });
   return parseJson<{ ok: boolean }>(response);
+}
+
+export async function previewCoreFiles() {
+  const response = await fetch(`${API_BASE}/corefiles/preview`);
+  return parseJson<CoreFilesPreviewResponse>(response);
+}
+
+export async function diffCoreFiles(snapshotId?: string) {
+  const query = snapshotId ? `?snapshotId=${encodeURIComponent(snapshotId)}` : '';
+  const response = await fetch(`${API_BASE}/corefiles/diff${query}`);
+  return parseJson<CoreFilesDiffResponse>(response);
+}
+
+export async function applyCoreFiles(payload: { applyRuntime?: boolean; artifacts?: DeployPreview['artifacts'] }) {
+  const response = await fetch(`${API_BASE}/corefiles/apply`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<{ ok: boolean; diagnostics?: string[] }>(response);
+}
+
+export async function rollbackCoreFiles(snapshotId: string) {
+  const response = await fetch(`${API_BASE}/corefiles/rollback`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ snapshotId }),
+  });
+  return parseJson<{ ok: boolean; message?: string; error?: string }>(response);
+}
+
+export async function triggerTopologyAction(
+  action: TopologyRuntimeAction,
+  payload: { from: TopologyNodeRef; to?: TopologyNodeRef; reason?: string; metadata?: Record<string, unknown> },
+) {
+  const response = await fetch(`${API_BASE}/topology/${action}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const body = await response.json().catch(() => null) as TopologyActionResult | null;
+  if (!response.ok) {
+    if (body?.status === 'unsupported_by_runtime') {
+      return body;
+    }
+    throw new Error((body as { message?: string } | null)?.message ?? `Request failed: ${response.status}`);
+  }
+
+  return body as TopologyActionResult;
+}
+
+export async function getBuilderAgentFunction(level: CanonicalNodeLevel, id: string) {
+  const params = new URLSearchParams({ level, id });
+  const response = await fetch(`${API_BASE}/builder-agent/function?${params.toString()}`);
+  return parseJson<BuilderAgentFunctionOutput>(response);
+}
+
+export async function getRuntimeCapabilities() {
+  const response = await fetch(`${API_BASE}/runtime/capabilities`);
+  return parseJson<RuntimeCapabilityMatrix>(response);
+}
+
+export async function getRuntimeSessions() {
+  const response = await fetch(`${API_BASE}/runtime/sessions`);
+  return parseJson<SessionState[]>(response);
+}
+
+export async function getRuntimeChannels() {
+  const response = await fetch(`${API_BASE}/runtime/channels`);
+  return parseJson<Array<{ channel: string; sessions: number; activeSessions: number }>>(response);
+}
+
+export async function getRuntimeTopologyLinks() {
+  const response = await fetch(`${API_BASE}/runtime/topology-links`);
+  return parseJson<TopologyLinkState[]>(response);
 }
 
 export async function createWorkspace(input: {
@@ -230,7 +334,22 @@ export async function rejectStep(runId: string, stepId: string, reason?: string)
 
 export async function getRunTrace(id: string) {
   const response = await fetch(`${API_BASE}/runs/${encodeURIComponent(id)}/trace`);
-  return parseJson<{ runId: string; flowId: string; status: string; steps: RunSpec['steps'] }>(response);
+  return parseJson<{
+    runId: string;
+    flowId: string;
+    status: string;
+    steps: RunSpec['steps'];
+    topologyEvents: Array<Record<string, unknown>>;
+    handoffs: Array<Record<string, unknown>>;
+    redirects: Array<Record<string, unknown>>;
+    stateTransitions: Array<Record<string, unknown>>;
+    replay: { sourceRunId?: string; replayType?: string };
+  }>(response);
+}
+
+export async function getRunReplayMetadata(id: string) {
+  const response = await fetch(`${API_BASE}/runs/${encodeURIComponent(id)}/replay-metadata`);
+  return parseJson<ReplayMetadataResponse>(response);
 }
 
 // ── Flow Validation ──────────────────────────────────────────────────

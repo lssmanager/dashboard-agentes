@@ -21,6 +21,10 @@ import { registerAuditRoutes } from './modules/audit/audit.controller';
 import { registerBudgetsRoutes } from './modules/budgets/budgets.controller';
 import { registerMcpRoutes } from './modules/mcp/mcp.controller';
 import { registerVersionsRoutes } from './modules/versions/versions.controller';
+import { registerTopologyRoutes } from './modules/topology/topology.controller';
+import { registerCorefilesRoutes } from './modules/corefiles/corefiles.controller';
+import { registerBuilderAgentRoutes } from './modules/builder-agent/builder-agent.controller';
+import { registerRuntimeInspectionRoutes } from './modules/runtime/runtime-inspection.controller';
 
 export function registerRoutes(app: Express) {
   const router = Router();
@@ -49,6 +53,10 @@ export function registerRoutes(app: Express) {
   registerBudgetsRoutes(router);
   registerMcpRoutes(router);
   registerVersionsRoutes(router);
+  registerTopologyRoutes(router);
+  registerCorefilesRoutes(router);
+  registerBuilderAgentRoutes(router);
+  registerRuntimeInspectionRoutes(router);
 
   app.use(studioConfig.apiPrefix, router);
 }

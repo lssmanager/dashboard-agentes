@@ -13,7 +13,7 @@ export function OverviewHero({ workspaceName, description }: OverviewHeroProps) 
     { label: 'New agent', icon: Users, path: '/agents/new' },
     { label: 'New profile', icon: BookOpen, path: '/profiles' },
     { label: 'New flow', icon: GitBranch, path: '/routing' },
-    { label: 'Test workspace', icon: Rocket, path: '/studio' },
+    { label: 'Test workspace', icon: Rocket, path: '/workspace-studio' },
   ];
 
   return (

@@ -8,4 +8,8 @@ export function registerStudioRoutes(router: Router) {
   router.get('/studio/state', async (_req, res) => {
     res.json(await service.getState());
   });
+
+  router.get('/studio/canonical-state', async (_req, res) => {
+    res.json(await service.getCanonicalState());
+  });
 }

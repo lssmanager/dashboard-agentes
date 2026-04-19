@@ -186,3 +186,182 @@ export interface StudioStateResponse {
   hooks?: HookSpec[];
   effectiveConfig?: EffectiveConfig;
 }
+
+// Canonical Studio
+export type CanonicalNodeLevel = 'agency' | 'department' | 'workspace' | 'agent' | 'subagent';
+
+export interface AgencySpec {
+  id: string;
+  name: string;
+  description?: string;
+  departmentIds: string[];
+  tags: string[];
+}
+
+export interface DepartmentSpec {
+  id: string;
+  agencyId: string;
+  name: string;
+  description?: string;
+  workspaceIds: string[];
+  tags: string[];
+}
+
+export interface CanonicalWorkspaceSpec extends WorkspaceSpec {
+  departmentId: string;
+}
+
+export type TopologyRuntimeAction =
+  | 'connect'
+  | 'disconnect'
+  | 'pause'
+  | 'reactivate'
+  | 'redirect'
+  | 'continue';
+
+export interface TopologyNodeRef {
+  level: CanonicalNodeLevel;
+  id: string;
+}
+
+export interface ConnectionSpec {
+  id: string;
+  agencyId: string;
+  from: TopologyNodeRef;
+  to: TopologyNodeRef;
+  state: 'connected' | 'disconnected' | 'paused';
+  direction: 'unidirectional' | 'bidirectional';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChannelBinding {
+  id: string;
+  channel: string;
+  route: string;
+  enabled: boolean;
+  sourceLevel: CanonicalNodeLevel;
+  sourceId: string;
+}
+
+export interface SessionRef {
+  id: string;
+  channel?: string;
+  workspaceId?: string;
+  departmentId?: string;
+  agencyId?: string;
+}
+
+export interface SessionState {
+  ref: SessionRef;
+  status: 'active' | 'idle' | 'paused' | 'closed' | 'unknown';
+  lastEventAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RuntimeCapabilityMatrix {
+  source: 'gateway_capabilities' | 'status_inference' | 'unknown';
+  topology: {
+    connect: boolean;
+    disconnect: boolean;
+    pause: boolean;
+    reactivate: boolean;
+    redirect: boolean;
+    continue: boolean;
+  };
+  inspection: {
+    sessions: boolean;
+    channels: boolean;
+    topology: boolean;
+  };
+}
+
+export interface TopologyLinkState {
+  linkId: string;
+  runtimeState: 'connected' | 'disconnected' | 'paused' | 'unknown';
+  runtimeSupported: boolean;
+  lastObservedAt: string;
+}
+
+export interface CanonicalStudioStateResponse {
+  agency: AgencySpec;
+  departments: DepartmentSpec[];
+  workspaces: CanonicalWorkspaceSpec[];
+  agents: AgentSpec[];
+  subagents: AgentSpec[];
+  catalog: {
+    skills: SkillSpec[];
+    tools: Array<{ id: string; name: string; description: string }>;
+  };
+  flows: FlowSpec[];
+  topology: {
+    connections: ConnectionSpec[];
+    links: TopologyLinkState[];
+    failClosed: true;
+    supportedActions: TopologyRuntimeAction[];
+  };
+  runtimeControl: {
+    capabilityMatrix: RuntimeCapabilityMatrix;
+    sessions: SessionState[];
+    channelBindings: ChannelBinding[];
+  };
+  coreFiles: {
+    targets: string[];
+    supportedLifecycle: Array<'preview' | 'diff' | 'apply' | 'rollback'>;
+  };
+  runtime: StudioStateResponse['runtime'];
+  compatibility: {
+    strategy: 'compat_adapter';
+    source: 'legacy_studio_state';
+    adaptedAt: string;
+  };
+  generatedAt: string;
+}
+
+export interface TopologyActionResult {
+  action: TopologyRuntimeAction;
+  status: 'applied' | 'unsupported_by_runtime' | 'rejected';
+  message: string;
+  runtimeSupported: boolean;
+  requestedAt: string;
+  appliedAt?: string;
+  errorCode?: string;
+}
+
+export interface CoreFilesPreviewResponse {
+  artifacts: DeployPreview['artifacts'];
+  diagnostics: string[];
+  diff: DeployPreview['diff'];
+  lifecycle: Array<'preview' | 'diff' | 'apply' | 'rollback'>;
+}
+
+export interface CoreFilesDiffResponse {
+  ok: boolean;
+  source: 'snapshot' | 'current';
+  diffs?: Array<Record<string, unknown>>;
+  error?: string;
+}
+
+export interface BuilderAgentFunctionOutput {
+  entityId: string;
+  entityLevel: CanonicalNodeLevel;
+  entityName: string;
+  whatItDoes: string;
+  inputs: string[];
+  outputs: string[];
+  skills: string[];
+  tools: string[];
+  collaborators: string[];
+  proposedCoreFileDiffs: DeployPreview['diff'];
+}
+
+export interface ReplayMetadataResponse {
+  topologyEvents: Array<Record<string, unknown>>;
+  handoffs: Array<Record<string, unknown>>;
+  redirects: Array<Record<string, unknown>>;
+  stateTransitions: Array<Record<string, unknown>>;
+  replay: {
+    sourceRunId?: string;
+    replayType?: string;
+  };
+}

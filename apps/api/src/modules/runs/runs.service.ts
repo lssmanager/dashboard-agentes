@@ -58,6 +58,28 @@ export class RunsService {
     return runRepository.findById(id);
   }
 
+  getReplayMetadata(id: string) {
+    const run = runRepository.findById(id);
+    if (!run) return null;
+
+    const metadata = (run.metadata ?? {}) as Record<string, unknown>;
+    const topologyEvents = Array.isArray(metadata.topologyEvents) ? metadata.topologyEvents : [];
+    const handoffs = Array.isArray(metadata.handoffs) ? metadata.handoffs : [];
+    const redirects = Array.isArray(metadata.redirects) ? metadata.redirects : [];
+    const stateTransitions = Array.isArray(metadata.stateTransitions) ? metadata.stateTransitions : [];
+
+    return {
+      topologyEvents,
+      handoffs,
+      redirects,
+      stateTransitions,
+      replay: {
+        sourceRunId: typeof metadata.sourceRunId === 'string' ? metadata.sourceRunId : undefined,
+        replayType: run.trigger?.type?.startsWith('replay:') ? run.trigger.type : undefined,
+      },
+    };
+  }
+
   // ── Sprint 7: Operations ─────────────────────────────────────────────
 
   replayRun(id: string): RunSpec {
