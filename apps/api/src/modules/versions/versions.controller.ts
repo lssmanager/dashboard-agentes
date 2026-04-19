@@ -14,7 +14,7 @@ export function registerVersionsRoutes(router: Router) {
   router.get('/versions/:id', (req, res) => {
     const snapshot = service.getSnapshot(req.params.id);
     if (!snapshot) return res.status(404).json({ error: 'Snapshot not found' });
-    res.json(snapshot);
+    return res.json(snapshot);
   });
 
   // POST /versions — create new snapshot
@@ -28,28 +28,32 @@ export function registerVersionsRoutes(router: Router) {
   router.get('/versions/:id/diff', (req, res) => {
     const diff = service.getDiff(req.params.id);
     if (!diff) return res.status(404).json({ error: 'Snapshot not found' });
-    res.json(diff);
+    return res.json(diff);
   });
 
   // POST /versions/:id/rollback — restore from snapshot
   router.post('/versions/:id/rollback', (req, res) => {
     const ok = service.rollback(req.params.id);
     if (!ok) return res.status(404).json({ error: 'Snapshot not found' });
-    res.json({ ok: true, message: `Rolled back to snapshot ${req.params.id}` });
+    return res.json({ ok: true, message: `Rolled back to snapshot ${req.params.id}` });
   });
 
   // POST /versions/publish — create labeled published snapshot
   router.post('/versions/publish', (req, res) => {
     const { label, notes } = req.body ?? {};
-    if (!label) return res.status(400).json({ error: 'Label is required' });
+    if (!label) {
+      return res.status(400).json({ error: 'Label is required' });
+    }
     const snapshot = service.publish(label, notes);
-    res.status(201).json(snapshot);
+    return res.status(201).json(snapshot);
   });
 
   // POST /import — import workspace data
   router.post('/import', (req, res) => {
     const { workspace, agents, flows, skills, policies } = req.body ?? {};
-    if (!workspace) return res.status(400).json({ error: 'workspace is required' });
+    if (!workspace) {
+      return res.status(400).json({ error: 'workspace is required' });
+    }
     const result = service.importWorkspace({
       workspace,
       agents: agents ?? [],
@@ -57,6 +61,6 @@ export function registerVersionsRoutes(router: Router) {
       skills: skills ?? [],
       policies: policies ?? [],
     });
-    res.status(201).json(result);
+    return res.status(201).json(result);
   });
 }

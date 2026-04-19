@@ -37,7 +37,7 @@ export class JsonWorkspaceStore extends WorkspaceStore {
 
   // ── Workspace ──────────────────────────────────────────────
   readWorkspace(): WorkspaceSpec | null { return this.workspaceStore.read(); }
-  writeWorkspace(ws: WorkspaceSpec): WorkspaceSpec { return this.workspaceStore.write(ws); }
+  writeWorkspace(ws: WorkspaceSpec): WorkspaceSpec { return this.workspaceStore.write(ws) as WorkspaceSpec; }
 
   // ── Agents ─────────────────────────────────────────────────
   listAgents(): AgentSpec[] { return this.agentsStore.read(); }

@@ -26,7 +26,7 @@ function classifyPath(relativePath: string): WatcherEvent['entity'] {
 }
 
 export class OpenclawWatcher extends EventEmitter {
-  private watcher: { close: () => Promise<void> } | null = null;
+  private watcher: { on(event: string, cb: (...args: any[]) => void): any; close(): Promise<void> } | null = null;
   private readonly watchDir: string;
 
   constructor(rootDir: string) {
