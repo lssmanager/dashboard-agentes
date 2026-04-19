@@ -1,0 +1,104 @@
+<!DOCTYPE html><html lang="es" data-theme="light"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Agency / <strong>Nova Agency</strong> / Agency Builder</title><style>
+:root{
+  --bg:#f4f7fb; --surface:#ffffff; --surface-2:#f8fafc; --surface-3:#eef3fb;
+  --text:#101828; --muted:#475467; --faint:#667085; --border:#dfe6ef;
+  --primary:#2563eb; --primary-soft:rgba(37,99,235,.12); --success:#16a34a;
+  --success-soft:rgba(22,163,74,.12); --warning:#d97706; --warning-soft:rgba(217,119,6,.12);
+  --danger:#dc2626; --danger-soft:rgba(220,38,38,.12); --rail:#0f1b38; --rail-text:#d9e3f5;
+  --panel:#0e2247; --panel-border:rgba(255,255,255,.08);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 10px 24px rgba(16,24,40,.06);
+  --shadow-md:0 8px 20px rgba(16,24,40,.10),0 18px 36px rgba(16,24,40,.10);
+  --r1:10px; --r2:14px; --r3:18px; --r4:22px;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+html[data-theme="dark"]{
+  --bg:#081220; --surface:#0f1a2b; --surface-2:#0d1626; --surface-3:#142236;
+  --text:#edf2fa; --muted:#c5d0e0; --faint:#95a3b8; --border:#21324a;
+  --primary:#4c8dff; --primary-soft:rgba(76,141,255,.14); --success:#34d399;
+  --success-soft:rgba(52,211,153,.14); --warning:#f59e0b; --warning-soft:rgba(245,158,11,.14);
+  --danger:#f87171; --danger-soft:rgba(248,113,113,.14); --rail:#08101e; --rail-text:#dbe7f9;
+  --panel:#0a1426; --panel-border:#1b2a44; --shadow:none;
+  --shadow-md:0 0 0 1px rgba(255,255,255,.04),0 16px 32px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:inherit}
+button{font:inherit}
+.app{display:grid;grid-template-columns:64px 270px 1fr;min-height:100vh}
+.rail{background:linear-gradient(180deg,var(--rail),#09132a);border-right:1px solid var(--panel-border);display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0;position:sticky;top:0;height:100vh}
+.brand,.rbtn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.brand{background:var(--primary);color:#fff;font-weight:800;box-shadow:0 10px 24px rgba(37,99,235,.35);margin-bottom:8px}
+.rbtn{color:var(--rail-text);border:1px solid transparent;background:transparent;opacity:.85}
+.rbtn.active{background:rgba(76,141,255,.14);border-color:rgba(76,141,255,.28);opacity:1}
+.sp{flex:1}
+.panel{background:linear-gradient(180deg,var(--panel),#0b1732);color:#fff;border-right:1px solid var(--panel-border);padding:24px 18px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow:auto}
+.ey{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#90a6cf;font-weight:700}
+.wcard,.plink{border:1px solid var(--panel-border);border-radius:16px;padding:14px;background:rgba(255,255,255,.04)}
+.wname{font-size:26px;font-weight:800;line-height:1.08;margin:8px 0 10px}
+.wmeta{color:#baceee;font-size:13px;line-height:1.5}
+.ps{border-top:1px solid var(--panel-border);padding-top:18px;display:flex;flex-direction:column;gap:12px}
+.pt{font-size:14px;font-weight:700}
+.psub{font-size:12px;color:#a8bcdf;margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;border-radius:999px;padding:7px 11px;background:rgba(255,255,255,.08);color:#dce7fb;border:1px solid var(--panel-border)}
+.main{min-width:0;display:flex;flex-direction:column}
+.header{position:sticky;top:0;z-index:6;height:72px;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);padding:0 22px;display:flex;justify-content:space-between;align-items:center}
+.crumb{font-size:14px;color:var(--faint);font-weight:600}.crumb strong{color:var(--text)}
+.acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;padding:10px 14px;font-weight:700;font-size:13px;box-shadow:var(--shadow)}
+.btn.primary{background:var(--primary);color:#fff;border-color:transparent}
+.btn.ghost{background:transparent}
+.content{padding:22px;display:flex;flex-direction:column;gap:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+.hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+.hero h1{margin:0;font-size:28px;line-height:1.08}
+.hero p{margin:10px 0 0;color:var(--muted);max-width:72ch;line-height:1.6}
+.tag{display:inline-flex;padding:7px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:800;margin-bottom:12px}
+.section{padding:18px;display:flex;flex-direction:column;gap:16px}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.st{font-size:16px;font-weight:800}
+.ss{color:var(--muted);font-size:13px;margin-top:4px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:8px}
+.label{font-size:12px;font-weight:800;text-transform:uppercase;color:var(--faint);letter-spacing:.04em}
+.input,.textarea,.select{border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);padding:11px 12px;font-size:14px}
+.textarea{min-height:92px;resize:none}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:800;border:1px solid var(--border);background:var(--surface-2);color:var(--muted)}
+.badge.primary{background:var(--primary-soft);color:var(--primary)}
+.badge.success{background:var(--success-soft);color:var(--success)}
+.badge.warning{background:var(--warning-soft);color:var(--warning)}
+.badge.danger{background:var(--danger-soft);color:var(--danger)}
+.list{display:flex;flex-direction:column;gap:10px}
+.li{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.mt{font-size:14px;font-weight:800}
+.ms{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+.lm{font-size:12px;color:var(--faint);font-weight:700;text-align:right}
+.empty{display:grid;place-items:center;text-align:center;min-height:140px;border:1.5px dashed var(--border);border-radius:16px;background:var(--surface-2);color:var(--faint);padding:18px}
+.empty strong{display:block;color:var(--text);font-size:14px;margin-bottom:6px}
+.split{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+.mono{padding:10px 11px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted)}
+.helper-row{display:flex;gap:10px;flex-wrap:wrap}
+@media (max-width: 1200px){.app{grid-template-columns:64px 1fr}.panel{display:none}.split,.grid3,.grid2{grid-template-columns:1fr}}
+
+.stepper{display:flex;flex-direction:column;gap:10px}
+.step{display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:start;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.step .num{width:32px;height:32px;border-radius:10px;background:var(--surface-3);display:grid;place-items:center;font-weight:800;color:var(--primary)}
+.step.active{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 25%, var(--border))}
+.preview-box{padding:14px;border:1px dashed var(--border);border-radius:16px;background:var(--surface-2)}
+.node-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--muted)}
+.canvas{position:relative;min-height:620px;border:1px solid var(--border);border-radius:18px;background:radial-gradient(circle at 1px 1px, color-mix(in srgb,var(--border) 65%, transparent) 1px, transparent 0);background-size:22px 22px; overflow:hidden}
+.node{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:12px;min-width:190px}
+.node.big{min-width:240px}
+.node.selected{outline:2px solid color-mix(in srgb,var(--primary) 45%, transparent)}
+.handle{width:10px;height:10px;border-radius:50%;background:var(--primary);position:absolute}
+.handle.top{top:-5px;left:calc(50% - 5px)} .handle.bottom{bottom:-5px;left:calc(50% - 5px)}
+.node-title{font-weight:800;font-size:14px} .node-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+.node-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.right-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.diff-block{padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.diff-add{border-left:4px solid var(--success);padding-left:10px}
+.diff-change{border-left:4px solid var(--warning);padding-left:10px}
+.agent-modal{padding:18px;border:1px solid var(--border);border-radius:18px;background:color-mix(in srgb,var(--surface) 90%, transparent);box-shadow:var(--shadow-md)}
+.catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.catalog-item{padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.topology-svg text,.topology-svg .node-label{font-family:Inter,system-ui,sans-serif}
+</style></head><body><div class="app"><aside class="rail"><div class="brand">OC</div><div class="rbtn ">⌂</div><div class="rbtn active">◫</div><div class="rbtn ">⚙</div><div class="rbtn ">⇄</div><div class="rbtn ">◉</div><div class="rbtn ">✦</div><div class="sp"></div><button class="rbtn" onclick="toggleTheme()">☼</button><div class="rbtn">?</div></aside><aside class="panel"><div><div class="ey">Agency builder</div><div class="wcard"><div class="pill">Agency · Department · Workspace</div><div class="wname">Nova Agency</div><div class="wmeta">Sandbox activo · 6 departments · 14 workspaces · 42 agents · 79 subagents</div></div></div><div class="ps"><div class="ey">Builder scope</div><div class="plink"><div class="pt">Structure</div><div class="psub">Agency, departments, workspaces y canales</div></div><div class="plink"><div class="pt">Global catalog</div><div class="psub">Skills, tools, reusable agents y perfiles</div></div><div class="plink"><div class="pt">Runtime links</div><div class="psub">Conexiones reales, handoffs y políticas</div></div><div class="plink"><div class="pt">Core files</div><div class="psub">Preview de BOOTSTRAP, IDENTITY, TOOLS, USER, MEMORY y SOUL</div></div></div><div class="ps"><div class="ey">Quick actions</div><div class="helper-row"><span class="pill">+ Department</span><span class="pill">+ Workspace</span><span class="pill">+ Skill</span></div></div></aside><main class="main"><header class="header"><div class="crumb">Agency / <strong>Nova Agency</strong> / Agency Builder</div><div class="acts"><button class="btn">Preview diffs</button><button class="btn">Export JSON</button><button class="btn primary">Generate</button></div></header><div class="content"><section class="hero"><div><div class="tag">Agency Builder · helper estructural</div><h1>Construye la agency desde bloques, no desde templates rígidos.</h1><p>El helper define agency, departments, workspaces, catálogos globales, canales, conexiones y orquestadores. Todo lo que asignes debe alimentar perfiles operativos y core files con preview, diff, apply y rollback.</p></div><div class="acts"><button class="btn">Save draft</button><button class="btn">Preview graph</button><button class="btn primary">Generate agency</button></div></section><section class="split"><div class="card section"><div class="sh"><div><div class="st">Setup steps</div><div class="ss">Helper multinivel para construir la agency completa.</div></div><span class="badge primary">Wizard + Builder</span></div><div class="stepper"><div class="step active"><div class="num">1</div><div><div class="mt">Agency definition</div><div class="ms">Nombre, descripción, canal principal, orchestrator de agency y políticas base.</div></div></div><div class="step"><div class="num">2</div><div><div class="mt">Departments</div><div class="ms">Crear departments, marcar si reciben mensajes directos y si tienen orquestador central.</div></div></div><div class="step"><div class="num">3</div><div><div class="mt">Workspaces</div><div class="ms">Definir workspaces por department, canales propios, conexiones y handoffs.</div></div></div><div class="step"><div class="num">4</div><div><div class="mt">Global catalog</div><div class="ms">Skills, tools, perfiles, reusable agents y subagents.</div></div></div><div class="step"><div class="num">5</div><div><div class="mt">Runtime topology</div><div class="ms">Conectar, pausar, reactivar y redirigir relaciones internas.</div></div></div><div class="step"><div class="num">6</div><div><div class="mt">Preview + diff</div><div class="ms">Ver artefactos derivados y diffs sobre core files antes de aplicar.</div></div></div></div></div><div class="card section"><div class="sh"><div><div class="st">Structure preview</div><div class="ss">Cómo quedará la agency antes de aplicar.</div></div><span class="badge success">Live preview</span></div><div class="preview-box"><div class="helper-row"><span class="node-chip">Agency: Nova</span><span class="node-chip">Dept: Marketing</span><span class="node-chip">Dept: Development</span><span class="node-chip">Dept: Automation</span></div><div style="margin-top:14px" class="list"><div class="li"><div><div class="mt">Marketing</div><div class="ms">3 workspaces · canal propio · 1 orchestrator · 12 skills referenciadas</div></div><div class="lm"><span class="badge success">Ready</span></div></div><div class="li"><div><div class="mt">Development</div><div class="ms">4 workspaces · canal propio · 2 routing links con Automation</div></div><div class="lm"><span class="badge warning">Review</span></div></div><div class="li"><div><div class="mt">Automation</div><div class="ms">2 workspaces · n8n + Cronjobs · recibe handoff de Marketing y Development</div></div><div class="lm"><span class="badge primary">Connected</span></div></div></div></div></div></section><section class="card section"><div class="sh"><div><div class="st">Agency definition</div><div class="ss">Inputs principales del helper.</div></div><div class="helper-row"><span class="badge primary">Can trigger</span><span class="badge">Sandbox</span><span class="badge">Core files aware</span></div></div><div class="grid3"><div class="field"><div class="label">Agency name</div><input class="input" value="Nova Agency"></div><div class="field"><div class="label">Primary channel</div><select class="select"><option>WhatsApp / Main Intake</option></select></div><div class="field"><div class="label">Agency orchestrator</div><select class="select"><option>Agency Routing Orchestrator</option></select></div></div><div class="field"><div class="label">Agency purpose</div><textarea class="textarea">Agencia interna que coordina marketing, development, automation y cybersecurity con handoffs reales entre departments y workspaces.</textarea></div><div class="grid2"><div class="field"><div class="label">Global skills catalog</div><div class="catalog-grid"><div class="catalog-item"><div class="mt">Google Ads</div><div class="ms">Shared across Marketing department and reusable in Support campaigns.</div></div><div class="catalog-item"><div class="mt">Thumbnail Design</div><div class="ms">Reusable by YouTube and Creative workspaces.</div></div><div class="catalog-item"><div class="mt">API Design</div><div class="ms">Referenced by Backend and Integrations workspaces.</div></div><div class="catalog-item"><div class="mt">Incident Triage</div><div class="ms">Reusable by Cybersecurity and Ops.</div></div></div></div><div class="field"><div class="label">Global tools catalog</div><div class="catalog-grid"><div class="catalog-item"><div class="mt">MCP Connector</div><div class="ms">Available by reference with policy restrictions.</div></div><div class="catalog-item"><div class="mt">Webhook Engine</div><div class="ms">Reusable in Automation and Development.</div></div><div class="catalog-item"><div class="mt">File Search</div><div class="ms">Accessible across departments with scoped memory.</div></div><div class="catalog-item"><div class="mt">Browser</div><div class="ms">Used for research, QA and monitoring flows.</div></div></div></div></div></section><section class="split"><div class="card section"><div class="sh"><div><div class="st">Department and workspace builder</div><div class="ss">Cuadritos editables para crear y afinar la estructura.</div></div><button class="btn primary">+ Add department</button></div><div class="grid2"><div class="card section" style="padding:16px"><div class="sh"><div class="mt">Marketing Department</div><span class="badge success">Channel enabled</span></div><div class="field"><div class="label">Orchestrator</div><select class="select"><option>Marketing Central Orchestrator</option></select></div><div class="field"><div class="label">Workspaces</div><div class="helper-row"><span class="badge primary">Ads Workspace</span><span class="badge">YouTube Workspace</span><span class="badge">Social Media Workspace</span></div></div><div class="field"><div class="label">Connected to</div><div class="helper-row"><span class="badge">Development</span><span class="badge">Automation</span></div></div></div><div class="card section" style="padding:16px"><div class="sh"><div class="mt">Development Department</div><span class="badge warning">Review links</span></div><div class="field"><div class="label">Orchestrator</div><select class="select"><option>Development Central Orchestrator</option></select></div><div class="field"><div class="label">Workspaces</div><div class="helper-row"><span class="badge primary">Backend Workspace</span><span class="badge">Frontend Workspace</span><span class="badge">QA Workspace</span></div></div><div class="field"><div class="label">Connected to</div><div class="helper-row"><span class="badge">Automation</span><span class="badge">Cybersecurity</span></div></div></div></div></div><div class="card section"><div class="sh"><div><div class="st">Core files diff preview</div><div class="ss">Nada se aplica ciegamente.</div></div><span class="badge warning">Preview only</span></div><div class="diff-block diff-add"><div class="mt">BOOTSTRAP</div><div class="ms">+ Add department links for Marketing → Automation and Development → Cybersecurity.</div></div><div class="diff-block diff-change"><div class="mt">IDENTITY</div><div class="ms">~ Agency now declares three channel entry points: Agency, Marketing, Development.</div></div><div class="diff-block diff-change"><div class="mt">TOOLS</div><div class="ms">~ Global MCP Connector and Webhook Engine referenced by Automation and Backend.</div></div><div class="diff-block diff-add"><div class="mt">MEMORY</div><div class="ms">+ Cross-workspace handoff memory policy for Ads Workspace and Backend Workspace.</div></div><div class="helper-row"><button class="btn">Rollback</button><button class="btn">Export diff</button><button class="btn primary">Apply changes</button></div></div></section></div></main></div><script>function toggleTheme(){const el=document.documentElement;el.dataset.theme=el.dataset.theme==="dark"?"light":"dark";}</script></body></html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html><html lang="es" data-theme="light"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Agency / <strong>Nova Agency</strong> / Topology</title><style>
+:root{
+  --bg:#f4f7fb; --surface:#ffffff; --surface-2:#f8fafc; --surface-3:#eef3fb;
+  --text:#101828; --muted:#475467; --faint:#667085; --border:#dfe6ef;
+  --primary:#2563eb; --primary-soft:rgba(37,99,235,.12); --success:#16a34a;
+  --success-soft:rgba(22,163,74,.12); --warning:#d97706; --warning-soft:rgba(217,119,6,.12);
+  --danger:#dc2626; --danger-soft:rgba(220,38,38,.12); --rail:#0f1b38; --rail-text:#d9e3f5;
+  --panel:#0e2247; --panel-border:rgba(255,255,255,.08);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 10px 24px rgba(16,24,40,.06);
+  --shadow-md:0 8px 20px rgba(16,24,40,.10),0 18px 36px rgba(16,24,40,.10);
+  --r1:10px; --r2:14px; --r3:18px; --r4:22px;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+html[data-theme="dark"]{
+  --bg:#081220; --surface:#0f1a2b; --surface-2:#0d1626; --surface-3:#142236;
+  --text:#edf2fa; --muted:#c5d0e0; --faint:#95a3b8; --border:#21324a;
+  --primary:#4c8dff; --primary-soft:rgba(76,141,255,.14); --success:#34d399;
+  --success-soft:rgba(52,211,153,.14); --warning:#f59e0b; --warning-soft:rgba(245,158,11,.14);
+  --danger:#f87171; --danger-soft:rgba(248,113,113,.14); --rail:#08101e; --rail-text:#dbe7f9;
+  --panel:#0a1426; --panel-border:#1b2a44; --shadow:none;
+  --shadow-md:0 0 0 1px rgba(255,255,255,.04),0 16px 32px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:inherit}
+button{font:inherit}
+.app{display:grid;grid-template-columns:64px 270px 1fr;min-height:100vh}
+.rail{background:linear-gradient(180deg,var(--rail),#09132a);border-right:1px solid var(--panel-border);display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0;position:sticky;top:0;height:100vh}
+.brand,.rbtn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.brand{background:var(--primary);color:#fff;font-weight:800;box-shadow:0 10px 24px rgba(37,99,235,.35);margin-bottom:8px}
+.rbtn{color:var(--rail-text);border:1px solid transparent;background:transparent;opacity:.85}
+.rbtn.active{background:rgba(76,141,255,.14);border-color:rgba(76,141,255,.28);opacity:1}
+.sp{flex:1}
+.panel{background:linear-gradient(180deg,var(--panel),#0b1732);color:#fff;border-right:1px solid var(--panel-border);padding:24px 18px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow:auto}
+.ey{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#90a6cf;font-weight:700}
+.wcard,.plink{border:1px solid var(--panel-border);border-radius:16px;padding:14px;background:rgba(255,255,255,.04)}
+.wname{font-size:26px;font-weight:800;line-height:1.08;margin:8px 0 10px}
+.wmeta{color:#baceee;font-size:13px;line-height:1.5}
+.ps{border-top:1px solid var(--panel-border);padding-top:18px;display:flex;flex-direction:column;gap:12px}
+.pt{font-size:14px;font-weight:700}
+.psub{font-size:12px;color:#a8bcdf;margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;border-radius:999px;padding:7px 11px;background:rgba(255,255,255,.08);color:#dce7fb;border:1px solid var(--panel-border)}
+.main{min-width:0;display:flex;flex-direction:column}
+.header{position:sticky;top:0;z-index:6;height:72px;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);padding:0 22px;display:flex;justify-content:space-between;align-items:center}
+.crumb{font-size:14px;color:var(--faint);font-weight:600}.crumb strong{color:var(--text)}
+.acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;padding:10px 14px;font-weight:700;font-size:13px;box-shadow:var(--shadow)}
+.btn.primary{background:var(--primary);color:#fff;border-color:transparent}
+.btn.ghost{background:transparent}
+.content{padding:22px;display:flex;flex-direction:column;gap:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+.hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+.hero h1{margin:0;font-size:28px;line-height:1.08}
+.hero p{margin:10px 0 0;color:var(--muted);max-width:72ch;line-height:1.6}
+.tag{display:inline-flex;padding:7px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:800;margin-bottom:12px}
+.section{padding:18px;display:flex;flex-direction:column;gap:16px}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.st{font-size:16px;font-weight:800}
+.ss{color:var(--muted);font-size:13px;margin-top:4px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:8px}
+.label{font-size:12px;font-weight:800;text-transform:uppercase;color:var(--faint);letter-spacing:.04em}
+.input,.textarea,.select{border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);padding:11px 12px;font-size:14px}
+.textarea{min-height:92px;resize:none}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:800;border:1px solid var(--border);background:var(--surface-2);color:var(--muted)}
+.badge.primary{background:var(--primary-soft);color:var(--primary)}
+.badge.success{background:var(--success-soft);color:var(--success)}
+.badge.warning{background:var(--warning-soft);color:var(--warning)}
+.badge.danger{background:var(--danger-soft);color:var(--danger)}
+.list{display:flex;flex-direction:column;gap:10px}
+.li{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.mt{font-size:14px;font-weight:800}
+.ms{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+.lm{font-size:12px;color:var(--faint);font-weight:700;text-align:right}
+.empty{display:grid;place-items:center;text-align:center;min-height:140px;border:1.5px dashed var(--border);border-radius:16px;background:var(--surface-2);color:var(--faint);padding:18px}
+.empty strong{display:block;color:var(--text);font-size:14px;margin-bottom:6px}
+.split{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+.mono{padding:10px 11px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted)}
+.helper-row{display:flex;gap:10px;flex-wrap:wrap}
+@media (max-width: 1200px){.app{grid-template-columns:64px 1fr}.panel{display:none}.split,.grid3,.grid2{grid-template-columns:1fr}}
+
+.stepper{display:flex;flex-direction:column;gap:10px}
+.step{display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:start;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.step .num{width:32px;height:32px;border-radius:10px;background:var(--surface-3);display:grid;place-items:center;font-weight:800;color:var(--primary)}
+.step.active{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 25%, var(--border))}
+.preview-box{padding:14px;border:1px dashed var(--border);border-radius:16px;background:var(--surface-2)}
+.node-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--muted)}
+.canvas{position:relative;min-height:620px;border:1px solid var(--border);border-radius:18px;background:radial-gradient(circle at 1px 1px, color-mix(in srgb,var(--border) 65%, transparent) 1px, transparent 0);background-size:22px 22px; overflow:hidden}
+.node{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:12px;min-width:190px}
+.node.big{min-width:240px}
+.node.selected{outline:2px solid color-mix(in srgb,var(--primary) 45%, transparent)}
+.handle{width:10px;height:10px;border-radius:50%;background:var(--primary);position:absolute}
+.handle.top{top:-5px;left:calc(50% - 5px)} .handle.bottom{bottom:-5px;left:calc(50% - 5px)}
+.node-title{font-weight:800;font-size:14px} .node-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+.node-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.right-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.diff-block{padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.diff-add{border-left:4px solid var(--success);padding-left:10px}
+.diff-change{border-left:4px solid var(--warning);padding-left:10px}
+.agent-modal{padding:18px;border:1px solid var(--border);border-radius:18px;background:color-mix(in srgb,var(--surface) 90%, transparent);box-shadow:var(--shadow-md)}
+.catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.catalog-item{padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.topology-svg text,.topology-svg .node-label{font-family:Inter,system-ui,sans-serif}
+</style></head><body><div class="app"><aside class="rail"><div class="brand">OC</div><div class="rbtn ">⌂</div><div class="rbtn ">◫</div><div class="rbtn ">⚙</div><div class="rbtn active">⇄</div><div class="rbtn ">◉</div><div class="rbtn ">✦</div><div class="sp"></div><button class="rbtn" onclick="toggleTheme()">☼</button><div class="rbtn">?</div></aside><aside class="panel"><div><div class="ey">Agency topology</div><div class="wcard"><div class="pill">Agency · Departments · Workspaces</div><div class="wname">Nova Agency Network</div><div class="wmeta">Conexiones reales · connect / disconnect / pause / redirect</div></div></div><div class="ps"><div class="ey">Views</div><div class="plink"><div class="pt">Macro topology</div><div class="psub">Agency, departments y workspaces</div></div><div class="plink"><div class="pt">Runtime status</div><div class="psub">Conexiones activas, pausadas y degradadas</div></div><div class="plink"><div class="pt">Activity stream</div><div class="psub">Quién llamó a quién y qué payload transfirió</div></div></div><div class="ps"><div class="ey">Runtime controls</div><div class="helper-row"><span class="pill">Connect</span><span class="pill">Pause</span><span class="pill">Redirect</span></div></div></aside><main class="main"><header class="header"><div class="crumb">Agency / <strong>Nova Agency</strong> / Topology</div><div class="acts"><button class="btn">Saved views</button><button class="btn">Inspect runtime</button><button class="btn primary">Edit topology</button></div></header><div class="content"><section class="hero"><div><div class="tag">Agency Topology · control plane</div><h1>La red completa de departments y workspaces con control runtime real.</h1><p>Esta vista muestra la agency como sandbox, sus departments, sus workspaces y sus conexiones operativas. Desde aquí se debe poder conectar, desconectar, pausar, reactivar o redirigir relaciones reales dentro de la agency.</p></div><div class="acts"><button class="btn">Filter</button><button class="btn">Saved view</button><button class="btn primary">Edit topology</button></div></section><section class="split"><div class="card section"><div class="sh"><div><div class="st">Agency network</div><div class="ss">Macro view separada del Workspace Studio.</div></div><div class="helper-row"><span class="badge primary">Live topology</span><span class="badge success">Bidirectional links</span></div></div><div class="card" style="padding:14px;background:var(--surface-2)"><svg class="topology-svg" viewBox="0 0 980 620" width="100%" height="620"><defs><marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--primary)"></path></marker><marker id="arrowWarn" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--warning)"></path></marker></defs><path d="M490 96 C 350 140, 250 200, 220 270" stroke="var(--primary)" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/><path d="M490 96 C 640 140, 725 200, 760 270" stroke="var(--primary)" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/><path d="M270 318 C 420 345, 560 345, 710 318" stroke="var(--warning)" stroke-width="4" fill="none" stroke-dasharray="9 7" marker-end="url(#arrowWarn)"/><path d="M230 380 C 220 440, 200 485, 180 530" stroke="var(--primary)" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/><path d="M310 380 C 355 450, 420 485, 470 530" stroke="var(--primary)" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/><path d="M710 380 C 665 450, 605 485, 590 530" stroke="var(--primary)" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/><path d="M790 380 C 820 440, 850 485, 885 530" stroke="var(--primary)" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/><rect x="395" y="28" rx="22" ry="22" width="190" height="86" fill="var(--surface)" stroke="var(--border)" /><text x="490" y="56" text-anchor="middle" font-size="13" fill="var(--primary)" font-weight="800">AGENCY</text><text x="490" y="82" text-anchor="middle" font-size="20" fill="var(--text)" font-weight="800">Nova Agency</text><text x="490" y="100" text-anchor="middle" font-size="12" fill="var(--muted)">Central orchestrator · main channel</text><rect x="120" y="250" rx="20" ry="20" width="220" height="86" fill="var(--surface)" stroke="var(--border)" /><text x="230" y="278" text-anchor="middle" font-size="13" fill="var(--primary)" font-weight="800">DEPARTMENT</text><text x="230" y="304" text-anchor="middle" font-size="20" fill="var(--text)" font-weight="800">Marketing</text><text x="230" y="322" text-anchor="middle" font-size="12" fill="var(--muted)">channel enabled · 3 workspaces</text><rect x="650" y="250" rx="20" ry="20" width="220" height="86" fill="var(--surface)" stroke="var(--border)" /><text x="760" y="278" text-anchor="middle" font-size="13" fill="var(--primary)" font-weight="800">DEPARTMENT</text><text x="760" y="304" text-anchor="middle" font-size="20" fill="var(--text)" font-weight="800">Development</text><text x="760" y="322" text-anchor="middle" font-size="12" fill="var(--muted)">channel enabled · 4 workspaces</text><rect x="80" y="530" rx="18" ry="18" width="190" height="68" fill="var(--surface)" stroke="var(--border)" /><text x="175" y="557" text-anchor="middle" font-size="13" fill="var(--primary)" font-weight="800">WORKSPACE</text><text x="175" y="581" text-anchor="middle" font-size="17" fill="var(--text)" font-weight="800">Ads Workspace</text><rect x="375" y="530" rx="18" ry="18" width="190" height="68" fill="var(--surface)" stroke="var(--border)" /><text x="470" y="557" text-anchor="middle" font-size="13" fill="var(--primary)" font-weight="800">WORKSPACE</text><text x="470" y="581" text-anchor="middle" font-size="17" fill="var(--text)" font-weight="800">YouTube Workspace</text><rect x="495" y="530" rx="18" ry="18" width="190" height="68" fill="var(--surface)" stroke="var(--border)" /><text x="590" y="557" text-anchor="middle" font-size="13" fill="var(--primary)" font-weight="800">WORKSPACE</text><text x="590" y="581" text-anchor="middle" font-size="17" fill="var(--text)" font-weight="800">Backend Workspace</text><rect x="790" y="530" rx="18" ry="18" width="190" height="68" fill="var(--surface)" stroke="var(--border)" /><text x="885" y="557" text-anchor="middle" font-size="13" fill="var(--primary)" font-weight="800">WORKSPACE</text><text x="885" y="581" text-anchor="middle" font-size="17" fill="var(--text)" font-weight="800">n8n Workspace</text><text x="490" y="356" text-anchor="middle" font-size="12" fill="var(--warning)" font-weight="800">cross-department handoff: Marketing → Development</text></svg></div></div><div class="card section"><div class="sh"><div><div class="st">Connection inspector</div><div class="ss">Control visual real sobre la relación seleccionada.</div></div><span class="badge warning">Live runtime</span></div><div class="field"><div class="label">Selected link</div><div class="mono">Marketing Department → Development Department</div></div><div class="grid2"><div class="card section" style="padding:16px"><div class="label">State</div><div class="mt" style="font-size:22px;color:var(--warning)">Paused</div><div class="ms">Paused 14m ago by operator</div></div><div class="card section" style="padding:16px"><div class="label">Handoff type</div><div class="mt" style="font-size:22px">delegate</div><div class="ms">Bidirectional response enabled</div></div></div><div class="list"><div class="li"><div><div class="mt">Last payload</div><div class="ms">Video campaign assets + ad specs + API requirement summary</div></div><div class="lm">2m ago</div></div><div class="li"><div><div class="mt">Return path</div><div class="ms">Development can reply with artifacts and completion message.</div></div><div class="lm"><span class="badge success">Enabled</span></div></div><div class="li"><div><div class="mt">Runtime policy</div><div class="ms">Max reentry 3 · loop guard active · manual approval on redirect</div></div><div class="lm"><span class="badge primary">Protected</span></div></div></div><div class="helper-row"><button class="btn">Disconnect</button><button class="btn">Reactivate</button><button class="btn">Redirect</button><button class="btn primary">Continue run</button></div><div class="card section" style="padding:16px;background:var(--surface-2)"><div class="st">Activity stream</div><div class="list"><div class="li"><div><div class="mt">Agency routed request to Marketing</div><div class="ms">Main channel message classified as campaign + implementation request.</div></div><div class="lm">19:14</div></div><div class="li"><div><div class="mt">Marketing opened cross-department handoff</div><div class="ms">Requested Backend Workspace to prepare API payload for campaign automation.</div></div><div class="lm">19:18</div></div><div class="li"><div><div class="mt">Operator paused the link</div><div class="ms">Paused because final payload schema was under review.</div></div><div class="lm">19:25</div></div></div></div></div></section></div></main></div><script>function toggleTheme(){const el=document.documentElement;el.dataset.theme=el.dataset.theme==="dark"?"light":"dark";}</script></body></html>

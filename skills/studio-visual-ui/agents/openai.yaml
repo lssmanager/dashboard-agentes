@@ -1,0 +1,4 @@
+interface:
+  display_name: "Visual UI"
+  short_description: "Estandariza y moderniza UI React con tokens"
+  default_prompt: "Use $visual-ui para unificar la interfaz React con tokens, componentes base y theming light/dark sin cambiar la logica de negocio."
