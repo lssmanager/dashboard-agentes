@@ -1,5 +1,5 @@
 import { Handle, Position } from 'reactflow';
-import { CircleStop } from 'lucide-react';
+import { StopCircle } from 'lucide-react';
 
 interface EndNodeProps {
   data: { label?: string; config?: { outcome?: string } };
@@ -18,7 +18,7 @@ export function EndNode({ data, selected }: EndNodeProps) {
       <Handle type="target" position={Position.Top} className="!bg-gray-500 !w-2.5 !h-2.5" />
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: '#4b5563' }}>
-          <CircleStop size={13} className="text-white" />
+          <StopCircle size={13} className="text-white" />
         </div>
         <div>
           <div className="text-[11px] font-semibold" style={{ color: '#374151' }}>End</div>
