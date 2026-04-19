@@ -9,6 +9,7 @@ import { ProfileSummaryCard } from './ProfileSummaryCard';
 interface OnboardingDrawerProps {
   open: boolean;
   onComplete: () => Promise<void>;
+  onClose?: () => void;
 }
 
 interface FormValues {
@@ -16,7 +17,7 @@ interface FormValues {
   profileId: string;
 }
 
-export function OnboardingDrawer({ open, onComplete }: OnboardingDrawerProps) {
+export function OnboardingDrawer({ open, onComplete, onClose }: OnboardingDrawerProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [profiles, setProfiles]     = useState<ProfileSpec[]>([]);
   const [fetching, setFetching]     = useState(true);
@@ -99,6 +100,7 @@ export function OnboardingDrawer({ open, onComplete }: OnboardingDrawerProps) {
     setStep(1);
     reset();
     setSubmitErr(null);
+    onClose?.();
   }
 
   if (!open) return null;
@@ -106,12 +108,39 @@ export function OnboardingDrawer({ open, onComplete }: OnboardingDrawerProps) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={handleClose} />
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15,23,42,0.28)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
+          zIndex: 1100,
+        }}
+        onClick={handleClose}
+      />
 
-      {/* Drawer */}
-      <aside className="fixed top-0 right-0 h-full w-[420px] max-w-full bg-white shadow-2xl z-50 flex flex-col overflow-hidden">
+      {/* Drawer — floating card with 16px inset */}
+      <aside
+        style={{
+          position: 'fixed',
+          top: 16,
+          right: 16,
+          bottom: 16,
+          width: 440,
+          maxWidth: 'calc(100vw - 32px)',
+          background: 'rgba(255,255,255,0.98)',
+          border: '1px solid rgba(255,255,255,0.7)',
+          borderRadius: 22,
+          boxShadow: '0 28px 80px rgba(15, 23, 42, 0.18)',
+          zIndex: 1101,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] flex-shrink-0">
+        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border-primary)', background: '#fbfdff', flexShrink: 0 }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[var(--color-primary)] flex items-center justify-center flex-shrink-0">
@@ -137,21 +166,22 @@ export function OnboardingDrawer({ open, onComplete }: OnboardingDrawerProps) {
             </button>
           </div>
 
-          {/* Progress bar and step indicator */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
+          {/* Progress bar — 3-segment grid */}
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {[1, 2, 3].map((stepNum) => (
-                <div key={stepNum} className="flex-1">
-                  <div
-                    className="h-1 rounded-full transition-all"
-                    style={{
-                      background: stepNum <= step ? 'var(--color-primary)' : 'var(--border-primary)',
-                    }}
-                  />
-                </div>
+                <div
+                  key={stepNum}
+                  style={{
+                    height: 6,
+                    borderRadius: 'var(--radius-full)',
+                    background: stepNum <= step ? 'var(--color-primary)' : 'var(--border-primary)',
+                    transition: 'background var(--transition)',
+                  }}
+                />
               ))}
             </div>
-            <p className="text-xs text-[var(--text-muted)] text-center">
+            <p className="text-xs text-[var(--text-muted)] text-center" style={{ marginTop: 8 }}>
               Step {step} of 3
             </p>
           </div>
@@ -160,7 +190,7 @@ export function OnboardingDrawer({ open, onComplete }: OnboardingDrawerProps) {
         {/* Body */}
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 overflow-y-auto px-6 py-6 space-y-5"
+          style={{ flex: 1, overflowY: 'auto', padding: '18px 20px', display: 'grid', gap: 16 }}
         >
           {(fetchErr || submitErr) && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -313,7 +343,7 @@ export function OnboardingDrawer({ open, onComplete }: OnboardingDrawerProps) {
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-5 border-t border-[var(--border-primary)] bg-[var(--bg-secondary)] flex-shrink-0 space-y-3">
+        <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-primary)', background: '#fbfdff', flexShrink: 0 }}>
           <div className="flex items-center gap-3">
             {step > 1 && (
               <button

@@ -5,6 +5,7 @@ import { getStudioState } from './lib/api';
 import { StudioStateResponse } from './lib/types';
 import { StudioStateContext } from './lib/StudioStateContext';
 import { ThemeProvider } from './lib/ThemeProvider';
+import { OnboardingProvider } from './lib/OnboardingContext';
 import { usePreferences } from './lib/usePreferences';
 import { MainLayout } from './layouts/MainLayout';
 import { LoadingState } from './components/ui/LoadingState';
@@ -30,6 +31,7 @@ export function App() {
   const [state, setState] = useState<StudioStateResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   async function loadState() {
     setLoading(true);
@@ -145,33 +147,45 @@ export function App() {
 
   if (!state) return null;
 
+  // Open onboarding automatically when no workspace exists
+  const shouldShowOnboarding = onboardingOpen || !state.workspace;
+
   return (
     <ThemeProvider initialTheme={theme} onThemeChange={setTheme}>
       <StudioStateContext.Provider value={{ state, refresh: refreshState }}>
-        <BrowserRouter>
-          {/* Onboarding drawer overlays the dashboard when no workspace exists */}
-          <OnboardingDrawer open={!state.workspace} onComplete={loadState} />
+        <OnboardingProvider value={{ openOnboarding: () => setOnboardingOpen(true) }}>
+          <BrowserRouter>
+            {/* Onboarding drawer overlays the dashboard */}
+            <OnboardingDrawer
+              open={shouldShowOnboarding}
+              onComplete={async () => {
+                setOnboardingOpen(false);
+                await loadState();
+              }}
+              onClose={() => setOnboardingOpen(false)}
+            />
 
-          <Routes>
-            <Route element={<MainLayout />}>
-              <Route path="/"            element={<OverviewPage />} />
-              <Route path="/studio"      element={<StudioPage />} />
-              <Route path="/workspaces"  element={<WorkspacesPage />} />
-              <Route path="/agents"      element={<AgentListPage />} />
-              <Route path="/profiles"    element={<ProfilesPage />} />
-              <Route path="/diagnostics" element={<DiagnosticsPage />} />
-              <Route path="/sessions"    element={<SessionsPage />} />
-              <Route path="/routing"     element={<RoutingPage />} />
-              <Route path="/runs"        element={<RunsPage />} />
-              <Route path="/hooks"       element={<HooksPage />} />
-              <Route path="/versions"    element={<VersionsPage />} />
-              <Route path="/settings"    element={<SettingsPage />} />
-              <Route path="/commands"    element={<CommandsPage />} />
-              <Route path="/operations"  element={<OperationsPage />} />
-              <Route path="*"            element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+            <Routes>
+              <Route element={<MainLayout />}>
+                <Route path="/"            element={<OverviewPage />} />
+                <Route path="/studio"      element={<StudioPage />} />
+                <Route path="/workspaces"  element={<WorkspacesPage />} />
+                <Route path="/agents"      element={<AgentListPage />} />
+                <Route path="/profiles"    element={<ProfilesPage />} />
+                <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                <Route path="/sessions"    element={<SessionsPage />} />
+                <Route path="/routing"     element={<RoutingPage />} />
+                <Route path="/runs"        element={<RunsPage />} />
+                <Route path="/hooks"       element={<HooksPage />} />
+                <Route path="/versions"    element={<VersionsPage />} />
+                <Route path="/settings"    element={<SettingsPage />} />
+                <Route path="/commands"    element={<CommandsPage />} />
+                <Route path="/operations"  element={<OperationsPage />} />
+                <Route path="*"            element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </OnboardingProvider>
       </StudioStateContext.Provider>
     </ThemeProvider>
   );

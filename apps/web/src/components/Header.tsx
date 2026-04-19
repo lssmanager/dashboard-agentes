@@ -1,7 +1,8 @@
-import { Menu, RotateCw, Sun, Moon } from 'lucide-react';
+import { Menu, RotateCw, Sun, Moon, Plus } from 'lucide-react';
 import { useStudioState } from '../lib/StudioStateContext';
 import { RuntimeBadge } from './ui/RuntimeBadge';
 import { useTheme } from '../lib/ThemeProvider';
+import { useOnboarding } from '../lib/OnboardingContext';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -11,6 +12,7 @@ interface HeaderProps {
 export function Header({ onToggleSidebar, showHamburger = false }: HeaderProps) {
   const { state, refresh } = useStudioState();
   const { theme, toggleTheme } = useTheme();
+  const { openOnboarding } = useOnboarding();
 
   const workspace = state.workspace;
   const runtimeOk = state.runtime?.health?.ok ?? false;
@@ -81,6 +83,31 @@ export function Header({ onToggleSidebar, showHamburger = false }: HeaderProps) 
 
       {/* Right: actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        {!workspace && (
+          <button
+            onClick={openOnboarding}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 14px',
+              borderRadius: 'var(--radius-md)',
+              border: 'none',
+              background: 'var(--btn-primary-bg)',
+              color: 'var(--btn-primary-text)',
+              fontSize: 'var(--text-sm)',
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'background var(--transition)',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--btn-primary-hover)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--btn-primary-bg)'; }}
+          >
+            <Plus size={14} /> New Workspace
+          </button>
+        )}
+
         <RuntimeBadge ok={runtimeOk} size="sm" />
 
         <button
