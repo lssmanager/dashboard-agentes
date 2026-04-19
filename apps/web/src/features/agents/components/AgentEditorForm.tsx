@@ -59,11 +59,11 @@ export function AgentEditorForm({ workspaceId, agent, agents = [], skills, onSav
       })}
     >
       <div className="grid grid-cols-2 gap-3">
-        <input {...register('name')} placeholder="Agent name" className="rounded border border-slate-300 px-3 py-2" />
-        <input {...register('role')} placeholder="Role" className="rounded border border-slate-300 px-3 py-2" />
+        <input {...register('name')} placeholder="Agent name" className="rounded border px-3 py-2" style={{ borderColor: 'var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)' }} />
+        <input {...register('role')} placeholder="Role" className="rounded border px-3 py-2" style={{ borderColor: 'var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)' }} />
       </div>
 
-      <input {...register('description')} placeholder="Description" className="w-full rounded border border-slate-300 px-3 py-2" />
+      <input {...register('description')} placeholder="Description" className="w-full rounded border px-3 py-2" style={{ borderColor: 'var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)' }} />
 
       <AgentKindSelector value={currentKind as AgentKind} onChange={(kind) => setValue('kind', kind)} />
 
@@ -109,7 +109,13 @@ export function AgentEditorForm({ workspaceId, agent, agents = [], skills, onSav
       <AgentInstructionEditor value={watch('instructions')} onChange={(value) => setValue('instructions', value)} />
       <AgentHandoffEditor value={watch('handoffRules')} onChange={(value) => setValue('handoffRules', value)} />
 
-      <button type="submit" className="rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white">
+      <button
+        type="submit"
+        className="rounded px-3 py-2 text-sm font-medium"
+        style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--btn-primary-hover)'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--btn-primary-bg)'; }}
+      >
         Save Agent
       </button>
     </form>

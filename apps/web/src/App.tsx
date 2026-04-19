@@ -14,6 +14,7 @@ import OverviewPage from './features/overview/pages/OverviewPage';
 import StudioPage from './features/studio/pages/StudioPage';
 import WorkspacesPage from './features/workspaces/pages/WorkspacesPage';
 import AgentListPage from './features/agents/pages/AgentListPage';
+import AgentEditorPage from './features/agents/pages/AgentEditorPage';
 import ProfilesPage from './features/profiles/pages/ProfilesPage';
 import DiagnosticsPage from './features/diagnostics/pages/DiagnosticsPage';
 import SessionsPage from './features/sessions/pages/SessionsPage';
@@ -170,6 +171,8 @@ export function App() {
                 <Route path="/"            element={<OverviewPage />} />
                 <Route path="/studio"      element={<StudioPage />} />
                 <Route path="/workspaces"  element={<WorkspacesPage />} />
+                <Route path="/agents/new"  element={<AgentEditorPage />} />
+                <Route path="/agents/:id" element={<AgentEditorPage />} />
                 <Route path="/agents"      element={<AgentListPage />} />
                 <Route path="/profiles"    element={<ProfilesPage />} />
                 <Route path="/diagnostics" element={<DiagnosticsPage />} />

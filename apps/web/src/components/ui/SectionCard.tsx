@@ -20,14 +20,20 @@ export function SectionCard({
   bodyClassName = '',
 }: SectionCardProps) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm ${className}`}>
-      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-4">
+    <div
+      className={`rounded-xl border overflow-hidden ${className}`}
+      style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)', boxShadow: 'var(--shadow-sm)' }}
+    >
+      <div
+        className="px-5 py-4 border-b flex items-center justify-between gap-4"
+        style={{ borderColor: 'var(--border-secondary)' }}
+      >
         <div className="flex items-center gap-2.5 min-w-0">
-          {icon && <div className="flex-shrink-0 text-blue-600">{icon}</div>}
+          {icon && <div className="flex-shrink-0" style={{ color: 'var(--color-primary)' }}>{icon}</div>}
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-slate-900 leading-tight">{title}</h3>
+            <h3 className="text-sm font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>{title}</h3>
             {description && (
-              <p className="text-xs text-slate-500 mt-0.5 leading-tight">{description}</p>
+              <p className="text-xs mt-0.5 leading-tight" style={{ color: 'var(--text-muted)' }}>{description}</p>
             )}
           </div>
         </div>

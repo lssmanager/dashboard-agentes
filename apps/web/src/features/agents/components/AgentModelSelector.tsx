@@ -12,7 +12,8 @@ export function AgentModelSelector({ value, onChange }: AgentModelSelectorProps)
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded border border-slate-300 px-3 py-2"
+        className="rounded border px-3 py-2"
+        style={{ borderColor: 'var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)' }}
       >
         {MODEL_OPTIONS.map((model) => (
           <option key={model} value={model}>

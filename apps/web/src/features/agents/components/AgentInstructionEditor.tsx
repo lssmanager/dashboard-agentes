@@ -10,7 +10,8 @@ export function AgentInstructionEditor({ value, onChange }: AgentInstructionEdit
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-40 rounded border border-slate-300 px-3 py-2 text-sm"
+        className="min-h-40 rounded border px-3 py-2 text-sm"
+        style={{ borderColor: 'var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontFamily: 'var(--font-mono)' }}
       />
     </label>
   );

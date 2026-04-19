@@ -15,7 +15,7 @@ export function AgentSkillSelector({ value, options, onChange }: AgentSkillSelec
   return (
     <div className="space-y-2 text-sm">
       <p className="font-medium">Skills</p>
-      <div className="grid grid-cols-1 gap-2 rounded border border-slate-300 p-3">
+      <div className="grid grid-cols-1 gap-2 rounded border p-3" style={{ borderColor: 'var(--border-primary)' }}>
         {options.map((skill) => (
           <label key={skill.id} className="flex items-center gap-2">
             <input type="checkbox" checked={value.includes(skill.id)} onChange={() => toggle(skill.id)} />
