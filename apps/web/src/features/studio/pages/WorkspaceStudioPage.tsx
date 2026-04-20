@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useStudioState } from '../../../lib/StudioStateContext';
 import { usePreferences } from '../../../lib/usePreferences';
-import { applyCoreFiles, generateBuilderAgentFunction, previewCoreFiles } from '../../../lib/api';
+import { applyCoreFiles, getBuilderAgentFunction, previewCoreFiles } from '../../../lib/api';
 import type { BuilderAgentFunctionOutput, DeployPreview } from '../../../lib/types';
 import { StudioCanvas } from '../components/StudioCanvas';
 import { ComponentLibrary } from '../components/ComponentLibrary';
@@ -112,7 +112,7 @@ export default function WorkspaceStudioPage() {
     if (!selectedAgent) return;
     setBuilderBusy(true);
     try {
-      const generated = await generateBuilderAgentFunction('agent', selectedAgent.id);
+      const generated = await getBuilderAgentFunction('agent', selectedAgent.id);
       setBuilderOutput(generated);
       setToast({ type: 'success', message: 'Builder function generated' });
     } catch (err) {
