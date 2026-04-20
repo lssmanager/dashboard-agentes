@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { applyCoreFiles, previewCoreFiles } from '../../../lib/api';
 import { useStudioState } from '../../../lib/StudioStateContext';
@@ -16,10 +17,11 @@ import { Cpu } from 'lucide-react';
 export default function StudioPage() {
   const { state, refresh } = useStudioState();
   const { selectedAgentId, setSelectedAgentId } = usePreferences();
+  const navigate = useNavigate();
   const [preview, setPreview] = useState<DeployPreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<StudioTab>('canvas');
+  const [activeTab, setActiveTab] = useState<StudioTab>('builder');
 
   const [agentId, setAgentId] = useState<string | null>(selectedAgentId || state.agents[0]?.id || null);
 
@@ -74,7 +76,7 @@ export default function StudioPage() {
           title="No Agents"
           description="Create your first agent in the workspace to start editing."
           ctaLabel="Go to Agents"
-          onCta={() => { window.location.href = '/agents'; }}
+          onCta={() => navigate('/agents')}
         />
       </div>
     );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -35,6 +36,7 @@ import {
 export default function WorkspaceStudioPage() {
   const { state, refresh } = useStudioState();
   const { selectedAgentId, setSelectedAgentId } = usePreferences();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<StudioTab>('builder');
   const [busy, setBusy] = useState(false);
@@ -146,7 +148,7 @@ export default function WorkspaceStudioPage() {
             description="Create your first agent so the builder can generate editable graph surfaces."
             actionLabel="Go to Agents"
             onAction={() => {
-              window.location.href = '/agents';
+              navigate('/agents');
             }}
           />
         </StudioSectionCard>
@@ -405,7 +407,7 @@ export default function WorkspaceStudioPage() {
           </div>
 
           <div style={{ marginTop: 12 }}>
-            <button type="button" style={toolButton()} onClick={() => (window.location.href = '/agency-topology')}>
+            <button type="button" style={toolButton()} onClick={() => navigate('/agency-topology')}>
               Open Agency Topology
             </button>
           </div>
