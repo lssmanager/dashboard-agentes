@@ -4,13 +4,19 @@ import { Plus, Trash2, Webhook } from 'lucide-react';
 import { createHook, deleteHook, getHooks, updateHook } from '../../../lib/api';
 import type { HookSpec } from '../../../lib/types';
 import { HookEditor } from '../components/HookEditor';
-import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../../operations/components/ObservabilityShell';
+import {
+  ConsoleEmpty,
+  ConsolePanel,
+  ObservabilityShell,
+  consoleToolButtonStyle,
+} from '../../operations/components/ObservabilityShell';
 
 export default function HooksPage() {
   const [hooks, setHooks] = useState<HookSpec[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<HookSpec | null>(null);
   const [creating, setCreating] = useState(false);
+  const enabledHooks = hooks.filter((hook) => hook.enabled).length;
 
   async function loadHooks() {
     try {
@@ -48,6 +54,16 @@ export default function HooksPage() {
       description="Automation trigger management for runs, steps, deployments, and notifications."
       icon={Webhook}
       runtimeOk={!loading}
+      kpis={[
+        { label: 'Configured Hooks', value: hooks.length, helper: 'Registry size' },
+        {
+          label: 'Enabled',
+          value: enabledHooks,
+          helper: 'Live automation rules',
+          tone: enabledHooks > 0 ? 'success' : 'default',
+        },
+        { label: 'Disabled', value: hooks.length - enabledHooks, helper: 'Inactive rules' },
+      ]}
       actions={
         <button
           type="button"
@@ -150,19 +166,14 @@ export default function HooksPage() {
 }
 
 function buttonStyle(primary = false): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-md)',
-    border: primary ? 'none' : '1px solid var(--border-primary)',
-    background: primary ? 'var(--btn-primary-bg)' : 'var(--card-bg)',
-    color: primary ? 'var(--btn-primary-text)' : 'var(--text-primary)',
-    padding: '8px 12px',
-    fontSize: 13,
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    cursor: 'pointer',
-  };
+  return primary
+    ? {
+        ...consoleToolButtonStyle(),
+        border: 'none',
+        background: 'var(--btn-primary-bg)',
+        color: 'var(--btn-primary-text)',
+      }
+    : consoleToolButtonStyle();
 }
 
 function dangerButton(): CSSProperties {

@@ -1,5 +1,4 @@
 import { Activity, MessageSquare } from 'lucide-react';
-import type { CSSProperties } from 'react';
 import { useStudioState } from '../../../lib/StudioStateContext';
 import { DiagnosticsPanel } from '../../../components/ui/DiagnosticsPanel';
 import { GatewayLogsPanel } from '../components/GatewayLogsPanel';
@@ -18,14 +17,32 @@ export default function DiagnosticsPage() {
       description="Runtime health, compile diagnostics, and gateway payload inspection in one diagnostics console."
       icon={Activity}
       runtimeOk={runtimeOk}
+      kpis={[
+        {
+          label: 'Runtime',
+          value: runtimeOk ? 'Online' : 'Offline',
+          helper: 'Gateway heartbeat',
+          tone: runtimeOk ? 'success' : 'warning',
+        },
+        {
+          label: 'Compile',
+          value: compileDiagnostics.length === 0 ? 'Clean' : `${compileDiagnostics.length} issues`,
+          helper: 'Latest static checks',
+          tone: compileDiagnostics.length === 0 ? 'success' : 'warning',
+        },
+        {
+          label: 'Workspace',
+          value: state.workspace ? state.workspace.name : 'None',
+          helper: 'Current target',
+          tone: state.workspace ? 'default' : 'warning',
+        },
+        {
+          label: 'Sessions',
+          value: sessions.length,
+          helper: 'Observed now',
+        },
+      ]}
     >
-      <section className="studio-responsive-four-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
-        <StatusCard label="Runtime" value={runtimeOk ? 'Online' : 'Offline'} tone={runtimeOk ? 'success' : 'warning'} />
-        <StatusCard label="Compile" value={compileDiagnostics.length === 0 ? 'Clean' : `${compileDiagnostics.length} issues`} tone={compileDiagnostics.length === 0 ? 'success' : 'warning'} />
-        <StatusCard label="Workspace" value={state.workspace ? state.workspace.name : 'None'} tone={state.workspace ? 'success' : 'warning'} />
-        <StatusCard label="Sessions" value={`${sessions.length}`} tone="default" />
-      </section>
-
       <ConsolePanel title="Compile Diagnostics" description="Latest compile and validation results">
         <DiagnosticsPanel diagnostics={compileDiagnostics} title="Compile Diagnostics" />
       </ConsolePanel>
@@ -103,40 +120,5 @@ export default function DiagnosticsPage() {
         </ConsolePanel>
       )}
     </ObservabilityShell>
-  );
-}
-
-function StatusCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: 'default' | 'success' | 'warning';
-}) {
-  const tones: Record<typeof tone, CSSProperties> = {
-    default: { borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' },
-    success: { borderColor: 'var(--tone-success-border)', background: 'var(--tone-success-bg)' },
-    warning: { borderColor: 'var(--tone-warning-border)', background: 'var(--tone-warning-bg)' },
-  };
-
-  return (
-    <div
-      style={{
-        ...tones[tone],
-        borderRadius: 'var(--radius-lg)',
-        borderStyle: 'solid',
-        borderWidth: 1,
-        padding: 14,
-      }}
-    >
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {label}
-      </p>
-      <strong style={{ display: 'block', marginTop: 6, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
-        {value}
-      </strong>
-    </div>
   );
 }

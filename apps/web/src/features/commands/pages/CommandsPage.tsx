@@ -23,12 +23,22 @@ export function CommandsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const avgSteps = commands.length > 0
+    ? Math.round(commands.reduce((sum, command) => sum + command.steps.length, 0) / commands.length)
+    : 0;
+  const taggedCommands = commands.filter((command) => (command.tags?.length ?? 0) > 0).length;
+
   return (
     <ObservabilityShell
       title="Commands"
       description="Reusable command routines for operational playbooks and execution guidance."
       icon={Terminal}
       runtimeOk={!loading}
+      kpis={[
+        { label: 'Commands', value: commands.length, helper: 'Registered routines' },
+        { label: 'Avg Steps', value: avgSteps, helper: 'Operational depth' },
+        { label: 'Tagged', value: taggedCommands, helper: 'Indexed by tags' },
+      ]}
     >
       {loading ? (
         <ConsolePanel title="Commands Registry" description="Loading command definitions">

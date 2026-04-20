@@ -24,13 +24,17 @@ export default function SessionsPage() {
       description="Runtime sessions view with channel, status, and per-session message activity."
       icon={MessageSquare}
       runtimeOk={runtimeOk}
+      kpis={[
+        { label: 'Total Sessions', value: sessions.length, helper: 'Current payload size' },
+        {
+          label: hasStatusData ? 'Active Now' : 'Sessions',
+          value: activeCount,
+          helper: hasStatusData ? 'status=active' : 'Status unavailable',
+          tone: activeCount > 0 ? 'success' : 'default',
+        },
+        { label: 'Avg Messages', value: avgMessages, helper: 'Per session' },
+      ]}
     >
-      <section className="studio-responsive-three-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-        <MetricTile label="Total Sessions" value={`${sessions.length}`} />
-        <MetricTile label={hasStatusData ? 'Active Now' : 'Sessions'} value={`${activeCount}`} />
-        <MetricTile label="Avg Messages / Session" value={sessions.length > 0 ? `${avgMessages}` : '0'} />
-      </section>
-
       <ConsolePanel title="Session Stream" description="Current runtime session table">
         {sessions.length === 0 ? (
           <ConsoleEmpty
@@ -67,24 +71,6 @@ export default function SessionsPage() {
         )}
       </ConsolePanel>
     </ObservabilityShell>
-  );
-}
-
-function MetricTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-primary)',
-        background: 'var(--bg-secondary)',
-        padding: 14,
-      }}
-    >
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {label}
-      </p>
-      <strong style={{ display: 'block', marginTop: 6, fontSize: 'var(--text-2xl)' }}>{value}</strong>
-    </div>
   );
 }
 

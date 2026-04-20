@@ -7,7 +7,12 @@ import { StepBadge } from '../../../components/ui/StepBadge';
 import { RunTimeline } from '../components/RunTimeline';
 import { StepDetail } from '../components/StepDetail';
 import { ApprovalPanel } from '../components/ApprovalPanel';
-import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../../operations/components/ObservabilityShell';
+import {
+  ConsoleEmpty,
+  ConsolePanel,
+  ObservabilityShell,
+  consoleToolButtonStyle,
+} from '../../operations/components/ObservabilityShell';
 
 export default function RunsPage() {
   const [runs, setRuns] = useState<RunSpec[]>([]);
@@ -39,6 +44,9 @@ export default function RunsPage() {
 
   const selectedRun = runs.find((run) => run.id === selectedRunId) ?? null;
   const runtimeOk = runs.some((run) => run.status === 'running' || run.status === 'completed');
+  const running = runs.filter((run) => run.status === 'running').length;
+  const waitingApproval = runs.filter((run) => run.status === 'waiting_approval').length;
+  const failed = runs.filter((run) => run.status === 'failed').length;
 
   async function handleCancel(runId: string) {
     await cancelRun(runId);
@@ -51,8 +59,14 @@ export default function RunsPage() {
       description="Replayable execution timeline with approval checkpoints and step-by-step trace inspection."
       icon={Play}
       runtimeOk={runtimeOk}
+      kpis={[
+        { label: 'Total Runs', value: runs.length, helper: 'Loaded from runtime' },
+        { label: 'Running', value: running, helper: 'Active executions', tone: running > 0 ? 'success' : 'default' },
+        { label: 'Waiting Approval', value: waitingApproval, helper: 'Human-in-the-loop gates', tone: waitingApproval > 0 ? 'warning' : 'default' },
+        { label: 'Failed', value: failed, helper: 'Needs investigation', tone: failed > 0 ? 'warning' : 'default' },
+      ]}
       actions={
-        <button type="button" style={toolButton()} onClick={() => void loadRuns()}>
+        <button type="button" style={consoleToolButtonStyle()} onClick={() => void loadRuns()}>
           <RefreshCw size={14} />
           Refresh
         </button>
@@ -157,22 +171,6 @@ export default function RunsPage() {
       )}
     </ObservabilityShell>
   );
-}
-
-function toolButton(): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--border-primary)',
-    background: 'var(--card-bg)',
-    color: 'var(--text-primary)',
-    padding: '8px 12px',
-    fontSize: 13,
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    cursor: 'pointer',
-  };
 }
 
 function dangerButton(): CSSProperties {

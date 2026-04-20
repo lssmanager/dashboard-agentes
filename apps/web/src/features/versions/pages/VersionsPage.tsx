@@ -6,7 +6,12 @@ import type { VersionSnapshot } from '../../../lib/types';
 import { SnapshotList } from '../components/SnapshotList';
 import { SnapshotDiff } from '../components/SnapshotDiff';
 import { RollbackConfirm } from '../components/RollbackConfirm';
-import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../../operations/components/ObservabilityShell';
+import {
+  ConsoleEmpty,
+  ConsolePanel,
+  ObservabilityShell,
+  consoleToolButtonStyle,
+} from '../../operations/components/ObservabilityShell';
 
 type ViewMode = 'list' | 'diff' | 'rollback';
 
@@ -113,6 +118,20 @@ export default function VersionsPage() {
       description="Snapshot, diff, and rollback control for workspace state and deployment lineage."
       icon={GitBranch}
       runtimeOk={snapshots.length > 0}
+      kpis={[
+        { label: 'Snapshots', value: snapshots.length, helper: 'Version history depth' },
+        {
+          label: 'Selected',
+          value: selectedSnapshot ? selectedSnapshot.id.slice(0, 8) : 'None',
+          helper: selectedSnapshot ? 'Inspector target' : 'Pick from list',
+        },
+        {
+          label: 'Mode',
+          value: viewMode.toUpperCase(),
+          helper: 'Inspector state',
+          tone: viewMode === 'rollback' ? 'warning' : 'default',
+        },
+      ]}
       actions={
         <button type="button" style={buttonStyle(true)} onClick={() => void handleCreate()} disabled={creating}>
           <Plus size={14} />
@@ -218,19 +237,14 @@ export default function VersionsPage() {
 }
 
 function buttonStyle(primary = false): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-md)',
-    border: primary ? 'none' : '1px solid var(--border-primary)',
-    background: primary ? 'var(--btn-primary-bg)' : 'var(--card-bg)',
-    color: primary ? 'var(--btn-primary-text)' : 'var(--text-primary)',
-    padding: '8px 12px',
-    fontSize: 13,
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    cursor: 'pointer',
-  };
+  return primary
+    ? {
+        ...consoleToolButtonStyle(),
+        border: 'none',
+        background: 'var(--btn-primary-bg)',
+        color: 'var(--btn-primary-text)',
+      }
+    : consoleToolButtonStyle();
 }
 
 function dangerButton(): CSSProperties {

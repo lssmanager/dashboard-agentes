@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { CSSProperties } from 'react';
 import { ArrowLeftRight, BarChart3, RefreshCw } from 'lucide-react';
 import { compareRuns, getRun, getRuns, getUsage, getUsageByAgent } from '../../../lib/api';
 import type { RunSpec } from '../../../lib/types';
@@ -7,7 +6,12 @@ import { CostChart } from '../components/CostChart';
 import { TokenUsageTable } from '../components/TokenUsageTable';
 import { RunReplay } from '../components/RunReplay';
 import { RunComparison } from '../components/RunComparison';
-import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../components/ObservabilityShell';
+import {
+  ConsoleEmpty,
+  ConsolePanel,
+  ObservabilityShell,
+  consoleToolButtonStyle,
+} from '../components/ObservabilityShell';
 
 type ActiveTab = 'overview' | 'agents' | 'replay' | 'compare';
 
@@ -85,8 +89,31 @@ export default function OperationsPage() {
       description="Cost intelligence, token usage, replay validation, and run comparison in one operations console."
       icon={BarChart3}
       runtimeOk={(usage?.totalRuns ?? 0) > 0}
+      kpis={[
+        {
+          label: 'Total Cost',
+          value: usage ? `$${usage.totalCost.toFixed(2)}` : '$0.00',
+          helper: 'Current window',
+        },
+        {
+          label: 'Total Runs',
+          value: usage?.totalRuns ?? 0,
+          helper: 'Aggregated executions',
+        },
+        {
+          label: 'Token Throughput',
+          value: usage ? (usage.totalTokens.input + usage.totalTokens.output).toLocaleString() : '0',
+          helper: 'Input + output tokens',
+        },
+        {
+          label: 'Agents With Usage',
+          value: agentUsage.length,
+          helper: 'Active metered agents',
+          tone: agentUsage.length > 0 ? 'success' : 'warning',
+        },
+      ]}
       actions={
-        <button type="button" style={toolButton()} onClick={() => void loadUsage()}>
+        <button type="button" style={consoleToolButtonStyle()} onClick={() => void loadUsage()}>
           <RefreshCw size={14} />
           Refresh Data
         </button>
@@ -105,10 +132,7 @@ export default function OperationsPage() {
               type="button"
               onClick={() => setTab(item.id)}
               style={{
-                ...toolButton(),
-                borderColor: tab === item.id ? 'var(--color-primary)' : 'var(--border-primary)',
-                background: tab === item.id ? 'var(--color-primary-soft)' : 'var(--card-bg)',
-                color: tab === item.id ? 'var(--color-primary)' : 'var(--text-primary)',
+                ...consoleToolButtonStyle(tab === item.id),
               }}
             >
               {item.label}
@@ -158,11 +182,9 @@ export default function OperationsPage() {
                     type="button"
                     onClick={() => void handleSelectRun(run.id)}
                     style={{
-                      ...toolButton(),
+                      ...consoleToolButtonStyle(selectedRunId === run.id),
                       width: '100%',
                       justifyContent: 'space-between',
-                      borderColor: selectedRunId === run.id ? 'var(--color-primary)' : 'var(--border-primary)',
-                      background: selectedRunId === run.id ? 'var(--color-primary-soft)' : 'var(--card-bg)',
                     }}
                   >
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{run.id.slice(0, 10)}</span>
@@ -206,9 +228,7 @@ export default function OperationsPage() {
                         type="button"
                         onClick={() => handleToggleCompare(run.id)}
                         style={{
-                          ...toolButton(),
-                          borderColor: selected ? 'var(--color-primary)' : 'var(--border-primary)',
-                          background: selected ? 'var(--color-primary-soft)' : 'var(--card-bg)',
+                          ...consoleToolButtonStyle(selected),
                           fontFamily: 'var(--font-mono)',
                         }}
                       >
@@ -217,7 +237,7 @@ export default function OperationsPage() {
                     );
                   })}
                 </div>
-                <button type="button" style={toolButton()} onClick={() => void handleCompare()} disabled={compareIds.length < 2}>
+                <button type="button" style={consoleToolButtonStyle()} onClick={() => void handleCompare()} disabled={compareIds.length < 2}>
                   <ArrowLeftRight size={14} />
                   Compare Runs
                 </button>
@@ -234,22 +254,6 @@ export default function OperationsPage() {
       )}
     </ObservabilityShell>
   );
-}
-
-function toolButton(): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--border-primary)',
-    background: 'var(--card-bg)',
-    color: 'var(--text-primary)',
-    padding: '8px 12px',
-    fontSize: 13,
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    cursor: 'pointer',
-  };
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {

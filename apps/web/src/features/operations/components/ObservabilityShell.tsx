@@ -5,6 +5,7 @@ import {
   RuntimeStatusBadge,
   StudioEmptyState,
   StudioHeroSection,
+  StudioKpiCard,
   StudioPageShell,
   StudioSectionCard,
 } from '../../../components/ui';
@@ -25,7 +26,15 @@ interface ObservabilityShellProps {
   icon: LucideIcon;
   runtimeOk: boolean;
   actions?: ReactNode;
+  kpis?: ConsoleKpi[];
   children: ReactNode;
+}
+
+export interface ConsoleKpi {
+  label: string;
+  value: string | number;
+  helper?: string;
+  tone?: 'default' | 'success' | 'warning';
 }
 
 export function ObservabilityShell({
@@ -34,6 +43,7 @@ export function ObservabilityShell({
   icon: Icon,
   runtimeOk,
   actions,
+  kpis,
   children,
 }: ObservabilityShellProps) {
   const location = useLocation();
@@ -81,6 +91,27 @@ export function ObservabilityShell({
           })}
         </div>
       </StudioSectionCard>
+
+      {kpis && kpis.length > 0 && (
+        <section
+          className="studio-responsive-four-col"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 10,
+          }}
+        >
+          {kpis.map((kpi) => (
+            <StudioKpiCard
+              key={kpi.label}
+              label={kpi.label}
+              value={kpi.value}
+              helper={kpi.helper}
+              tone={kpi.tone ?? 'default'}
+            />
+          ))}
+        </section>
+      )}
 
       {children}
     </StudioPageShell>
@@ -132,6 +163,23 @@ function tabButtonStyle(active: boolean): CSSProperties {
     display: 'inline-flex',
     gap: 6,
     alignItems: 'center',
+    cursor: 'pointer',
+  };
+}
+
+export function consoleToolButtonStyle(active = false): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid',
+    borderColor: active ? 'var(--color-primary)' : 'var(--border-primary)',
+    background: active ? 'var(--color-primary-soft)' : 'var(--card-bg)',
+    color: active ? 'var(--color-primary)' : 'var(--text-primary)',
+    padding: '8px 12px',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     cursor: 'pointer',
   };
 }
