@@ -41,9 +41,9 @@ export class BuilderAgentService {
         whatItDoes: 'Coordinates departments, governance, and global catalog strategy',
         inputs: DEFAULT_INPUTS_BY_LEVEL.agency,
         outputs: DEFAULT_OUTPUTS_BY_LEVEL.agency,
-        skills: canonical.catalog.skills.map((skill) => skill.name),
-        tools: canonical.catalog.tools.map((tool) => tool.name),
-        collaborators: canonical.departments.map((department) => department.name),
+        skills: listUnique(canonical.catalog.skills.map((skill) => skill.name)),
+        tools: listUnique(canonical.catalog.tools.map((tool) => tool.name)),
+        collaborators: listUnique(canonical.departments.map((department) => department.name)),
         proposedCoreFileDiffs,
       });
     }
@@ -60,11 +60,11 @@ export class BuilderAgentService {
         whatItDoes: 'Routes intents from agency to workspaces and proposes operational refinements',
         inputs: DEFAULT_INPUTS_BY_LEVEL.department,
         outputs: DEFAULT_OUTPUTS_BY_LEVEL.department,
-        skills: canonical.catalog.skills.map((skill) => skill.name),
-        tools: canonical.catalog.tools.map((tool) => tool.name),
-        collaborators: canonical.workspaces
+        skills: listUnique(canonical.catalog.skills.map((skill) => skill.name)),
+        tools: listUnique(canonical.catalog.tools.map((tool) => tool.name)),
+        collaborators: listUnique(canonical.workspaces
           .filter((workspace) => workspace.departmentId === department.id)
-          .map((workspace) => workspace.name),
+          .map((workspace) => workspace.name)),
         proposedCoreFileDiffs,
       });
     }
@@ -84,11 +84,11 @@ export class BuilderAgentService {
         whatItDoes: 'Executes work by orchestrating agents, subagents, flows, and diff lifecycle',
         inputs: DEFAULT_INPUTS_BY_LEVEL.workspace,
         outputs: DEFAULT_OUTPUTS_BY_LEVEL.workspace,
-        skills: workspaceSkills,
-        tools: canonical.catalog.tools.map((tool) => tool.name),
-        collaborators: canonical.agents
+        skills: listUnique(workspaceSkills),
+        tools: listUnique(canonical.catalog.tools.map((tool) => tool.name)),
+        collaborators: listUnique(canonical.agents
           .filter((agent) => agent.workspaceId === workspace.id)
-          .map((agent) => agent.name),
+          .map((agent) => agent.name)),
         proposedCoreFileDiffs,
       });
     }
@@ -105,13 +105,13 @@ export class BuilderAgentService {
         whatItDoes: subagent.description || 'Executes delegated specialized tasks under an agent',
         inputs: DEFAULT_INPUTS_BY_LEVEL.subagent,
         outputs: DEFAULT_OUTPUTS_BY_LEVEL.subagent,
-        skills: canonical.catalog.skills
+        skills: listUnique(canonical.catalog.skills
           .filter((skill) => subagent.skillRefs.includes(skill.id))
-          .map((skill) => skill.name),
-        tools: subagent.permissions?.tools ?? [],
-        collaborators: canonical.agents
+          .map((skill) => skill.name)),
+        tools: listUnique(subagent.permissions?.tools ?? []),
+        collaborators: listUnique(canonical.agents
           .filter((agent) => agent.id === subagent.parentAgentId)
-          .map((agent) => agent.name),
+          .map((agent) => agent.name)),
         proposedCoreFileDiffs,
       });
     }
@@ -127,14 +127,18 @@ export class BuilderAgentService {
       whatItDoes: agent.description || 'Executes delegated tasks in the workspace execution graph',
       inputs: DEFAULT_INPUTS_BY_LEVEL.agent,
       outputs: DEFAULT_OUTPUTS_BY_LEVEL.agent,
-      skills: canonical.catalog.skills
+      skills: listUnique(canonical.catalog.skills
         .filter((skill) => agent.skillRefs.includes(skill.id))
-        .map((skill) => skill.name),
-      tools: agent.permissions?.tools ?? [],
-      collaborators: canonical.subagents
+        .map((skill) => skill.name)),
+      tools: listUnique(agent.permissions?.tools ?? []),
+      collaborators: listUnique(canonical.subagents
         .filter((subagent) => subagent.parentAgentId === agent.id)
-        .map((subagent) => subagent.name),
+        .map((subagent) => subagent.name)),
       proposedCoreFileDiffs,
     });
   }
+}
+
+function listUnique(values: string[]): string[] {
+  return Array.from(new Set(values.filter((value) => value && value.trim().length > 0)));
 }

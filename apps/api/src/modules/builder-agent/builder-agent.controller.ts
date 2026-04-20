@@ -32,4 +32,27 @@ export function registerBuilderAgentRoutes(router: Router) {
       });
     }
   });
+
+  router.post('/builder-agent/generate', async (req, res) => {
+    const levelRaw = (req.body?.level as string | undefined) ?? 'agent';
+    const id = (req.body?.id as string | undefined) ?? '';
+    const level = levelRaw.toLowerCase();
+
+    if (!isCanonicalLevel(level)) {
+      return res.status(400).json({
+        ok: false,
+        error: `Invalid level "${levelRaw}". Use agency|department|workspace|agent|subagent`,
+      });
+    }
+
+    try {
+      const response = await service.getFunctionSummary(level, id);
+      return res.json(response);
+    } catch (error) {
+      return res.status(404).json({
+        ok: false,
+        error: (error as Error).message,
+      });
+    }
+  });
 }

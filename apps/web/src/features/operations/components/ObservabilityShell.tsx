@@ -10,13 +10,13 @@ import {
 } from '../../../components/ui';
 
 const CONSOLE_TABS = [
-  { path: '/runs', label: 'Runs' },
-  { path: '/operations', label: 'Operations' },
-  { path: '/diagnostics', label: 'Diagnostics' },
-  { path: '/sessions', label: 'Sessions' },
-  { path: '/hooks', label: 'Hooks' },
-  { path: '/versions', label: 'Versions' },
-  { path: '/commands', label: 'Commands' },
+  { path: '/runs', label: 'Runs', matchPaths: ['/runs'] },
+  { path: '/observability', label: 'Operations', matchPaths: ['/operations', '/observability'] },
+  { path: '/diagnostics', label: 'Diagnostics', matchPaths: ['/diagnostics'] },
+  { path: '/sessions', label: 'Sessions', matchPaths: ['/sessions'] },
+  { path: '/hooks', label: 'Hooks', matchPaths: ['/hooks'] },
+  { path: '/versions', label: 'Versions', matchPaths: ['/versions'] },
+  { path: '/commands', label: 'Commands', matchPaths: ['/commands'] },
 ];
 
 interface ObservabilityShellProps {
@@ -65,7 +65,9 @@ export function ObservabilityShell({
       <StudioSectionCard title="Console Navigation" description="Unified operations surfaces">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {CONSOLE_TABS.map((tab) => {
-            const active = location.pathname === tab.path;
+            const active = tab.matchPaths.some((matchPath) =>
+              location.pathname === matchPath || location.pathname.startsWith(`${matchPath}/`)
+            );
             return (
               <button
                 key={tab.path}

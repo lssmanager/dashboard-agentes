@@ -86,6 +86,38 @@ export async function rollbackCoreFiles(snapshotId: string) {
   return parseJson<{ ok: boolean; message?: string; error?: string }>(response);
 }
 
+export async function getCoreFilesPreviewForTarget(target: string) {
+  const response = await fetch(`${API_BASE}/corefiles/${encodeURIComponent(target)}/preview`);
+  return parseJson<CoreFilesPreviewResponse>(response);
+}
+
+export async function getCoreFilesDiffForTarget(target: string, snapshotId?: string) {
+  const query = snapshotId ? `?snapshotId=${encodeURIComponent(snapshotId)}` : '';
+  const response = await fetch(`${API_BASE}/corefiles/${encodeURIComponent(target)}/diff${query}`);
+  return parseJson<CoreFilesDiffResponse>(response);
+}
+
+export async function applyCoreFilesForTarget(
+  target: string,
+  payload: { applyRuntime?: boolean; artifacts?: DeployPreview['artifacts'] },
+) {
+  const response = await fetch(`${API_BASE}/corefiles/${encodeURIComponent(target)}/apply`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<{ ok: boolean; diagnostics?: string[] }>(response);
+}
+
+export async function rollbackCoreFilesForTarget(target: string, snapshotId: string) {
+  const response = await fetch(`${API_BASE}/corefiles/${encodeURIComponent(target)}/rollback`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ snapshotId }),
+  });
+  return parseJson<{ ok: boolean; message?: string; error?: string }>(response);
+}
+
 export async function triggerTopologyAction(
   action: TopologyRuntimeAction,
   payload: { from: TopologyNodeRef; to?: TopologyNodeRef; reason?: string; metadata?: Record<string, unknown> },
@@ -110,6 +142,15 @@ export async function triggerTopologyAction(
 export async function getBuilderAgentFunction(level: CanonicalNodeLevel, id: string) {
   const params = new URLSearchParams({ level, id });
   const response = await fetch(`${API_BASE}/builder-agent/function?${params.toString()}`);
+  return parseJson<BuilderAgentFunctionOutput>(response);
+}
+
+export async function generateBuilderAgentFunction(level: CanonicalNodeLevel, id: string) {
+  const response = await fetch(`${API_BASE}/builder-agent/generate`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ level, id }),
+  });
   return parseJson<BuilderAgentFunctionOutput>(response);
 }
 

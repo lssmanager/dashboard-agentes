@@ -54,6 +54,9 @@ export class CorefilesService {
     }
 
     const artifacts = payload?.artifacts ?? compile.artifacts;
+    const snapshot = this.versionsService.createSnapshot(
+      `Corefiles apply ${new Date().toISOString()}`,
+    );
     const writeResult = this.deployService.applyArtifacts(artifacts);
     const runtime = payload?.applyRuntime
       ? await this.deployService.triggerRuntimeReload()
@@ -61,6 +64,7 @@ export class CorefilesService {
 
     return {
       ok: true,
+      snapshotId: snapshot.id,
       writeResult,
       runtime,
       lifecycle: 'apply',

@@ -14,6 +14,8 @@ import OverviewPage from './features/overview/pages/OverviewPage';
 import AgencyBuilderPage from './features/studio/pages/AgencyBuilderPage';
 import AgencyTopologyPage from './features/studio/pages/AgencyTopologyPage';
 import WorkspaceStudioPage from './features/studio/pages/WorkspaceStudioPage';
+import ObservabilityPage from './features/operations/pages/ObservabilityPage';
+import ObservabilityRunPage from './features/operations/pages/ObservabilityRunPage';
 import WorkspacesPage from './features/workspaces/pages/WorkspacesPage';
 import AgentListPage from './features/agents/pages/AgentListPage';
 import AgentEditorPage from './features/agents/pages/AgentEditorPage';
@@ -175,6 +177,8 @@ export function App() {
                 <Route path="/workspace-studio" element={<WorkspaceStudioPage />} />
                 <Route path="/agency-topology" element={<AgencyTopologyPage />} />
                 <Route path="/studio"      element={<Navigate to="/workspace-studio" replace />} />
+                <Route path="/observability" element={<ObservabilityPage />} />
+                <Route path="/observability/:runId" element={<ObservabilityRunPage />} />
                 <Route path="/workspaces"  element={<WorkspacesPage />} />
                 <Route path="/agents/new"  element={<AgentEditorPage />} />
                 <Route path="/agents/:id" element={<AgentEditorPage />} />

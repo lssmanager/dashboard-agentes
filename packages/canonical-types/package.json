@@ -1,0 +1,7 @@
+{
+  "name": "@openclaw/canonical-types",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/index.ts"
+}
