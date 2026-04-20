@@ -3,19 +3,24 @@ import {
   AlertTriangle,
   CheckCircle2,
   Eye,
+  GitBranch,
   LayoutGrid,
   MessageSquare,
   RefreshCw,
   Rocket,
+  Sparkles,
   Wrench,
 } from 'lucide-react';
 import { useStudioState } from '../../../lib/StudioStateContext';
 import { usePreferences } from '../../../lib/usePreferences';
-import { applyCoreFiles, previewCoreFiles } from '../../../lib/api';
-import type { AgentSpec, DeployPreview } from '../../../lib/types';
+import { applyCoreFiles, generateBuilderAgentFunction, previewCoreFiles } from '../../../lib/api';
+import type { AgentSpec, BuilderAgentFunctionOutput, DeployPreview } from '../../../lib/types';
 import { StudioCanvas } from '../components/StudioCanvas';
 import { ComponentLibrary } from '../components/ComponentLibrary';
 import { PropertiesPanel } from '../components/PropertiesPanel';
+import { StudioTabBar, type StudioTab } from '../components/StudioTabBar';
+import { AgentBuilderModal } from '../components/AgentBuilderModal';
+import { CorefilesDiffPreviewModal } from '../components/CorefilesDiffPreviewModal';
 import { Toast } from '../../../components';
 import {
   RuntimeStatusBadge,
@@ -27,15 +32,17 @@ import {
   StudioSectionCard,
 } from '../../../components/ui';
 
-type StudioSurfaceTab = 'builder' | 'test' | 'diff';
-
 export default function WorkspaceStudioPage() {
   const { state, refresh } = useStudioState();
   const { selectedAgentId, setSelectedAgentId } = usePreferences();
 
-  const [activeTab, setActiveTab] = useState<StudioSurfaceTab>('builder');
+  const [activeTab, setActiveTab] = useState<StudioTab>('builder');
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<DeployPreview | null>(null);
+  const [builderOutput, setBuilderOutput] = useState<BuilderAgentFunctionOutput | null>(null);
+  const [builderBusy, setBuilderBusy] = useState(false);
+  const [builderModalOpen, setBuilderModalOpen] = useState(false);
+  const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [agentId, setAgentId] = useState<string | null>(selectedAgentId || state.agents[0]?.id || null);
@@ -90,6 +97,20 @@ export default function WorkspaceStudioPage() {
       setToast({ type: 'error', message: err instanceof Error ? err.message : 'Deployment failed' });
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleGenerateBuilder() {
+    if (!selectedAgent) return;
+    setBuilderBusy(true);
+    try {
+      const generated = await generateBuilderAgentFunction('agent', selectedAgent.id);
+      setBuilderOutput(generated);
+      setToast({ type: 'success', message: 'Builder function generated' });
+    } catch (err) {
+      setToast({ type: 'error', message: err instanceof Error ? err.message : 'Failed to generate builder profile' });
+    } finally {
+      setBuilderBusy(false);
     }
   }
 
@@ -150,6 +171,10 @@ export default function WorkspaceStudioPage() {
               <Eye size={14} />
               Preview Diff
             </button>
+            <button type="button" style={toolButton()} disabled={!selectedAgent || builderBusy} onClick={() => setBuilderModalOpen(true)}>
+              <Sparkles size={14} />
+              Builder Agent Function
+            </button>
             <button type="button" style={primaryActionButton()} disabled={busy} onClick={() => void handleDeploy()}>
               <Rocket size={14} />
               Apply Deployment
@@ -162,31 +187,24 @@ export default function WorkspaceStudioPage() {
         title="Studio Toolbar"
         description="Select your active builder target and switch operational panes."
         actions={
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(['builder', 'test', 'diff'] as StudioSurfaceTab[]).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid',
-                  borderColor: activeTab === tab ? 'var(--color-primary)' : 'var(--border-primary)',
-                  background: activeTab === tab ? 'var(--color-primary-soft)' : 'var(--card-bg)',
-                  color: activeTab === tab ? 'var(--color-primary)' : 'var(--text-muted)',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  padding: '7px 10px',
-                }}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+          <button type="button" style={toolButton()} disabled={busy} onClick={() => setDiffModalOpen(true)}>
+            <Eye size={14} />
+            Open Diff Modal
+          </button>
         }
       >
+        <StudioTabBar
+          active={activeTab}
+          onChange={setActiveTab}
+          tabs={[
+            { id: 'builder', label: 'Builder' },
+            { id: 'test', label: 'Test' },
+            { id: 'debug', label: 'Debug' },
+            { id: 'topology', label: 'Topology' },
+            { id: 'diff', label: 'Diff / Apply' },
+          ]}
+        />
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Active Agent
@@ -332,6 +350,68 @@ export default function WorkspaceStudioPage() {
         </section>
       )}
 
+      {activeTab === 'debug' && (
+        <section className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <StudioSectionCard title="Diagnostics Stream" description="Compile/runtime warnings scoped to current workspace state.">
+            {diagnostics.length === 0 ? (
+              <StudioEmptyState title="No diagnostics" description="Builder surface currently passes compile checks." />
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {diagnostics.map((item) => (
+                  <div key={item} style={statusTile('warning')}>
+                    <AlertTriangle size={14} />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
+          </StudioSectionCard>
+
+          <StudioSectionCard title="Builder Agent Output" description="Generated profile summary for selected agent.">
+            {!builderOutput ? (
+              <StudioEmptyState
+                title="No builder output generated"
+                description="Open Builder Agent Function and run generation to inspect suggested IO and collaborators."
+                actionLabel="Open Builder Agent Function"
+                onAction={() => setBuilderModalOpen(true)}
+              />
+            ) : (
+              <StudioInspectorCard title={builderOutput.entityName}>
+                <StudioMetricRow label="Inputs" value={`${builderOutput.inputs.length}`} />
+                <StudioMetricRow label="Outputs" value={`${builderOutput.outputs.length}`} />
+                <StudioMetricRow label="Collaborators" value={`${builderOutput.collaborators.length}`} />
+                <StudioMetricRow label="Diff Targets" value={`${builderOutput.proposedCoreFileDiffs.length}`} />
+              </StudioInspectorCard>
+            )}
+          </StudioSectionCard>
+        </section>
+      )}
+
+      {activeTab === 'topology' && (
+        <StudioSectionCard title="Workspace Topology Slice" description="Micro-topology summary for active workspace context.">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            <div style={statusTile(runtimeOk ? 'success' : 'warning')}>
+              <GitBranch size={14} />
+              Runtime links {runtimeOk ? 'online' : 'degraded'}
+            </div>
+            <div style={statusTile('success')}>
+              <LayoutGrid size={14} />
+              Agents in workspace: {state.agents.length}
+            </div>
+            <div style={statusTile(sessions.length > 0 ? 'success' : 'warning')}>
+              <MessageSquare size={14} />
+              Live sessions: {sessions.length}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <button type="button" style={toolButton()} onClick={() => (window.location.href = '/agency-topology')}>
+              Open Agency Topology
+            </button>
+          </div>
+        </StudioSectionCard>
+      )}
+
       {activeTab === 'diff' && (
         <section className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <StudioSectionCard title="Deploy Diff" description="Proposed file changes generated by current studio state.">
@@ -382,6 +462,10 @@ export default function WorkspaceStudioPage() {
                 <Eye size={14} />
                 Refresh Diff
               </button>
+              <button type="button" style={toolButton()} onClick={() => setDiffModalOpen(true)} disabled={busy}>
+                <Wrench size={14} />
+                Open Diff Modal
+              </button>
               <button type="button" style={primaryActionButton()} onClick={() => void handleDeploy()} disabled={busy}>
                 <Rocket size={14} />
                 Apply Changes
@@ -390,6 +474,24 @@ export default function WorkspaceStudioPage() {
           </StudioSectionCard>
         </section>
       )}
+
+      <AgentBuilderModal
+        open={builderModalOpen}
+        agent={selectedAgent ?? null}
+        output={builderOutput}
+        busy={builderBusy}
+        onClose={() => setBuilderModalOpen(false)}
+        onGenerate={() => void handleGenerateBuilder()}
+      />
+
+      <CorefilesDiffPreviewModal
+        open={diffModalOpen}
+        preview={preview}
+        busy={busy}
+        onClose={() => setDiffModalOpen(false)}
+        onRefresh={() => void handlePreview()}
+        onApply={() => void handleDeploy()}
+      />
 
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
     </StudioPageShell>

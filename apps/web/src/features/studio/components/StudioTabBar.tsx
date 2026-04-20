@@ -1,19 +1,20 @@
-import { useState } from 'react';
-
-const TABS = [
-  { id: 'canvas', label: 'Canvas' },
-  { id: 'agents', label: 'Agents' },
-  { id: 'chat', label: 'Chat' },
+const DEFAULT_TABS = [
+  { id: 'builder', label: 'Builder' },
+  { id: 'test', label: 'Test' },
+  { id: 'debug', label: 'Debug' },
+  { id: 'topology', label: 'Topology' },
+  { id: 'diff', label: 'Diff / Apply' },
 ] as const;
 
-export type StudioTab = (typeof TABS)[number]['id'];
+export type StudioTab = (typeof DEFAULT_TABS)[number]['id'];
 
 interface StudioTabBarProps {
   active: StudioTab;
   onChange: (tab: StudioTab) => void;
+  tabs?: ReadonlyArray<{ id: StudioTab; label: string }>;
 }
 
-export function StudioTabBar({ active, onChange }: StudioTabBarProps) {
+export function StudioTabBar({ active, onChange, tabs = DEFAULT_TABS }: StudioTabBarProps) {
   return (
     <div
       style={{
@@ -25,7 +26,7 @@ export function StudioTabBar({ active, onChange }: StudioTabBarProps) {
         background: 'var(--bg-primary)',
       }}
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = active === tab.id;
         return (
           <button
