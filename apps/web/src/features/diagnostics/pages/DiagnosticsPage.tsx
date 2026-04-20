@@ -1,134 +1,142 @@
+import { Activity, MessageSquare } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { useStudioState } from '../../../lib/StudioStateContext';
-import { Activity, Circle, MessageSquare } from 'lucide-react';
-import { PageHeader, Alert, Card } from '../../../components';
-import { StatCard } from '../../../components/ui/StatCard';
-import { KpiGrid } from '../../../components/ui/KpiGrid';
 import { DiagnosticsPanel } from '../../../components/ui/DiagnosticsPanel';
 import { GatewayLogsPanel } from '../components/GatewayLogsPanel';
+import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../../operations/components/ObservabilityShell';
 
 export default function DiagnosticsPage() {
   const { state } = useStudioState();
-
-  const runtimeOk          = state.runtime?.health?.ok ?? false;
+  const runtimeOk = state.runtime?.health?.ok ?? false;
   const compileDiagnostics = state.compile?.diagnostics ?? [];
-  const sessions           = state.runtime?.sessions?.payload ?? [];
-  const workspace          = state.workspace;
+  const sessions = state.runtime?.sessions?.payload ?? [];
   const runtimeDiagnostics = state.runtime?.diagnostics ?? {};
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <PageHeader
-        title="Diagnostics"
-        icon={Activity}
-        description="System health, runtime status, and compilation diagnostics"
-      />
+    <ObservabilityShell
+      title="Diagnostics"
+      description="Runtime health, compile diagnostics, and gateway payload inspection in one diagnostics console."
+      icon={Activity}
+      runtimeOk={runtimeOk}
+    >
+      <section className="studio-responsive-four-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+        <StatusCard label="Runtime" value={runtimeOk ? 'Online' : 'Offline'} tone={runtimeOk ? 'success' : 'warning'} />
+        <StatusCard label="Compile" value={compileDiagnostics.length === 0 ? 'Clean' : `${compileDiagnostics.length} issues`} tone={compileDiagnostics.length === 0 ? 'success' : 'warning'} />
+        <StatusCard label="Workspace" value={state.workspace ? state.workspace.name : 'None'} tone={state.workspace ? 'success' : 'warning'} />
+        <StatusCard label="Sessions" value={`${sessions.length}`} tone="default" />
+      </section>
 
-      {/* KPI cards */}
-      <KpiGrid cols={4}>
-        <StatCard
-          label="Runtime"
-          value={runtimeOk ? 'Online' : 'Offline'}
-          helper={runtimeOk ? 'Gateway responding' : 'Cannot reach gateway'}
-          tone={runtimeOk ? 'success' : 'warning'}
-          icon={<Activity size={20} />}
-        />
-        <StatCard
-          label="Compilation"
-          value={compileDiagnostics.length === 0 ? 'Clean' : compileDiagnostics.length}
-          helper={compileDiagnostics.length === 0 ? 'No issues detected' : `${compileDiagnostics.length} issue${compileDiagnostics.length > 1 ? 's' : ''}`}
-          tone={compileDiagnostics.length > 0 ? 'warning' : 'success'}
-        />
-        <StatCard
-          label="Workspace"
-          value={workspace ? 'Active' : 'None'}
-          helper={workspace ? workspace.name : 'No workspace loaded'}
-          tone={workspace ? 'success' : 'default'}
-        />
-        <StatCard
-          label="Sessions"
-          value={sessions.length}
-          helper="active gateway sessions"
-          icon={<MessageSquare size={20} />}
-        />
-      </KpiGrid>
+      <ConsolePanel title="Compile Diagnostics" description="Latest compile and validation results">
+        <DiagnosticsPanel diagnostics={compileDiagnostics} title="Compile Diagnostics" />
+      </ConsolePanel>
 
-      {/* Compile diagnostics panel */}
-      <DiagnosticsPanel diagnostics={compileDiagnostics} title="Compile Diagnostics" />
-
-      {/* Sessions table */}
-      <Card className="p-0 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-          <MessageSquare size={16} className="text-blue-600" />
-          <h3 className="text-sm font-semibold text-slate-900">Active Sessions</h3>
-          <span className="ml-auto text-xs text-slate-400">{sessions.length} total</span>
-        </div>
-
-        {sessions.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="text-left py-3 px-5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Session ID</th>
-                  <th className="text-left py-3 px-5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                  <th className="text-left py-3 px-5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Channel</th>
-                  <th className="text-left py-3 px-5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Agent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.slice(0, 10).map((session: any, idx: number) => {
-                  const s = session as { id?: string; agentId?: string; status?: string; channel?: string };
-                  return (
-                    <tr key={s.id ?? idx} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                      <td className="py-3 px-5 font-mono text-xs text-slate-800">
-                        {s.id ? s.id.substring(0, 16) + '…' : `session-${idx + 1}`}
-                      </td>
-                      <td className="py-3 px-5">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Circle
-                            size={8}
-                            className={s.status === 'active' ? 'fill-emerald-500 text-emerald-500' : 'fill-slate-300 text-slate-300'}
-                          />
-                          <span className="text-xs text-slate-600">{s.status ?? 'unknown'}</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-5 text-xs text-slate-600">{s.channel ?? '—'}</td>
-                      <td className="py-3 px-5 font-mono text-xs text-slate-600">{s.agentId ?? '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {sessions.length > 10 && (
-              <p className="px-5 py-3 text-xs text-slate-400">Showing 10 of {sessions.length} sessions</p>
-            )}
-          </div>
+      <ConsolePanel title="Active Sessions" description="Current runtime session slice">
+        {sessions.length === 0 ? (
+          <ConsoleEmpty
+            title="No active sessions"
+            description="Sessions appear when agents receive or emit runtime traffic."
+          />
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <MessageSquare size={36} className="text-slate-200 mb-3" />
-            <p className="text-sm font-medium text-slate-500">No active sessions</p>
-            <p className="text-xs text-slate-400 mt-1">Sessions appear here when agents start processing</p>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {sessions.slice(0, 12).map((session, index) => {
+              const current = session as Record<string, unknown>;
+              const id = typeof current.id === 'string' ? current.id.slice(0, 16) : `session-${index + 1}`;
+              const status = typeof current.status === 'string' ? current.status : 'unknown';
+              const channel = typeof current.channel === 'string' ? current.channel : 'n/a';
+              const agentId = typeof current.agentId === 'string' ? current.agentId : 'n/a';
+
+              return (
+                <div
+                  key={`${id}-${index}`}
+                  style={{
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-primary)',
+                    background: 'var(--bg-secondary)',
+                    padding: '10px 12px',
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1fr) 100px 120px 1fr',
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{id}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{status}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{channel}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
+                    {agentId}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
-      </Card>
+      </ConsolePanel>
 
-      {/* Gateway diagnostics payload */}
       {Object.keys(runtimeDiagnostics).length > 0 && (
-        <GatewayLogsPanel diagnostics={runtimeDiagnostics} />
+        <ConsolePanel title="Gateway Diagnostics Payload" description="Raw runtime diagnostics details">
+          <GatewayLogsPanel diagnostics={runtimeDiagnostics} />
+        </ConsolePanel>
       )}
 
-      {/* Compile errors detailed list */}
       {compileDiagnostics.length > 0 && (
-        <Alert variant="warning" title="Compilation Issues">
-          <ul className="space-y-1.5 mt-1">
-            {compileDiagnostics.map((d: string, i: number) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="text-amber-500 flex-shrink-0">▸</span>
-                <span>{d}</span>
-              </li>
+        <ConsolePanel title="Diagnostic Alerts" description="Actionable warnings from latest compile run">
+          <div style={{ display: 'grid', gap: 8 }}>
+            {compileDiagnostics.map((item) => (
+              <div
+                key={item}
+                style={{
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--tone-warning-border)',
+                  background: 'var(--tone-warning-bg)',
+                  color: 'var(--tone-warning-text)',
+                  padding: '10px 12px',
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <MessageSquare size={13} />
+                {item}
+              </div>
             ))}
-          </ul>
-        </Alert>
+          </div>
+        </ConsolePanel>
       )}
+    </ObservabilityShell>
+  );
+}
+
+function StatusCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: 'default' | 'success' | 'warning';
+}) {
+  const tones: Record<typeof tone, CSSProperties> = {
+    default: { borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' },
+    success: { borderColor: 'var(--tone-success-border)', background: 'var(--tone-success-bg)' },
+    warning: { borderColor: 'var(--tone-warning-border)', background: 'var(--tone-warning-bg)' },
+  };
+
+  return (
+    <div
+      style={{
+        ...tones[tone],
+        borderRadius: 'var(--radius-lg)',
+        borderStyle: 'solid',
+        borderWidth: 1,
+        padding: 14,
+      }}
+    >
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {label}
+      </p>
+      <strong style={{ display: 'block', marginTop: 6, fontSize: 'var(--text-xl)', color: 'var(--text-primary)' }}>
+        {value}
+      </strong>
     </div>
   );
 }

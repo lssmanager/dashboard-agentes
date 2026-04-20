@@ -1,5 +1,444 @@
-import StudioPage from './StudioPage';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Eye,
+  LayoutGrid,
+  MessageSquare,
+  RefreshCw,
+  Rocket,
+  Wrench,
+} from 'lucide-react';
+import { useStudioState } from '../../../lib/StudioStateContext';
+import { usePreferences } from '../../../lib/usePreferences';
+import { applyCoreFiles, previewCoreFiles } from '../../../lib/api';
+import type { AgentSpec, DeployPreview } from '../../../lib/types';
+import { StudioCanvas } from '../components/StudioCanvas';
+import { ComponentLibrary } from '../components/ComponentLibrary';
+import { PropertiesPanel } from '../components/PropertiesPanel';
+import { Toast } from '../../../components';
+import {
+  RuntimeStatusBadge,
+  StudioEmptyState,
+  StudioHeroSection,
+  StudioInspectorCard,
+  StudioMetricRow,
+  StudioPageShell,
+  StudioSectionCard,
+} from '../../../components/ui';
+
+type StudioSurfaceTab = 'builder' | 'test' | 'diff';
 
 export default function WorkspaceStudioPage() {
-  return <StudioPage />;
+  const { state, refresh } = useStudioState();
+  const { selectedAgentId, setSelectedAgentId } = usePreferences();
+
+  const [activeTab, setActiveTab] = useState<StudioSurfaceTab>('builder');
+  const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<DeployPreview | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const [agentId, setAgentId] = useState<string | null>(selectedAgentId || state.agents[0]?.id || null);
+  const selectedAgent = state.agents.find((agent) => agent.id === agentId) || state.agents[0];
+
+  const workspaceId = state.workspace?.id;
+  const runtimeOk = state.runtime?.health?.ok ?? false;
+  const diagnostics = state.compile?.diagnostics ?? [];
+  const sessions = state.runtime?.sessions?.payload ?? [];
+
+  useEffect(() => {
+    if (agentId) setSelectedAgentId(agentId);
+  }, [agentId, setSelectedAgentId]);
+
+  async function handleRefresh() {
+    setBusy(true);
+    try {
+      await refresh();
+      setToast({ type: 'success', message: 'Studio state refreshed' });
+    } catch (err) {
+      setToast({ type: 'error', message: err instanceof Error ? err.message : 'Failed to refresh Studio state' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePreview() {
+    setBusy(true);
+    try {
+      const nextPreview = await previewCoreFiles();
+      setPreview(nextPreview);
+      setActiveTab('diff');
+    } catch (err) {
+      setToast({ type: 'error', message: err instanceof Error ? err.message : 'Failed to load diff preview' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeploy() {
+    setBusy(true);
+    try {
+      const result = await applyCoreFiles({ applyRuntime: true });
+      if (!result.ok) {
+        throw new Error((result.diagnostics ?? []).join(', ') || 'Core files apply failed');
+      }
+      await refresh();
+      setPreview(await previewCoreFiles());
+      setToast({ type: 'success', message: 'Deployment applied successfully' });
+      setActiveTab('diff');
+    } catch (err) {
+      setToast({ type: 'error', message: err instanceof Error ? err.message : 'Deployment failed' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const testRows = useMemo(
+    () => [
+      { label: 'Runtime heartbeat', value: runtimeOk ? 'Healthy' : 'Unavailable', hint: runtimeOk ? 'Gateway responding' : 'Check diagnostics' },
+      { label: 'Compile diagnostics', value: diagnostics.length === 0 ? 'Clean' : `${diagnostics.length} issue(s)`, hint: 'Latest compile feedback' },
+      { label: 'Active sessions', value: `${sessions.length}`, hint: 'Runtime session count' },
+      { label: 'Selected agent', value: selectedAgent?.name ?? 'None', hint: selectedAgent?.model ?? 'No model' },
+    ],
+    [runtimeOk, diagnostics.length, sessions.length, selectedAgent?.name, selectedAgent?.model],
+  );
+
+  if (!workspaceId) {
+    return (
+      <StudioPageShell>
+        <StudioSectionCard title="Workspace Studio" description="No workspace loaded yet">
+          <StudioEmptyState
+            title="Create a workspace first"
+            description="Workspace Studio needs a workspace context before opening the builder surface."
+          />
+        </StudioSectionCard>
+      </StudioPageShell>
+    );
+  }
+
+  if (state.agents.length === 0) {
+    return (
+      <StudioPageShell>
+        <StudioSectionCard title="Workspace Studio" description="Builder requires at least one agent">
+          <StudioEmptyState
+            title="No agents available"
+            description="Create your first agent so the builder can generate editable graph surfaces."
+            actionLabel="Go to Agents"
+            onAction={() => {
+              window.location.href = '/agents';
+            }}
+          />
+        </StudioSectionCard>
+      </StudioPageShell>
+    );
+  }
+
+  return (
+    <StudioPageShell maxWidth={1440}>
+      <StudioHeroSection
+        eyebrow="Workspace Studio"
+        title="Builder Surface"
+        description="Compose agent behavior, test runtime readiness, and review deploy diffs from a single studio surface."
+        meta={<RuntimeStatusBadge status={runtimeOk ? 'online' : 'degraded'} label={runtimeOk ? 'runtime online' : 'runtime degraded'} />}
+        actions={
+          <>
+            <button type="button" style={toolButton(true)} disabled={busy} onClick={() => void handleRefresh()}>
+              <RefreshCw size={14} />
+              Refresh
+            </button>
+            <button type="button" style={toolButton()} disabled={busy} onClick={() => void handlePreview()}>
+              <Eye size={14} />
+              Preview Diff
+            </button>
+            <button type="button" style={primaryActionButton()} disabled={busy} onClick={() => void handleDeploy()}>
+              <Rocket size={14} />
+              Apply Deployment
+            </button>
+          </>
+        }
+      />
+
+      <StudioSectionCard
+        title="Studio Toolbar"
+        description="Select your active builder target and switch operational panes."
+        actions={
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['builder', 'test', 'diff'] as StudioSurfaceTab[]).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid',
+                  borderColor: activeTab === tab ? 'var(--color-primary)' : 'var(--border-primary)',
+                  background: activeTab === tab ? 'var(--color-primary-soft)' : 'var(--card-bg)',
+                  color: activeTab === tab ? 'var(--color-primary)' : 'var(--text-muted)',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  padding: '7px 10px',
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Active Agent
+          </span>
+          <select
+            value={agentId || ''}
+            onChange={(event) => setAgentId(event.target.value)}
+            style={{
+              minWidth: 240,
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--input-border)',
+              background: 'var(--input-bg)',
+              color: 'var(--input-text)',
+              padding: '9px 12px',
+              fontSize: 'var(--text-sm)',
+            }}
+          >
+            {state.agents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
+              </option>
+            ))}
+          </select>
+          {selectedAgent?.description && (
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedAgent.description}</span>
+          )}
+        </div>
+      </StudioSectionCard>
+
+      {activeTab === 'builder' && (
+        <section
+          className="studio-builder-surface"
+          style={{
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid var(--card-border)',
+            background: 'var(--card-bg)',
+            overflow: 'hidden',
+            display: 'grid',
+            gridTemplateColumns: '290px minmax(0, 1fr) 330px',
+            minHeight: 640,
+          }}
+        >
+          <div style={{ borderRight: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
+            <ComponentLibrary />
+          </div>
+
+          <div style={{ minHeight: 0, position: 'relative', background: 'var(--bg-secondary)' }}>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 12,
+                border: '1px solid var(--border-primary)',
+                borderRadius: 'var(--radius-lg)',
+                background:
+                  'radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--border-primary) 90%, transparent) 1px, transparent 0)',
+                backgroundSize: '22px 22px',
+                overflow: 'hidden',
+              }}
+            >
+              {selectedAgent ? (
+                <StudioCanvas
+                  workspaceId={workspaceId}
+                  agents={[selectedAgent]}
+                  flows={state.flows}
+                  skills={state.skills}
+                  onAgentSaved={(_agent: AgentSpec) => {
+                    void refresh();
+                  }}
+                />
+              ) : (
+                <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+                  <StudioEmptyState
+                    title="Select an agent"
+                    description="Choose a builder target to load nodes on the workspace canvas."
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ borderLeft: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
+            <PropertiesPanel diagnostics={diagnostics} deployPreview={preview} sessions={sessions} />
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'test' && (
+        <section className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 14 }}>
+          <StudioSectionCard title="Runtime Test Console" description="Run-time readiness and diagnostics for the active builder state.">
+            <StudioInspectorCard title="Readiness checks">
+              {testRows.map((row) => (
+                <StudioMetricRow key={row.label} label={row.label} value={row.value} hint={row.hint} />
+              ))}
+            </StudioInspectorCard>
+
+            {diagnostics.length > 0 && (
+              <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+                {diagnostics.map((item) => (
+                  <div
+                    key={item}
+                    style={{
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--tone-warning-border)',
+                      background: 'var(--tone-warning-bg)',
+                      color: 'var(--tone-warning-text)',
+                      padding: '10px 12px',
+                      fontSize: 12,
+                    }}
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
+          </StudioSectionCard>
+
+          <StudioSectionCard title="Session Sampling" description="Current runtime sessions for quick manual validation.">
+            {sessions.length === 0 ? (
+              <StudioEmptyState
+                title="No runtime sessions"
+                description="Start or replay a run to populate session traces in this panel."
+              />
+            ) : (
+              <StudioInspectorCard title="Live sessions">
+                {sessions.slice(0, 8).map((session, index) => {
+                  const current = session as Record<string, unknown>;
+                  const id = typeof current.id === 'string' ? current.id.slice(0, 12) : `session-${index + 1}`;
+                  const status = typeof current.status === 'string' ? current.status : 'unknown';
+                  const channel = typeof current.channel === 'string' ? current.channel : 'n/a';
+
+                  return (
+                    <StudioMetricRow
+                      key={`${id}-${index}`}
+                      label={id}
+                      value={status}
+                      hint={`Channel: ${channel}`}
+                    />
+                  );
+                })}
+              </StudioInspectorCard>
+            )}
+          </StudioSectionCard>
+        </section>
+      )}
+
+      {activeTab === 'diff' && (
+        <section className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <StudioSectionCard title="Deploy Diff" description="Proposed file changes generated by current studio state.">
+            {!preview ? (
+              <StudioEmptyState
+                title="No preview loaded"
+                description="Run Preview Diff from the toolbar to inspect proposed core-file changes."
+                actionLabel="Preview Diff"
+                onAction={() => void handlePreview()}
+              />
+            ) : preview.diff.length === 0 ? (
+              <StudioEmptyState
+                title="No file changes"
+                description="Current studio state matches deployed core files."
+              />
+            ) : (
+              <StudioInspectorCard title="Diff entries">
+                {preview.diff.map((entry) => (
+                  <StudioMetricRow
+                    key={`${entry.path}-${entry.status}`}
+                    label={entry.path}
+                    value={entry.status}
+                    hint={entry.status === 'unchanged' ? 'No update required' : 'Ready for apply'}
+                  />
+                ))}
+              </StudioInspectorCard>
+            )}
+          </StudioSectionCard>
+
+          <StudioSectionCard title="Diagnostics + Lifecycle" description="Compile checks and deployment readiness summary.">
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div style={statusTile(runtimeOk ? 'success' : 'warning')}>
+                {runtimeOk ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                Runtime: {runtimeOk ? 'healthy' : 'degraded'}
+              </div>
+              <div style={statusTile(diagnostics.length === 0 ? 'success' : 'warning')}>
+                {diagnostics.length === 0 ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                Compile diagnostics: {diagnostics.length === 0 ? 'none' : diagnostics.length}
+              </div>
+              <div style={statusTile((preview?.diff.length ?? 0) > 0 ? 'warning' : 'success')}>
+                <LayoutGrid size={14} />
+                Diff entries: {preview?.diff.length ?? 0}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+              <button type="button" style={toolButton()} onClick={() => void handlePreview()} disabled={busy}>
+                <Eye size={14} />
+                Refresh Diff
+              </button>
+              <button type="button" style={primaryActionButton()} onClick={() => void handleDeploy()} disabled={busy}>
+                <Rocket size={14} />
+                Apply Changes
+              </button>
+            </div>
+          </StudioSectionCard>
+        </section>
+      )}
+
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+    </StudioPageShell>
+  );
+}
+
+function toolButton(withPulse = false): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--border-primary)',
+    background: withPulse ? 'var(--color-primary-soft)' : 'var(--card-bg)',
+    color: withPulse ? 'var(--color-primary)' : 'var(--text-primary)',
+    padding: '8px 12px',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+  };
+}
+
+function primaryActionButton(): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: 'none',
+    background: 'var(--btn-primary-bg)',
+    color: 'var(--btn-primary-text)',
+    padding: '8px 12px',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+  };
+}
+
+function statusTile(tone: 'success' | 'warning'): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: `1px solid ${tone === 'success' ? 'var(--tone-success-border)' : 'var(--tone-warning-border)'}`,
+    background: tone === 'success' ? 'var(--tone-success-bg)' : 'var(--tone-warning-bg)',
+    color: tone === 'success' ? 'var(--tone-success-text)' : 'var(--tone-warning-text)',
+    padding: '10px 12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 13,
+    fontWeight: 600,
+  };
 }

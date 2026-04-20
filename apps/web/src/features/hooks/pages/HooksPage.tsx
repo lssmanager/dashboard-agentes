@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Webhook, Plus, Trash2 } from 'lucide-react';
-
-import { getHooks, createHook, updateHook, deleteHook } from '../../../lib/api';
-import { PageHeader, EmptyState } from '../../../components';
+import type { CSSProperties } from 'react';
+import { Plus, Trash2, Webhook } from 'lucide-react';
+import { createHook, deleteHook, getHooks, updateHook } from '../../../lib/api';
 import type { HookSpec } from '../../../lib/types';
 import { HookEditor } from '../components/HookEditor';
+import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../../operations/components/ObservabilityShell';
 
 export default function HooksPage() {
   const [hooks, setHooks] = useState<HookSpec[]>([]);
@@ -12,7 +12,7 @@ export default function HooksPage() {
   const [editing, setEditing] = useState<HookSpec | null>(null);
   const [creating, setCreating] = useState(false);
 
-  async function load() {
+  async function loadHooks() {
     try {
       setHooks(await getHooks());
     } catch {
@@ -22,7 +22,9 @@ export default function HooksPage() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void loadHooks();
+  }, []);
 
   async function handleSave(input: Omit<HookSpec, 'id'> & { id?: string }) {
     if (input.id) {
@@ -32,111 +34,149 @@ export default function HooksPage() {
     }
     setEditing(null);
     setCreating(false);
-    await load();
+    await loadHooks();
   }
 
   async function handleDelete(id: string) {
     await deleteHook(id);
-    await load();
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <PageHeader title="Hooks" icon={Webhook} description="Automation triggers for runs, steps, and deployments" />
-        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading hooks...</div>
-      </div>
-    );
+    await loadHooks();
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Hooks" icon={Webhook} description="Automation triggers for runs, steps, and deployments" />
+    <ObservabilityShell
+      title="Hooks"
+      description="Automation trigger management for runs, steps, deployments, and notifications."
+      icon={Webhook}
+      runtimeOk={!loading}
+      actions={
         <button
-          onClick={() => { setCreating(true); setEditing(null); }}
-          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-white"
-          style={{ background: 'var(--color-primary)' }}
+          type="button"
+          style={buttonStyle(true)}
+          onClick={() => {
+            setCreating(true);
+            setEditing(null);
+          }}
         >
           <Plus size={14} />
           New Hook
         </button>
-      </div>
-
+      }
+    >
       {(creating || editing) && (
-        <HookEditor
-          hook={editing ?? undefined}
-          onSave={handleSave}
-          onCancel={() => { setCreating(false); setEditing(null); }}
-        />
+        <ConsolePanel title={editing ? 'Edit Hook' : 'Create Hook'} description="Configure event/action automation rules">
+          <HookEditor
+            hook={editing ?? undefined}
+            onSave={handleSave}
+            onCancel={() => {
+              setCreating(false);
+              setEditing(null);
+            }}
+          />
+        </ConsolePanel>
       )}
 
-      {hooks.length === 0 && !creating ? (
-        <EmptyState
-          icon={Webhook}
-          title="No hooks configured"
-          description="Hooks let you automate actions like logging, approvals, webhooks, and notifications on key events."
-        />
-      ) : (
-        <div className="space-y-2">
-          {hooks.map((hook) => (
-            <div
-              key={hook.id}
-              className="rounded-lg border p-3 flex items-center justify-between"
-              style={{
-                borderColor: 'var(--border-primary)',
-                background: hook.enabled ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
-                opacity: hook.enabled ? 1 : 0.6,
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: hook.enabled ? '#059669' : '#9ca3af' }}
-                />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      {hook.event}
-                    </span>
+      <ConsolePanel title="Hook Registry" description={`${hooks.length} hook(s) configured`}>
+        {loading ? (
+          <ConsoleEmpty title="Loading hooks" description="Fetching hook registry." />
+        ) : hooks.length === 0 && !creating ? (
+          <ConsoleEmpty
+            title="No hooks configured"
+            description="Hooks automate logging, approvals, notifications, and webhook handoffs on runtime events."
+          />
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {hooks.map((hook) => (
+              <div
+                key={hook.id}
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-primary)',
+                  background: hook.enabled ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                  opacity: hook.enabled ? 1 : 0.7,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>{hook.event}</strong>
                     <span
-                      className="text-[10px] px-1.5 py-0.5 rounded"
-                      style={{ background: '#dbeafe', color: '#2563eb' }}
+                      style={{
+                        borderRadius: 'var(--radius-full)',
+                        border: '1px solid var(--color-primary)',
+                        background: 'var(--color-primary-soft)',
+                        color: 'var(--color-primary)',
+                        fontSize: 11,
+                        padding: '2px 8px',
+                        fontWeight: 700,
+                      }}
                     >
                       {hook.action}
                     </span>
-                    {hook.priority != null && hook.priority !== 0 && (
-                      <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                        priority: {hook.priority}
-                      </span>
+                    {!hook.enabled && (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Disabled</span>
                     )}
                   </div>
-                  <div className="text-[10px] mt-0.5 font-mono" style={{ color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
                     {hook.id}
-                  </div>
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    style={buttonStyle()}
+                    onClick={() => {
+                      setEditing(hook);
+                      setCreating(false);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button type="button" style={dangerButton()} onClick={() => void handleDelete(hook.id)}>
+                    <Trash2 size={13} />
+                    Delete
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => { setEditing(hook); setCreating(false); }}
-                  className="px-2 py-1 rounded text-[10px] font-medium"
-                  style={{ color: 'var(--color-primary)', background: 'var(--color-primary-soft)' }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => void handleDelete(hook.id)}
-                  className="p-1 rounded transition-colors"
-                  style={{ color: '#dc2626' }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </ConsolePanel>
+    </ObservabilityShell>
   );
+}
+
+function buttonStyle(primary = false): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: primary ? 'none' : '1px solid var(--border-primary)',
+    background: primary ? 'var(--btn-primary-bg)' : 'var(--card-bg)',
+    color: primary ? 'var(--btn-primary-text)' : 'var(--text-primary)',
+    padding: '8px 12px',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+  };
+}
+
+function dangerButton(): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--tone-danger-border)',
+    background: 'var(--tone-danger-bg)',
+    color: 'var(--tone-danger-text)',
+    padding: '8px 10px',
+    fontSize: 12,
+    fontWeight: 700,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+  };
 }

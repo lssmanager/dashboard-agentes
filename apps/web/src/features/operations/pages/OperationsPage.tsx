@@ -1,254 +1,273 @@
-import { useState, useEffect, useCallback } from 'react';
-import { BarChart3, RefreshCw, ArrowLeftRight } from 'lucide-react';
-import { PageHeader } from '../../../components';
+import { useCallback, useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { ArrowLeftRight, BarChart3, RefreshCw } from 'lucide-react';
+import { compareRuns, getRun, getRuns, getUsage, getUsageByAgent } from '../../../lib/api';
+import type { RunSpec } from '../../../lib/types';
 import { CostChart } from '../components/CostChart';
 import { TokenUsageTable } from '../components/TokenUsageTable';
 import { RunReplay } from '../components/RunReplay';
 import { RunComparison } from '../components/RunComparison';
-import type { RunSpec } from '../../../lib/types';
-import { getUsage, getUsageByAgent, getRuns, getRun, compareRuns } from '../../../lib/api';
+import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../components/ObservabilityShell';
 
 type ActiveTab = 'overview' | 'agents' | 'replay' | 'compare';
 
 export default function OperationsPage() {
   const [tab, setTab] = useState<ActiveTab>('overview');
-
-  // Overview state
-  const [usage, setUsage] = useState<{ totalCost: number; totalTokens: { input: number; output: number }; totalRuns: number; groups: Array<{ key: string; cost: number; tokens: { input: number; output: number }; runs: number }> } | null>(null);
-
-  // Agent usage state
-  const [agentUsage, setAgentUsage] = useState<Array<{ agentId: string; cost: number; tokens: { input: number; output: number }; steps: number }>>([]);
-
-  // Replay state
+  const [usage, setUsage] = useState<{
+    totalCost: number;
+    totalTokens: { input: number; output: number };
+    totalRuns: number;
+    groups: Array<{ key: string; cost: number; tokens: { input: number; output: number }; runs: number }>;
+  } | null>(null);
+  const [agentUsage, setAgentUsage] = useState<
+    Array<{ agentId: string; cost: number; tokens: { input: number; output: number }; steps: number }>
+  >([]);
   const [runs, setRuns] = useState<RunSpec[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedRun, setSelectedRun] = useState<RunSpec | null>(null);
-
-  // Compare state
   const [compareIds, setCompareIds] = useState<string[]>([]);
-  const [comparison, setComparison] = useState<{ runs: Array<{ id: string; flowId: string; status: string; startedAt: string; completedAt?: string; totalCost: number; totalTokens: { input: number; output: number }; stepCount: number }>; diffs: Array<{ field: string; values: Record<string, unknown> }> } | null>(null);
+  const [comparison, setComparison] = useState<{
+    runs: Array<{
+      id: string;
+      flowId: string;
+      status: string;
+      startedAt: string;
+      completedAt?: string;
+      totalCost: number;
+      totalTokens: { input: number; output: number };
+      stepCount: number;
+    }>;
+    diffs: Array<{ field: string; values: Record<string, unknown> }>;
+  } | null>(null);
 
   const loadUsage = useCallback(async () => {
     try {
-      const data = await getUsage();
-      setUsage(data);
-    } catch (e) {
-      console.error('Failed to load usage', e);
-    }
-  }, []);
-
-  const loadAgentUsage = useCallback(async () => {
-    try {
-      const data = await getUsageByAgent();
-      setAgentUsage(data);
-    } catch (e) {
-      console.error('Failed to load agent usage', e);
-    }
-  }, []);
-
-  const loadRuns = useCallback(async () => {
-    try {
-      const data = await getRuns();
-      setRuns(data);
-    } catch (e) {
-      console.error('Failed to load runs', e);
+      setUsage(await getUsage());
+      setAgentUsage(await getUsageByAgent());
+      setRuns(await getRuns());
+    } catch {
+      setUsage(null);
+      setAgentUsage([]);
+      setRuns([]);
     }
   }, []);
 
   useEffect(() => {
-    loadUsage();
-    loadAgentUsage();
-    loadRuns();
-  }, [loadUsage, loadAgentUsage, loadRuns]);
+    void loadUsage();
+  }, [loadUsage]);
 
-  const handleSelectRun = async (id: string) => {
+  async function handleSelectRun(id: string) {
     setSelectedRunId(id);
     try {
-      const run = await getRun(id);
-      setSelectedRun(run);
+      setSelectedRun(await getRun(id));
     } catch {
       setSelectedRun(null);
     }
-  };
+  }
 
-  const handleToggleCompare = (id: string) => {
-    setCompareIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+  function handleToggleCompare(id: string) {
+    setCompareIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
     setComparison(null);
-  };
+  }
 
-  const handleCompare = async () => {
+  async function handleCompare() {
     if (compareIds.length < 2) return;
     try {
-      const result = await compareRuns(compareIds);
-      setComparison(result);
-    } catch (e) {
-      console.error('Compare failed', e);
+      setComparison(await compareRuns(compareIds));
+    } catch {
+      setComparison(null);
     }
-  };
-
-  const TABS: Array<{ key: ActiveTab; label: string }> = [
-    { key: 'overview', label: 'Cost Overview' },
-    { key: 'agents', label: 'Agent Usage' },
-    { key: 'replay', label: 'Replay' },
-    { key: 'compare', label: 'Compare' },
-  ];
+  }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <PageHeader title="Operations" icon={BarChart3} description="Usage, costs, replay, and run comparison" />
+    <ObservabilityShell
+      title="Operations"
+      description="Cost intelligence, token usage, replay validation, and run comparison in one operations console."
+      icon={BarChart3}
+      runtimeOk={(usage?.totalRuns ?? 0) > 0}
+      actions={
+        <button type="button" style={toolButton()} onClick={() => void loadUsage()}>
+          <RefreshCw size={14} />
+          Refresh Data
+        </button>
+      }
+    >
+      <ConsolePanel title="Operations Views" description="Choose analytical, replay, or compare mode.">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {([
+            { id: 'overview', label: 'Cost Overview' },
+            { id: 'agents', label: 'Agent Usage' },
+            { id: 'replay', label: 'Replay' },
+            { id: 'compare', label: 'Compare' },
+          ] as Array<{ id: ActiveTab; label: string }>).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              style={{
+                ...toolButton(),
+                borderColor: tab === item.id ? 'var(--color-primary)' : 'var(--border-primary)',
+                background: tab === item.id ? 'var(--color-primary-soft)' : 'var(--card-bg)',
+                color: tab === item.id ? 'var(--color-primary)' : 'var(--text-primary)',
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </ConsolePanel>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b" style={{ borderColor: 'var(--border-primary)' }}>
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className="px-4 py-2 text-sm font-medium transition-colors relative"
-            style={{ color: tab === t.key ? 'var(--color-primary)' : 'var(--text-muted)' }}
-          >
-            {t.label}
-            {tab === t.key && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: 'var(--color-primary)' }} />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="rounded-xl border p-6" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
-
-        {/* ── Overview Tab ── */}
-        {tab === 'overview' && (
-          <div className="space-y-6">
-            {/* KPI row */}
-            {usage && (
-              <div className="grid grid-cols-3 gap-4">
-                <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)' }}>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>Total Cost</p>
-                  <p className="text-lg font-semibold font-heading" style={{ color: 'var(--text-primary)' }}>
-                    ${usage.totalCost.toFixed(4)}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)' }}>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>Total Tokens</p>
-                  <p className="text-lg font-semibold font-heading" style={{ color: 'var(--text-primary)' }}>
-                    {(usage.totalTokens.input + usage.totalTokens.output).toLocaleString()}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)' }}>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>Total Runs</p>
-                  <p className="text-lg font-semibold font-heading" style={{ color: 'var(--text-primary)' }}>
-                    {usage.totalRuns}
-                  </p>
-                </div>
+      {tab === 'overview' && (
+        <section style={{ display: 'grid', gap: 14 }}>
+          <ConsolePanel title="Cost KPIs" description="Top-level usage and spend metrics">
+            {!usage ? (
+              <ConsoleEmpty title="No usage data" description="Unable to fetch usage metrics right now." />
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+                <MetricCard label="Total Cost" value={`$${usage.totalCost.toFixed(4)}`} />
+                <MetricCard label="Total Tokens" value={`${(usage.totalTokens.input + usage.totalTokens.output).toLocaleString()}`} />
+                <MetricCard label="Total Runs" value={`${usage.totalRuns}`} />
               </div>
             )}
+          </ConsolePanel>
 
-            {/* Cost chart */}
-            {usage && <CostChart groups={usage.groups} totalCost={usage.totalCost} />}
+          {usage && (
+            <ConsolePanel title="Cost Distribution" description="Usage grouped by key segments">
+              <CostChart groups={usage.groups} totalCost={usage.totalCost} />
+            </ConsolePanel>
+          )}
+        </section>
+      )}
 
-            {!usage && (
-              <p className="text-xs text-center py-8" style={{ color: 'var(--text-muted)' }}>Loading usage data...</p>
-            )}
-          </div>
-        )}
-
-        {/* ── Agent Usage Tab ── */}
-        {tab === 'agents' && (
+      {tab === 'agents' && (
+        <ConsolePanel title="Agent Usage" description="Token and cost contribution by agent">
           <TokenUsageTable rows={agentUsage} />
-        )}
+        </ConsolePanel>
+      )}
 
-        {/* ── Replay Tab ── */}
-        {tab === 'replay' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Run list */}
-            <div className="md:col-span-1 space-y-1 max-h-[500px] overflow-y-auto">
-              <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Select a run</p>
-              {runs.map((run) => (
-                <button
-                  key={run.id}
-                  onClick={() => handleSelectRun(run.id)}
-                  className="w-full text-left px-3 py-2 rounded-lg border text-xs transition-colors"
-                  style={{
-                    borderColor: selectedRunId === run.id ? 'var(--color-primary)' : 'transparent',
-                    background: selectedRunId === run.id ? 'var(--color-primary-soft)' : 'transparent',
-                  }}
-                >
-                  <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{run.id.slice(0, 12)}</span>
-                  <span className="ml-2" style={{ color: run.status === 'completed' ? '#059669' : run.status === 'failed' ? '#dc2626' : 'var(--text-muted)' }}>
-                    {run.status}
-                  </span>
-                </button>
-              ))}
-              {runs.length === 0 && (
-                <p className="text-xs py-4 text-center" style={{ color: 'var(--text-muted)' }}>No runs available.</p>
-              )}
-            </div>
-
-            {/* Replay panel */}
-            <div className="md:col-span-2">
-              {selectedRun ? (
-                <RunReplay run={selectedRun} onReplayCreated={(newRun) => { loadRuns(); setSelectedRun(null); setSelectedRunId(null); }} />
-              ) : (
-                <div className="rounded-lg border p-8 text-center" style={{ borderColor: 'var(--card-border)' }}>
-                  <RefreshCw size={24} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Select a run to replay.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Compare Tab ── */}
-        {tab === 'compare' && (
-          <div className="space-y-4">
-            {/* Run selector */}
-            <div>
-              <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                Select runs to compare ({compareIds.length} selected)
-              </p>
-              <div className="flex flex-wrap gap-1 max-h-[200px] overflow-y-auto">
-                {runs.map((run) => {
-                  const isSelected = compareIds.includes(run.id);
-                  return (
-                    <button
-                      key={run.id}
-                      onClick={() => handleToggleCompare(run.id)}
-                      className="px-2.5 py-1.5 rounded-md border text-xs font-mono transition-colors"
-                      style={{
-                        borderColor: isSelected ? 'var(--color-primary)' : 'var(--border-primary)',
-                        background: isSelected ? 'var(--color-primary-soft)' : 'transparent',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      {run.id.slice(0, 8)}
-                      <span className="ml-1.5 font-sans" style={{ color: run.status === 'completed' ? '#059669' : '#dc2626' }}>
-                        {run.status}
-                      </span>
-                    </button>
-                  );
-                })}
+      {tab === 'replay' && (
+        <section className="studio-console-master-detail" style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: 14 }}>
+          <ConsolePanel title="Runs" description="Select one run to replay">
+            {runs.length === 0 ? (
+              <ConsoleEmpty title="No runs available" description="Runs are required to perform replay testing." />
+            ) : (
+              <div style={{ display: 'grid', gap: 8, maxHeight: 500, overflowY: 'auto' }}>
+                {runs.map((run) => (
+                  <button
+                    key={run.id}
+                    type="button"
+                    onClick={() => void handleSelectRun(run.id)}
+                    style={{
+                      ...toolButton(),
+                      width: '100%',
+                      justifyContent: 'space-between',
+                      borderColor: selectedRunId === run.id ? 'var(--color-primary)' : 'var(--border-primary)',
+                      background: selectedRunId === run.id ? 'var(--color-primary-soft)' : 'var(--card-bg)',
+                    }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{run.id.slice(0, 10)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{run.status}</span>
+                  </button>
+                ))}
               </div>
-              <button
-                onClick={handleCompare}
-                disabled={compareIds.length < 2}
-                className="mt-2 px-3 py-1.5 text-xs rounded-md font-medium text-white flex items-center gap-1.5"
-                style={{ background: 'var(--color-primary)', opacity: compareIds.length < 2 ? 0.5 : 1 }}
-              >
-                <ArrowLeftRight size={12} />
-                Compare
-              </button>
-            </div>
-
-            {/* Comparison result */}
-            {comparison && (
-              <RunComparison runs={comparison.runs} diffs={comparison.diffs} />
             )}
-          </div>
-        )}
-      </div>
+          </ConsolePanel>
+
+          <ConsolePanel title="Replay Surface" description="Replay and inspect execution behavior">
+            {selectedRun ? (
+              <RunReplay
+                run={selectedRun}
+                onReplayCreated={() => {
+                  void loadUsage();
+                  setSelectedRun(null);
+                  setSelectedRunId(null);
+                }}
+              />
+            ) : (
+              <ConsoleEmpty title="No run selected" description="Choose a run from the left list to begin replay." />
+            )}
+          </ConsolePanel>
+        </section>
+      )}
+
+      {tab === 'compare' && (
+        <section style={{ display: 'grid', gap: 14 }}>
+          <ConsolePanel title="Run Selection" description={`Select at least 2 runs (${compareIds.length} selected)`}>
+            {runs.length === 0 ? (
+              <ConsoleEmpty title="No runs available" description="Run comparison requires existing executions." />
+            ) : (
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {runs.map((run) => {
+                    const selected = compareIds.includes(run.id);
+                    return (
+                      <button
+                        key={run.id}
+                        type="button"
+                        onClick={() => handleToggleCompare(run.id)}
+                        style={{
+                          ...toolButton(),
+                          borderColor: selected ? 'var(--color-primary)' : 'var(--border-primary)',
+                          background: selected ? 'var(--color-primary-soft)' : 'var(--card-bg)',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      >
+                        {run.id.slice(0, 8)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button type="button" style={toolButton()} onClick={() => void handleCompare()} disabled={compareIds.length < 2}>
+                  <ArrowLeftRight size={14} />
+                  Compare Runs
+                </button>
+              </div>
+            )}
+          </ConsolePanel>
+
+          {comparison && (
+            <ConsolePanel title="Comparison Output" description="Field-level differences across selected runs">
+              <RunComparison runs={comparison.runs} diffs={comparison.diffs} />
+            </ConsolePanel>
+          )}
+        </section>
+      )}
+    </ObservabilityShell>
+  );
+}
+
+function toolButton(): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--border-primary)',
+    background: 'var(--card-bg)',
+    color: 'var(--text-primary)',
+    padding: '8px 12px',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+  };
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-primary)',
+        background: 'var(--bg-secondary)',
+        padding: 14,
+      }}
+    >
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {label}
+      </p>
+      <strong style={{ display: 'block', marginTop: 6, fontSize: 'var(--text-2xl)', color: 'var(--text-primary)' }}>
+        {value}
+      </strong>
     </div>
   );
 }

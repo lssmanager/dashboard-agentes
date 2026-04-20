@@ -1,122 +1,107 @@
+import { MessageSquare } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { useStudioState } from '../../../lib/StudioStateContext';
-import { MessageSquare, Circle } from 'lucide-react';
-import { PageHeader, Card, Badge } from '../../../components';
+import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../../operations/components/ObservabilityShell';
 
 export default function SessionsPage() {
   const { state } = useStudioState();
-
   const sessions = state.runtime?.sessions?.payload ?? [];
+  const runtimeOk = state.runtime?.health?.ok ?? false;
 
-  const hasStatusData = sessions.some((s: any) => s?.status !== undefined);
+  const hasStatusData = sessions.some((session: any) => session?.status !== undefined);
   const activeCount = hasStatusData
-    ? sessions.filter((s: any) => s?.status === 'active').length
+    ? sessions.filter((session: any) => session?.status === 'active').length
     : sessions.length;
-  const activeLabel = hasStatusData ? 'Active Now' : 'Sessions';
+  const avgMessages = sessions.length > 0
+    ? Math.round(
+        sessions.reduce((sum: number, session: any) => sum + (session?.messages?.length || 0), 0) / sessions.length,
+      )
+    : 0;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <PageHeader
-        title="Sessions"
-        description="Runtime session history and metrics"
-        icon={MessageSquare}
-      />
+    <ObservabilityShell
+      title="Sessions"
+      description="Runtime sessions view with channel, status, and per-session message activity."
+      icon={MessageSquare}
+      runtimeOk={runtimeOk}
+    >
+      <section className="studio-responsive-three-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+        <MetricTile label="Total Sessions" value={`${sessions.length}`} />
+        <MetricTile label={hasStatusData ? 'Active Now' : 'Sessions'} value={`${activeCount}`} />
+        <MetricTile label="Avg Messages / Session" value={sessions.length > 0 ? `${avgMessages}` : '0'} />
+      </section>
 
-      {/* Sessions Table */}
-      <Card className="p-0 overflow-hidden">
-        {sessions.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Session ID</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Channel</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Agent</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Messages</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {sessions.map((session: any, idx: number) => {
-                  const s = session as {
-                    id?: string;
-                    agentId?: string;
-                    status?: string;
-                    channel?: string;
-                    messages?: unknown[];
-                    createdAt?: string;
-                  };
-                  return (
-                    <tr key={s.id ?? idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 text-sm">
-                        <code className="bg-slate-100 text-slate-900 px-2 py-1 rounded text-xs font-mono">
-                          {s.id ? s.id.substring(0, 20) : `sess-${idx + 1}`}
-                        </code>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Circle
-                            size={8}
-                            className={
-                              s.status === 'active'
-                                ? 'fill-emerald-500 text-emerald-500'
-                                : 'fill-slate-300 text-slate-300'
-                            }
-                          />
-                          <span className="text-xs text-slate-700">{s.status ?? 'unknown'}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{s.channel ?? '—'}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="font-mono text-xs text-slate-900">{s.agentId ?? '—'}</span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <MessageSquare size={14} />
-                          <span>{s.messages?.length ?? 0}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      <ConsolePanel title="Session Stream" description="Current runtime session table">
+        {sessions.length === 0 ? (
+          <ConsoleEmpty
+            title="No sessions yet"
+            description="Sessions appear when agents start processing messages."
+          />
         ) : (
-          <div className="px-6 py-12 text-center">
-            <MessageSquare size={40} className="mx-auto text-slate-300 mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900">No sessions yet</h3>
-            <p className="text-slate-600 text-sm mt-2">Sessions will appear here when agents start processing</p>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={rowStyle(true)}>
+              <span>Session</span>
+              <span>Status</span>
+              <span>Channel</span>
+              <span>Agent</span>
+              <span>Messages</span>
+            </div>
+            {sessions.map((session: any, index: number) => {
+              const id = typeof session?.id === 'string' ? session.id.slice(0, 20) : `sess-${index + 1}`;
+              const status = typeof session?.status === 'string' ? session.status : 'unknown';
+              const channel = typeof session?.channel === 'string' ? session.channel : 'n/a';
+              const agent = typeof session?.agentId === 'string' ? session.agentId : 'n/a';
+              const messages = Array.isArray(session?.messages) ? session.messages.length : 0;
+
+              return (
+                <div key={`${id}-${index}`} style={rowStyle(false)}>
+                  <span style={{ fontFamily: 'var(--font-mono)' }}>{id}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{status}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{channel}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{agent}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{messages}</span>
+                </div>
+              );
+            })}
           </div>
         )}
-      </Card>
+      </ConsolePanel>
+    </ObservabilityShell>
+  );
+}
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <p className="text-sm text-slate-600">Total Sessions</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{sessions.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-slate-600">{activeLabel}</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{activeCount}</p>
-          <div className="mt-2">
-            <Badge variant={activeCount > 0 ? 'success' : 'default'}>
-              {activeCount > 0 ? 'Active' : 'None'}
-            </Badge>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-slate-600">Avg Messages/Session</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">
-            {sessions.length > 0
-              ? Math.round(
-                  sessions.reduce((sum: number, s: any) => sum + (s?.messages?.length || 0), 0) /
-                    sessions.length
-                )
-              : '—'}
-          </p>
-        </Card>
-      </div>
+function MetricTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-primary)',
+        background: 'var(--bg-secondary)',
+        padding: 14,
+      }}
+    >
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {label}
+      </p>
+      <strong style={{ display: 'block', marginTop: 6, fontSize: 'var(--text-2xl)' }}>{value}</strong>
     </div>
   );
+}
+
+function rowStyle(header: boolean): CSSProperties {
+  return {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.2fr) 120px 120px minmax(0, 1fr) 90px',
+    gap: 8,
+    alignItems: 'center',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--border-primary)',
+    background: header ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+    padding: '10px 12px',
+    fontSize: header ? 11 : 12,
+    fontWeight: header ? 700 : 500,
+    textTransform: header ? 'uppercase' : 'none',
+    letterSpacing: header ? '0.06em' : 'normal',
+    color: header ? 'var(--text-muted)' : 'var(--text-primary)',
+  };
 }

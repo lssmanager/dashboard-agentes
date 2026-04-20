@@ -1,461 +1,299 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users,
-  Wrench,
-  GitBranch,
-  BookOpen,
-  MessageSquare,
   Activity,
+  ArrowRightLeft,
+  BookOpen,
+  Bot,
+  CirclePlay,
   DollarSign,
-  Settings,
-  Save,
-  ChevronDown,
-  X,
+  GitBranch,
+  Plus,
+  Radar,
+  Sparkles,
+  Wrench,
 } from 'lucide-react';
+import { getUsage } from '../../../lib/api';
 import { useStudioState } from '../../../lib/StudioStateContext';
-import { saveAgent, getUsage } from '../../../lib/api';
-import { StatCard } from '../../../components/ui/StatCard';
-import { KpiGrid } from '../../../components/ui/KpiGrid';
-import { SectionCard } from '../../../components/ui/SectionCard';
-import { OverviewHero } from '../components/OverviewHero';
-import { OverviewTabs, type OverviewTab } from '../components/OverviewTabs';
+import {
+  RuntimeStatusBadge,
+  StudioEmptyState,
+  StudioHeroSection,
+  StudioInspectorCard,
+  StudioKpiCard,
+  StudioMetricRow,
+  StudioPageShell,
+  StudioSectionCard,
+  StudioTimelineBlock,
+} from '../../../components/ui';
 import { RuntimeHealthWidget } from '../components/widgets/RuntimeHealthWidget';
 import { SessionsTrendWidget } from '../components/widgets/SessionsTrendWidget';
 import { ToolCallsWidget } from '../components/widgets/ToolCallsWidget';
 import { FlowsHealthWidget } from '../components/widgets/FlowsHealthWidget';
-import { AgentOverviewCard } from '../components/AgentOverviewCard';
-import { ProfileOverviewCard } from '../components/ProfileOverviewCard';
-import { ActivityFeed } from '../components/ActivityFeed';
-import { FlowSummaryCard } from '../components/FlowSummaryCard';
-import { useDashboardLayout } from '../lib/use-dashboard-layout';
 
-// ── Widget registry ─────────────────────────────────────────────────
-type WidgetRenderer = (props: { runtimeOk: boolean; diagnosticsCount: number; sessionCount: number; skills: any[]; flows: any[] }) => ReactNode;
+function actionButtonStyle(primary = false): CSSProperties {
+  if (primary) {
+    return {
+      borderRadius: 'var(--radius-md)',
+      border: 'none',
+      background: 'var(--btn-primary-bg)',
+      color: 'var(--btn-primary-text)',
+      padding: '9px 14px',
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: 'pointer',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+    };
+  }
 
-const WIDGET_REGISTRY: Record<string, { label: string; render: WidgetRenderer; colSpan: 1 | 2 }> = {
-  'runtime-health': {
-    label: 'Runtime Health',
-    colSpan: 1,
-    render: ({ runtimeOk, diagnosticsCount }) => <RuntimeHealthWidget runtimeOk={runtimeOk} diagnosticsCount={diagnosticsCount} />,
-  },
-  'sessions-trend': {
-    label: 'Sessions Trend',
-    colSpan: 1,
-    render: ({ sessionCount }) => <SessionsTrendWidget sessionCount={sessionCount} />,
-  },
-  'tool-calls': {
-    label: 'Tool Calls',
-    colSpan: 1,
-    render: ({ skills }) => <ToolCallsWidget skills={skills} />,
-  },
-  'flows-health': {
-    label: 'Flows Health',
-    colSpan: 2,
-    render: ({ flows }) => <FlowsHealthWidget flows={flows} />,
-  },
-};
-
-// ── Small button style helper ───────────────────────────────────────
-const smallBtnStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
-  padding: '5px 12px',
-  borderRadius: 'var(--radius-md)',
-  border: '1px solid var(--border-primary)',
-  background: 'var(--bg-primary)',
-  color: 'var(--text-secondary)',
-  fontSize: 12,
-  fontWeight: 500,
-  cursor: 'pointer',
-};
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--border-primary)',
+    background: 'var(--card-bg)',
+    color: 'var(--text-primary)',
+    padding: '9px 14px',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+  };
+}
 
 export default function OverviewPage() {
-  const { state, refresh } = useStudioState();
+  const { state } = useStudioState();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<OverviewTab>('overview');
-  const [costValue, setCostValue] = useState<string>('N/A');
-  const [viewDropdown, setViewDropdown] = useState(false);
 
-  const {
-    currentView,
-    savedViews,
-    widgets: widgetConfigs,
-    setCurrentView,
-    saveView,
-    isEditing,
-    setEditing,
-    toggleWidget,
-    removeWidget,
-  } = useDashboardLayout();
+  const [costValue, setCostValue] = useState('N/A');
 
-  const workspace    = state.workspace;
-  const agents       = state.agents       ?? [];
-  const skills       = state.skills       ?? [];
-  const flows        = state.flows        ?? [];
-  const profiles     = state.profiles     ?? [];
+  const agents = state.agents ?? [];
+  const profiles = state.profiles ?? [];
+  const flows = state.flows ?? [];
+  const skills = state.skills ?? [];
+  const runtimeOk = state.runtime?.health?.ok ?? false;
+  const diagnosticsCount = state.compile?.diagnostics?.length ?? 0;
   const sessionCount = state.runtime?.sessions?.payload?.length ?? 0;
-  const runtimeOk    = state.runtime?.health?.ok ?? false;
-  const diagnostics  = state.compile?.diagnostics ?? [];
 
-  const enabledAgents = agents.filter((a) => a.isEnabled !== false).length;
-  const enabledFlows  = flows.filter((f) => f.isEnabled).length;
+  const enabledAgents = agents.filter((agent) => agent.isEnabled !== false).length;
+  const enabledFlows = flows.filter((flow) => flow.isEnabled).length;
 
-  // Phase D: Fetch usage cost on mount
   useEffect(() => {
     getUsage()
       .then((data) => setCostValue(`$${data.totalCost.toFixed(2)}`))
       .catch(() => setCostValue('N/A'));
   }, []);
 
-  const show = (section: OverviewTab) =>
-    activeTab === 'overview' || activeTab === section;
+  const recentActivity = useMemo(() => {
+    const items: Array<{ title: string; description: string; meta?: string }> = [];
 
-  // Phase D: Agent toggle handler
-  const handleAgentToggle = async (agentId: string) => {
-    const agent = agents.find((a) => a.id === agentId);
-    if (!agent) return;
-    try {
-      await saveAgent({ ...agent, isEnabled: !agent.isEnabled });
-      await refresh();
-    } catch { /* graceful fail */ }
-  };
+    items.push({
+      title: runtimeOk ? 'Runtime heartbeat healthy' : 'Runtime heartbeat degraded',
+      description: runtimeOk
+        ? 'Gateway responds to health checks and runtime controls.'
+        : 'Gateway checks failed. Review diagnostics before deploying.',
+      meta: diagnosticsCount > 0 ? `${diagnosticsCount} compile diagnostic(s) pending` : 'No compile diagnostics',
+    });
 
-  // Visible widgets sorted by position
-  const visibleWidgets = [...widgetConfigs]
-    .filter((w) => w.visible && WIDGET_REGISTRY[w.id])
-    .sort((a, b) => a.position - b.position);
+    items.push({
+      title: `${sessionCount} active session${sessionCount === 1 ? '' : 's'}`,
+      description: sessionCount > 0
+        ? 'Live conversations are currently routed through gateway sessions.'
+        : 'No active sessions right now.',
+      meta: 'Sessions surface updates from runtime.',
+    });
 
-  const widgetProps = { runtimeOk, diagnosticsCount: diagnostics.length, sessionCount, skills, flows };
+    items.push({
+      title: `${enabledFlows}/${flows.length} flows enabled`,
+      description: flows.length > 0
+        ? 'Routing graph has active paths and can execute run triggers.'
+        : 'No flows created yet.',
+      meta: `${enabledAgents}/${agents.length} agents enabled`,
+    });
+
+    return items;
+  }, [runtimeOk, diagnosticsCount, sessionCount, enabledFlows, flows.length, enabledAgents, agents.length]);
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* ── Hero ─────────────────────────────────── */}
-      <OverviewHero
-        workspaceName={workspace?.name ?? 'Studio Overview'}
-        description={workspace?.description}
+    <StudioPageShell>
+      <StudioHeroSection
+        eyebrow="Studio Control Plane"
+        title={state.workspace?.name ?? 'Workspace Overview'}
+        description={
+          state.workspace?.description ??
+          'Monitor runtime health, editing readiness, and routing posture from a single dashboard surface.'
+        }
+        actions={
+          <>
+            <button type="button" style={actionButtonStyle(true)} onClick={() => navigate('/workspace-studio')}>
+              <Sparkles size={14} />
+              Open Workspace Studio
+            </button>
+            <button type="button" style={actionButtonStyle()} onClick={() => navigate('/agents/new')}>
+              <Plus size={14} />
+              New Agent
+            </button>
+            <button type="button" style={actionButtonStyle()} onClick={() => navigate('/routing')}>
+              <GitBranch size={14} />
+              Edit Flows
+            </button>
+            <button type="button" style={actionButtonStyle()} onClick={() => navigate('/runs')}>
+              <CirclePlay size={14} />
+              Open Runs Console
+            </button>
+          </>
+        }
+        meta={<RuntimeStatusBadge status={runtimeOk ? 'online' : 'degraded'} label={runtimeOk ? 'runtime online' : 'runtime degraded'} />}
       />
 
-      {/* ── Tabs ─────────────────────────────────── */}
-      <OverviewTabs active={activeTab} onChange={setActiveTab} />
+      <section
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 12,
+        }}
+      >
+        <StudioKpiCard label="Agents" value={agents.length} helper={`${enabledAgents} enabled`} icon={<Bot size={18} />} onClick={() => navigate('/agents')} />
+        <StudioKpiCard label="Profiles" value={profiles.length} helper="Role templates" icon={<BookOpen size={18} />} onClick={() => navigate('/profiles')} />
+        <StudioKpiCard label="Flows" value={flows.length} helper={`${enabledFlows} enabled`} icon={<GitBranch size={18} />} onClick={() => navigate('/routing')} />
+        <StudioKpiCard label="Sessions" value={sessionCount} helper="Live runtime" icon={<Radar size={18} />} onClick={() => navigate('/sessions')} />
+        <StudioKpiCard label="Runtime" value={runtimeOk ? 'Online' : 'Degraded'} helper={runtimeOk ? 'Gateway healthy' : 'Action needed'} tone={runtimeOk ? 'success' : 'warning'} icon={<Activity size={18} />} onClick={() => navigate('/diagnostics')} />
+        <StudioKpiCard label="Usage Cost" value={costValue} helper="Current period" icon={<DollarSign size={18} />} onClick={() => navigate('/operations')} />
+      </section>
 
-      {/* ── KPI Row (6-col) ──────────────────────── */}
-      {show('overview') && (
-        <KpiGrid cols={6}>
-          <StatCard
-            label="Agents"
-            value={agents.length}
-            helper={`${enabledAgents} enabled`}
-            icon={<Users size={22} />}
-            onClick={() => navigate('/agents')}
-          />
-          <StatCard
-            label="Profiles"
-            value={profiles.length}
-            helper="templates"
-            icon={<BookOpen size={22} />}
-            onClick={() => navigate('/profiles')}
-          />
-          <StatCard
-            label="Flows"
-            value={flows.length}
-            helper={`${enabledFlows} enabled`}
-            icon={<GitBranch size={22} />}
-            onClick={() => navigate('/routing')}
-          />
-          <StatCard
-            label="Sessions"
-            value={sessionCount}
-            helper="gateway"
-            icon={<MessageSquare size={22} />}
-            onClick={() => navigate('/sessions')}
-          />
-          <StatCard
-            label="Runtime"
-            value={runtimeOk ? 'Online' : 'Offline'}
-            helper={runtimeOk ? 'Gateway OK' : 'Unreachable'}
-            tone={runtimeOk ? 'success' : 'warning'}
-            icon={<Activity size={22} />}
-          />
-          <StatCard
-            label="Cost"
-            value={costValue}
-            helper="this period"
-            icon={<DollarSign size={22} />}
-          />
-        </KpiGrid>
-      )}
-
-      {/* ── Main 2-col grid: Widgets + Activity ── */}
-      {show('overview') && (
-        <div
-          className="grid gap-5"
-          style={{ gridTemplateColumns: '1.35fr 0.9fr' }}
+      <section
+        className="studio-responsive-two-col"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)',
+          gap: 14,
+          alignItems: 'start',
+        }}
+      >
+        <StudioSectionCard
+          title="Runtime Health Summary"
+          description="Live telemetry from runtime, sessions, flows and tool surfaces."
         >
-          {/* Left: Widget section */}
-          <SectionCard
-            title="Widgets"
-            icon={<Wrench size={16} />}
-            description={currentView?.name ?? 'Operational overview'}
-            bodyClassName="!p-0"
-            actions={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
-                {/* View selector */}
-                <button
-                  style={smallBtnStyle}
-                  onClick={() => setViewDropdown(!viewDropdown)}
-                >
-                  <ChevronDown size={12} />
-                  {currentView?.name ?? 'Default'}
-                </button>
-                {viewDropdown && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: 4,
-                      background: 'var(--card-bg)',
-                      border: '1px solid var(--card-border)',
-                      borderRadius: 'var(--radius-md)',
-                      boxShadow: 'var(--shadow-lg)',
-                      zIndex: 50,
-                      minWidth: 180,
-                      padding: 4,
-                    }}
-                  >
-                    {savedViews.map((v) => (
-                      <button
-                        key={v.id}
-                        onClick={() => { setCurrentView(v.id); setViewDropdown(false); }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '8px 12px',
-                          fontSize: 13,
-                          fontWeight: v.id === currentView?.id ? 600 : 400,
-                          color: v.id === currentView?.id ? 'var(--color-primary)' : 'var(--text-primary)',
-                          background: v.id === currentView?.id ? 'var(--color-primary-soft)' : 'transparent',
-                          border: 'none',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {v.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Edit toggle */}
-                <button
-                  style={{
-                    ...smallBtnStyle,
-                    background: isEditing ? 'var(--color-primary-soft)' : 'var(--bg-primary)',
-                    color: isEditing ? 'var(--color-primary)' : 'var(--text-secondary)',
-                    borderColor: isEditing ? 'var(--color-primary)' : 'var(--border-primary)',
-                  }}
-                  onClick={() => setEditing(!isEditing)}
-                >
-                  <Settings size={12} />
-                  {isEditing ? 'Done' : 'Edit'}
-                </button>
-
-                {/* Save view */}
-                {isEditing && (
-                  <button
-                    style={{ ...smallBtnStyle, background: 'var(--color-primary-soft)', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
-                    onClick={() => {
-                      const name = prompt('View name:');
-                      if (name) saveView(name);
-                    }}
-                  >
-                    <Save size={12} />
-                    Save
-                  </button>
-                )}
-              </div>
-            }
-          >
-            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Dynamic widgets from layout */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {visibleWidgets.map((wc) => {
-                  const entry = WIDGET_REGISTRY[wc.id];
-                  if (!entry) return null;
-                  return (
-                    <div
-                      key={wc.id}
-                      style={{
-                        gridColumn: (wc.colSpan ?? entry.colSpan) > 1 ? 'span 2' : undefined,
-                        position: 'relative',
-                      }}
-                    >
-                      {isEditing && (
-                        <button
-                          onClick={() => removeWidget(wc.id)}
-                          style={{
-                            position: 'absolute',
-                            top: 6,
-                            right: 6,
-                            zIndex: 10,
-                            width: 22,
-                            height: 22,
-                            borderRadius: 'var(--radius-full)',
-                            border: '1px solid var(--tone-danger-border)',
-                            background: 'var(--tone-danger-bg)',
-                            color: 'var(--tone-danger-text)',
-                            display: 'grid',
-                            placeItems: 'center',
-                            cursor: 'pointer',
-                            fontSize: 12,
-                          }}
-                        >
-                          <X size={12} />
-                        </button>
-                      )}
-                      {entry.render(widgetProps)}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Add widget placeholder (always shown in edit mode) */}
-              {isEditing && (
-                <div
-                  style={{
-                    borderRadius: 'var(--radius-lg)',
-                    border: '2px dashed var(--border-primary)',
-                    background: 'var(--bg-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: 80,
-                    padding: 16,
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => {
-                    // Show available widgets that can be added
-                    const hidden = Object.keys(WIDGET_REGISTRY).filter(
-                      (id) => !widgetConfigs.some((w) => w.id === id && w.visible),
-                    );
-                    if (hidden.length === 0) {
-                      alert('All widgets are already visible');
-                      return;
-                    }
-                    const label = hidden.map((id) => WIDGET_REGISTRY[id]?.label ?? id).join('\n');
-                    const toAdd = hidden[0]; // Add first hidden widget
-                    toggleWidget(toAdd);
-                  }}
-                >
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
-                    + Add widget
-                  </p>
-                </div>
-              )}
-
-              {/* Static placeholder when not editing and some widget removed */}
-              {!isEditing && visibleWidgets.length < Object.keys(WIDGET_REGISTRY).length && (
-                <div
-                  style={{
-                    borderRadius: 'var(--radius-lg)',
-                    border: '2px dashed var(--border-primary)',
-                    background: 'var(--bg-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: 60,
-                    padding: 16,
-                  }}
-                >
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
-                    + Add widget · <span style={{ fontSize: 11 }}>click Edit to customize</span>
-                  </p>
-                </div>
-              )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, minmax(0, 1fr))', gap: 10 }}>
+            <div style={{ gridColumn: 'span 4' }}>
+              <RuntimeHealthWidget runtimeOk={runtimeOk} diagnosticsCount={diagnosticsCount} />
             </div>
-          </SectionCard>
+            <div style={{ gridColumn: 'span 4' }}>
+              <SessionsTrendWidget sessionCount={sessionCount} />
+            </div>
+            <div style={{ gridColumn: 'span 4' }}>
+              <ToolCallsWidget skills={skills} />
+            </div>
+            <div style={{ gridColumn: 'span 12' }}>
+              <FlowsHealthWidget flows={flows} />
+            </div>
+          </div>
+        </StudioSectionCard>
 
-          {/* Right: Activity + Alerts */}
-          <ActivityFeed
-            runtimeOk={runtimeOk}
-            diagnostics={diagnostics}
-            agentCount={agents.length}
-            enabledAgentCount={enabledAgents}
-            profileCount={profiles.length}
-            flowCount={flows.length}
-            enabledFlowCount={enabledFlows}
-            sessionCount={sessionCount}
-          />
-        </div>
-      )}
-
-      {/* ── Agents Section ───────────────────────── */}
-      {show('agents') && (
-        <SectionCard
-          title="Agents"
-          icon={<Users size={16} />}
-          description={`${agents.length} configured · ${enabledAgents} enabled`}
+        <StudioSectionCard
+          title="Recent Changes"
+          description="Operational timeline snapshot for this workspace."
+          actions={
+            <button type="button" style={actionButtonStyle()} onClick={() => navigate('/operations')}>
+              <ArrowRightLeft size={13} />
+              Open Operations
+            </button>
+          }
         >
+          <StudioTimelineBlock items={recentActivity} />
+        </StudioSectionCard>
+      </section>
+
+      <section className="studio-responsive-three-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14 }}>
+        <StudioSectionCard title="Agents" description="Builder inventory">
           {agents.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>
-              No agents configured yet.
-            </p>
+            <StudioEmptyState
+              title="No agents configured"
+              description="Create your first agent profile to start orchestrating the workspace."
+              actionLabel="Create Agent"
+              onAction={() => navigate('/agents/new')}
+            />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {agents.map((agent) => (
-                <AgentOverviewCard
+            <StudioInspectorCard title="Current roster">
+              {agents.slice(0, 4).map((agent) => (
+                <StudioMetricRow
                   key={agent.id}
-                  agent={agent}
-                  flows={flows}
-                  onClick={() => navigate(`/agents/${agent.id}`)}
-                  onToggle={() => handleAgentToggle(agent.id)}
+                  label={agent.name}
+                  value={agent.isEnabled !== false ? 'Enabled' : 'Disabled'}
+                  hint={agent.role || 'No role'}
                 />
               ))}
-            </div>
+            </StudioInspectorCard>
           )}
-        </SectionCard>
-      )}
+        </StudioSectionCard>
 
-      {/* ── Profiles + Flows Section ─────────────── */}
-      {show('profiles') && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <SectionCard
-            title="Profiles"
-            icon={<BookOpen size={16} />}
-            description={`${profiles.length} available`}
-          >
-            {profiles.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: 16 }}>
-                No profiles available.
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {profiles.map((p) => (
-                  <ProfileOverviewCard key={p.id} profile={p} onClick={() => navigate('/profiles')} />
-                ))}
-              </div>
-            )}
-          </SectionCard>
+        <StudioSectionCard title="Profiles" description="Reusable setup packs">
+          {profiles.length === 0 ? (
+            <StudioEmptyState
+              title="No profiles yet"
+              description="Profiles define repeatable defaults for model, skill bundle and routines."
+              actionLabel="Open Profiles"
+              onAction={() => navigate('/profiles')}
+            />
+          ) : (
+            <StudioInspectorCard title="Available presets">
+              {profiles.slice(0, 4).map((profile) => (
+                <StudioMetricRow
+                  key={profile.id}
+                  label={profile.name}
+                  value={profile.category || 'General'}
+                  hint={profile.defaultModel ? `Default model: ${profile.defaultModel}` : 'No default model'}
+                />
+              ))}
+            </StudioInspectorCard>
+          )}
+        </StudioSectionCard>
 
-          <FlowSummaryCard flows={flows} />
+        <StudioSectionCard title="Flows" description="Routing graph inventory">
+          {flows.length === 0 ? (
+            <StudioEmptyState
+              title="No flows configured"
+              description="Define runtime routing in the flow editor to connect triggers, tools, and agents."
+              actionLabel="Open Routing"
+              onAction={() => navigate('/routing')}
+            />
+          ) : (
+            <StudioInspectorCard title="Pipeline summary">
+              {flows.slice(0, 4).map((flow) => (
+                <StudioMetricRow
+                  key={flow.id}
+                  label={flow.name}
+                  value={flow.isEnabled ? 'Enabled' : 'Disabled'}
+                  hint={`${flow.nodes?.length ?? 0} nodes • ${flow.edges?.length ?? 0} edges`}
+                />
+              ))}
+            </StudioInspectorCard>
+          )}
+        </StudioSectionCard>
+      </section>
+
+      <StudioSectionCard title="Quick Actions" description="Common control-plane jumps">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }}>
+          <button type="button" style={actionButtonStyle()} onClick={() => navigate('/workspace-studio')}>
+            <Wrench size={14} />
+            Enter Builder
+          </button>
+          <button type="button" style={actionButtonStyle()} onClick={() => navigate('/agency-topology')}>
+            <GitBranch size={14} />
+            View Topology
+          </button>
+          <button type="button" style={actionButtonStyle()} onClick={() => navigate('/diagnostics')}>
+            <Activity size={14} />
+            Open Diagnostics
+          </button>
+          <button type="button" style={actionButtonStyle()} onClick={() => navigate('/commands')}>
+            <Radar size={14} />
+            Commands Console
+          </button>
         </div>
-      )}
-
-      {/* ── Flows tab (standalone) ───────────────── */}
-      {activeTab === 'flows' && (
-        <FlowSummaryCard flows={flows} />
-      )}
-
-      {/* ── Runtime tab ──────────────────────────── */}
-      {activeTab === 'runtime' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <RuntimeHealthWidget runtimeOk={runtimeOk} diagnosticsCount={diagnostics.length} />
-          <SessionsTrendWidget sessionCount={sessionCount} />
-        </div>
-      )}
-    </div>
+      </StudioSectionCard>
+    </StudioPageShell>
   );
 }

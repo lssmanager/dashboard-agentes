@@ -7,3 +7,14 @@ export { SectionCard } from './SectionCard';
 export { AgentCard } from './AgentCard';
 export { FlowCard } from './FlowCard';
 export { EmptySection } from './EmptySection';
+export {
+  StudioPageShell,
+  StudioHeroSection,
+  StudioSectionCard,
+  StudioKpiCard,
+  StudioMetricRow,
+  StudioEmptyState,
+  StudioInspectorCard,
+  StudioTimelineBlock,
+  RuntimeStatusBadge,
+} from './StudioPrimitives';

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Terminal } from 'lucide-react';
-
 import { getCommands } from '../../../lib/api';
-import { PageHeader } from '../../../components';
+import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../../operations/components/ObservabilityShell';
 
 interface CommandSpec {
   id: string;
@@ -24,99 +23,112 @@ export function CommandsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <PageHeader title="Commands" icon={Terminal} description="Reusable routines and command templates" />
-        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading commands...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <PageHeader title="Commands" icon={Terminal} description="Reusable routines and command templates" />
-
-      {commands.length === 0 ? (
-        <div
-          className="rounded-lg border p-8 text-center"
-          style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
-        >
-          <Terminal size={48} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>No commands found</h3>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Add <code>.md</code> files to <code>.openclaw/commands/</code> to define reusable routines.
-          </p>
-        </div>
+    <ObservabilityShell
+      title="Commands"
+      description="Reusable command routines for operational playbooks and execution guidance."
+      icon={Terminal}
+      runtimeOk={!loading}
+    >
+      {loading ? (
+        <ConsolePanel title="Commands Registry" description="Loading command definitions">
+          <ConsoleEmpty title="Loading commands" description="Fetching routines from command registry." />
+        </ConsolePanel>
+      ) : commands.length === 0 ? (
+        <ConsolePanel title="Commands Registry" description="No command definitions available">
+          <ConsoleEmpty
+            title="No commands found"
+            description="Add markdown files to `.openclaw/commands/` to define reusable operations."
+          />
+        </ConsolePanel>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Command list */}
-          <div className="md:col-span-1 space-y-2">
-            {commands.map((cmd) => (
-              <button
-                key={cmd.id}
-                type="button"
-                onClick={() => setSelected(cmd)}
-                className="w-full text-left rounded-lg border p-3 transition-colors"
-                style={{
-                  borderColor: selected?.id === cmd.id ? 'var(--color-primary)' : 'var(--border-primary)',
-                  background: selected?.id === cmd.id ? 'var(--color-primary-soft)' : 'var(--bg-secondary)',
-                }}
-              >
-                <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-                  {cmd.name}
-                </div>
-                <div className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--text-muted)' }}>
-                  {cmd.description.slice(0, 120)}
-                </div>
-                {cmd.steps.length > 0 && (
-                  <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                    {cmd.steps.length} step{cmd.steps.length !== 1 ? 's' : ''}
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
+        <section className="studio-console-master-detail" style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: 14 }}>
+          <ConsolePanel title="Command List" description={`${commands.length} command(s) available`}>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {commands.map((command) => (
+                <button
+                  key={command.id}
+                  type="button"
+                  onClick={() => setSelected(command)}
+                  style={{
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid',
+                    borderColor: selected?.id === command.id ? 'var(--color-primary)' : 'var(--border-primary)',
+                    background: selected?.id === command.id ? 'var(--color-primary-soft)' : 'var(--bg-secondary)',
+                    textAlign: 'left',
+                    padding: '10px 12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>{command.name}</strong>
+                  <p style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)' }}>
+                    {command.description.slice(0, 120)}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </ConsolePanel>
 
-          {/* Command detail */}
-          <div className="md:col-span-2">
+          <ConsolePanel title="Command Details" description={selected ? selected.name : 'Select a command'}>
             {selected ? (
-              <div
-                className="rounded-lg border p-5"
-                style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
-              >
-                <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                  {selected.name}
-                </h2>
-                <div className="text-sm whitespace-pre-wrap mb-4" style={{ color: 'var(--text-muted)' }}>
-                  {selected.description}
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div
+                  style={{
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-primary)',
+                    background: 'var(--bg-secondary)',
+                    padding: '12px 14px',
+                  }}
+                >
+                  <p style={{ fontSize: 13, color: 'var(--text-primary)' }}>{selected.description}</p>
                 </div>
+
                 {selected.steps.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Steps</h3>
-                    <ol className="list-decimal list-inside space-y-1">
-                      {selected.steps.map((step, i) => (
-                        <li key={i} className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {selected.steps.map((step, index) => (
+                      <div
+                        key={`${step}-${index}`}
+                        style={{
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-primary)',
+                          background: 'var(--bg-secondary)',
+                          padding: '10px 12px',
+                          display: 'grid',
+                          gridTemplateColumns: '28px 1fr',
+                          gap: 8,
+                          alignItems: 'start',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: '50%',
+                            background: 'var(--color-primary-soft)',
+                            color: 'var(--color-primary)',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            display: 'grid',
+                            placeItems: 'center',
+                          }}
+                        >
+                          {index + 1}
+                        </span>
+                        <p style={{ marginTop: 2, fontSize: 13, color: 'var(--text-muted)' }}>{step}</p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             ) : (
-              <div
-                className="rounded-lg border p-8 text-center"
-                style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
-              >
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Select a command to view its details
-                </p>
-              </div>
+              <ConsoleEmpty
+                title="No command selected"
+                description="Choose a command from the list to inspect its operation steps."
+              />
             )}
-          </div>
-        </div>
+          </ConsolePanel>
+        </section>
       )}
-    </div>
+    </ObservabilityShell>
   );
 }

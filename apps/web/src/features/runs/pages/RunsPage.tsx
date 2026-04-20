@@ -1,13 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Play, RefreshCw, XCircle } from 'lucide-react';
-
-import { getRuns, cancelRun } from '../../../lib/api';
-import { PageHeader, EmptyState } from '../../../components';
-import { StepBadge } from '../../../components/ui/StepBadge';
+import { cancelRun, getRuns } from '../../../lib/api';
 import type { RunSpec, RunStep } from '../../../lib/types';
+import { StepBadge } from '../../../components/ui/StepBadge';
 import { RunTimeline } from '../components/RunTimeline';
 import { StepDetail } from '../components/StepDetail';
 import { ApprovalPanel } from '../components/ApprovalPanel';
+import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../../operations/components/ObservabilityShell';
 
 export default function RunsPage() {
   const [runs, setRuns] = useState<RunSpec[]>([]);
@@ -30,123 +30,112 @@ export default function RunsPage() {
     void loadRuns();
   }, [loadRuns]);
 
-  // Auto-refresh active runs
   useEffect(() => {
-    const hasActive = runs.some((r) => r.status === 'running' || r.status === 'queued' || r.status === 'waiting_approval');
+    const hasActive = runs.some((run) => run.status === 'running' || run.status === 'queued' || run.status === 'waiting_approval');
     if (!hasActive) return;
-
-    const interval = setInterval(() => void loadRuns(), 2000);
-    return () => clearInterval(interval);
+    const timer = setInterval(() => void loadRuns(), 2500);
+    return () => clearInterval(timer);
   }, [runs, loadRuns]);
 
-  const selectedRun = runs.find((r) => r.id === selectedRunId) ?? null;
+  const selectedRun = runs.find((run) => run.id === selectedRunId) ?? null;
+  const runtimeOk = runs.some((run) => run.status === 'running' || run.status === 'completed');
 
   async function handleCancel(runId: string) {
     await cancelRun(runId);
     await loadRuns();
   }
 
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <PageHeader title="Runs" icon={Play} description="Flow execution history and step traces" />
-        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading runs...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Runs" icon={Play} description="Flow execution history and step traces" />
-        <button
-          onClick={() => void loadRuns()}
-          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors"
-          style={{ color: 'var(--color-primary)', background: 'var(--color-primary-soft)' }}
-        >
+    <ObservabilityShell
+      title="Runs"
+      description="Replayable execution timeline with approval checkpoints and step-by-step trace inspection."
+      icon={Play}
+      runtimeOk={runtimeOk}
+      actions={
+        <button type="button" style={toolButton()} onClick={() => void loadRuns()}>
           <RefreshCw size={14} />
           Refresh
         </button>
-      </div>
-
-      {runs.length === 0 ? (
-        <EmptyState
-          icon={Play}
-          title="No runs yet"
-          description="Execute a flow to see runs here. Each run tracks every step, approval, and result."
-        />
+      }
+    >
+      {loading ? (
+        <ConsolePanel title="Run Console" description="Loading runs from runtime">
+          <ConsoleEmpty title="Loading runs" description="Fetching run history and timeline traces." />
+        </ConsolePanel>
+      ) : runs.length === 0 ? (
+        <ConsolePanel title="Run Console" description="No executions available">
+          <ConsoleEmpty
+            title="No runs yet"
+            description="Execute a flow to see run timelines, approvals, and step traces."
+          />
+        </ConsolePanel>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Run list */}
-          <div className="md:col-span-1 space-y-2">
-            {runs.map((run) => (
-              <button
-                key={run.id}
-                type="button"
-                onClick={() => { setSelectedRunId(run.id); setSelectedStep(null); }}
-                className="w-full text-left rounded-lg border p-3 transition-colors"
-                style={{
-                  borderColor: selectedRunId === run.id ? 'var(--color-primary)' : 'var(--border-primary)',
-                  background: selectedRunId === run.id ? 'var(--color-primary-soft)' : 'var(--bg-secondary)',
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                    {run.flowId}
-                  </span>
-                  <StepBadge status={run.status} />
-                </div>
-                <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
-                  {run.trigger.type} — {new Date(run.startedAt).toLocaleString()}
-                </div>
-                <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {run.steps.length} step{run.steps.length !== 1 ? 's' : ''}
-                  {run.error && <span style={{ color: '#dc2626' }}> — {run.error}</span>}
-                </div>
-              </button>
-            ))}
-          </div>
+        <section className="studio-console-master-detail" style={{ display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gap: 14 }}>
+          <ConsolePanel title="Run Queue" description={`${runs.length} run(s) loaded`}>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {runs.map((run) => (
+                <button
+                  key={run.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedRunId(run.id);
+                    setSelectedStep(null);
+                  }}
+                  style={{
+                    textAlign: 'left',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid',
+                    borderColor: selectedRunId === run.id ? 'var(--color-primary)' : 'var(--border-primary)',
+                    background: selectedRunId === run.id ? 'var(--color-primary-soft)' : 'var(--bg-secondary)',
+                    padding: '10px 12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>{run.flowId}</strong>
+                    <StepBadge status={run.status} />
+                  </div>
+                  <p style={{ marginTop: 4, fontSize: 11, color: 'var(--text-muted)' }}>
+                    {run.trigger.type} • {new Date(run.startedAt).toLocaleString()}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </ConsolePanel>
 
-          {/* Run detail */}
-          <div className="md:col-span-2 space-y-4">
-            {selectedRun ? (
-              <>
-                {/* Run header */}
+          <ConsolePanel title="Run Trace" description={selectedRun ? `Run ${selectedRun.id.slice(0, 8)}` : 'Select a run'}>
+            {!selectedRun ? (
+              <ConsoleEmpty title="No run selected" description="Choose a run from the queue to inspect its execution timeline." />
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
                 <div
-                  className="rounded-lg border p-4 flex items-center justify-between"
-                  style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
+                  style={{
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-primary)',
+                    background: 'var(--bg-secondary)',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
                 >
                   <div>
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    <strong style={{ fontSize: 14, color: 'var(--text-primary)' }}>
                       Run {selectedRun.id.slice(0, 8)}
-                    </h3>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Flow: {selectedRun.flowId} — Trigger: {selectedRun.trigger.type}
+                    </strong>
+                    <p style={{ marginTop: 3, fontSize: 12, color: 'var(--text-muted)' }}>
+                      Trigger: {selectedRun.trigger.type}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <StepBadge status={selectedRun.status} size="md" />
-                    {(selectedRun.status === 'running' || selectedRun.status === 'queued') && (
-                      <button
-                        onClick={() => void handleCancel(selectedRun.id)}
-                        className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-white"
-                        style={{ background: '#dc2626' }}
-                      >
-                        <XCircle size={12} />
-                        Cancel
-                      </button>
-                    )}
-                  </div>
+                  {(selectedRun.status === 'running' || selectedRun.status === 'queued') && (
+                    <button type="button" style={dangerButton()} onClick={() => void handleCancel(selectedRun.id)}>
+                      <XCircle size={13} />
+                      Cancel
+                    </button>
+                  )}
                 </div>
 
-                {/* Timeline */}
-                <div
-                  className="rounded-lg border p-4"
-                  style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
-                >
-                  <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
-                    Timeline
-                  </h4>
+                <div style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', padding: 12 }}>
                   <RunTimeline
                     steps={selectedRun.steps}
                     onStepClick={setSelectedStep}
@@ -154,34 +143,50 @@ export default function RunsPage() {
                   />
                 </div>
 
-                {/* Approval panel (if applicable) */}
                 {selectedRun.steps
-                  .filter((s) => s.status === 'waiting_approval')
-                  .map((s) => (
-                    <ApprovalPanel
-                      key={s.id}
-                      runId={selectedRun.id}
-                      step={s}
-                      onResolved={() => void loadRuns()}
-                    />
+                  .filter((step) => step.status === 'waiting_approval')
+                  .map((step) => (
+                    <ApprovalPanel key={step.id} runId={selectedRun.id} step={step} onResolved={() => void loadRuns()} />
                   ))}
 
-                {/* Step detail */}
                 {selectedStep && <StepDetail step={selectedStep} />}
-              </>
-            ) : (
-              <div
-                className="rounded-lg border p-8 text-center"
-                style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
-              >
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Select a run to view its timeline and step details
-                </p>
               </div>
             )}
-          </div>
-        </div>
+          </ConsolePanel>
+        </section>
       )}
-    </div>
+    </ObservabilityShell>
   );
+}
+
+function toolButton(): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--border-primary)',
+    background: 'var(--card-bg)',
+    color: 'var(--text-primary)',
+    padding: '8px 12px',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+  };
+}
+
+function dangerButton(): CSSProperties {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--tone-danger-border)',
+    background: 'var(--tone-danger-bg)',
+    color: 'var(--tone-danger-text)',
+    padding: '7px 10px',
+    fontSize: 12,
+    fontWeight: 700,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+  };
 }
