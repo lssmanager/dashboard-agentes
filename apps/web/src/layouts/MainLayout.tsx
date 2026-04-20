@@ -34,21 +34,21 @@ export function MainLayout() {
         background: 'var(--bg-secondary)',
       }}
     >
-      {/* NavRail — col 1, spans all rows */}
+      {/* NavRail column */}
       {!isMobile && (
         <div style={{ gridColumn: '1', gridRow: '1 / -1', zIndex: 10 }}>
           <NavRail />
         </div>
       )}
 
-      {/* ContextPanel — col 2, spans all rows (desktop only) */}
+      {/* ContextPanel column (desktop only) */}
       {showContext && (
         <div style={{ gridColumn: '2', gridRow: '1 / -1', overflow: 'hidden' }}>
           <ContextPanel />
         </div>
       )}
 
-      {/* Header — last column, row 1 */}
+      {/* Header row */}
       <header
         style={{
           gridColumn: isMobile ? '1' : showContext ? '3' : '2',
@@ -60,7 +60,7 @@ export function MainLayout() {
           display: 'flex',
           alignItems: 'center',
           padding: '0 24px',
-          background: 'rgba(255,255,255,0.88)',
+          background: 'var(--bg-primary)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderBottom: '1px solid var(--border-primary)',
@@ -72,7 +72,7 @@ export function MainLayout() {
         />
       </header>
 
-      {/* Main content — last column, row 2 */}
+      {/* Main content row */}
       <main
         style={{
           gridColumn: isMobile ? '1' : showContext ? '3' : '2',

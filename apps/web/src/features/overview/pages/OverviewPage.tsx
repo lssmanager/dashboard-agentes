@@ -266,7 +266,7 @@ export default function OverviewPage() {
                   key={flow.id}
                   label={flow.name}
                   value={flow.isEnabled ? 'Enabled' : 'Disabled'}
-                  hint={`${flow.nodes?.length ?? 0} nodes • ${flow.edges?.length ?? 0} edges`}
+                  hint={`${flow.nodes?.length ?? 0} nodes / ${flow.edges?.length ?? 0} edges`}
                 />
               ))}
             </StudioInspectorCard>

@@ -3,6 +3,7 @@ import { StudioStateResponse } from './types';
 export type SidebarItem = {
   id: string;
   name: string;
+  path?: string;
   sub?: string;
   dot?: 'green' | 'amber' | 'slate' | 'blue';
 };
@@ -47,6 +48,7 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
       items:     agents.map((a) => ({
         id:   a.id,
         name: a.name,
+        path: `/agents/${encodeURIComponent(a.id)}`,
         sub:  a.role ?? a.executionMode ?? undefined,
         dot:  dotOf(a.isEnabled),
       })),
@@ -60,6 +62,7 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
       items: ws ? [{
         id: ws.id,
         name: ws.name,
+        path: '/agency-builder',
         sub: ws.defaultModel,
         dot: 'blue',
       }] : [],
@@ -73,6 +76,7 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
       items: ws ? [{
         id: ws.id,
         name: ws.name,
+        path: '/agency-topology',
         sub: 'Fail-closed runtime controls',
         dot: 'amber',
       }] : [],
@@ -85,6 +89,7 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
       items: profiles.map((p) => ({
         id:   p.id,
         name: p.name,
+        path: '/profiles',
         sub:  p.category,
         dot:  'blue' as const,
       })),
@@ -97,6 +102,7 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
       items: flows.map((f) => ({
         id:   f.id,
         name: f.name,
+        path: '/routing',
         sub:  f.trigger,
         dot:  dotOf(f.isEnabled),
       })),
@@ -108,7 +114,8 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
       label: 'Sessions',
       items: sessions.slice(0, 20).map((s, i) => ({
         id:   s.id ?? `session-${i}`,
-        name: s.id ? s.id.substring(0, 14) + '…' : `Session ${i + 1}`,
+        name: s.id ? `${s.id.substring(0, 14)}...` : `Session ${i + 1}`,
+        path: '/sessions',
         sub:  s.channel ?? undefined,
         dot:  s.status === 'active' ? 'green' as const : 'slate' as const,
       })),
@@ -120,7 +127,7 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
     return {
       label: 'Workspaces',
       items: ws
-        ? [{ id: ws.id, name: ws.name, sub: ws.defaultModel ?? undefined, dot: 'green' as const }]
+        ? [{ id: ws.id, name: ws.name, path: '/workspaces', sub: ws.defaultModel ?? undefined, dot: 'green' as const }]
         : [],
       emptyText: 'No workspace loaded',
     };
@@ -133,3 +140,4 @@ export function getContext(pathname: string, state: StudioStateResponse): Sectio
     emptyText: 'Select a section to browse items',
   };
 }
+

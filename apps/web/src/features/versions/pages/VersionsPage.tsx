@@ -221,7 +221,7 @@ export default function VersionsPage() {
                     <MetadataRow label="Snapshot ID" value={selectedSnapshot.id} mono />
                     <MetadataRow label="Hash" value={selectedSnapshot.hash} mono />
                     <MetadataRow label="Created" value={new Date(selectedSnapshot.createdAt).toLocaleString()} />
-                    <MetadataRow label="Label" value={selectedSnapshot.label || '—'} />
+                    <MetadataRow label="Label" value={selectedSnapshot.label || '-'} />
                     {selectedSnapshot.parentId && (
                       <MetadataRow label="Parent" value={selectedSnapshot.parentId} mono />
                     )}

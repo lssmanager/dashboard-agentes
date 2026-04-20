@@ -90,7 +90,7 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
         {workspace && (
           <p style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 'var(--text-sm)', lineHeight: 1.5 }}>
             {workspace.name}
-            {workspace.defaultModel ? ` · ${workspace.defaultModel}` : ''}
+            {workspace.defaultModel ? ` - ${workspace.defaultModel}` : ''}
           </p>
         )}
       </div>
@@ -140,7 +140,7 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'grid', gap: 10 }}>
         {filtered.length > 0 ? (
           filtered.map((item) => (
-            <MiniCard key={item.id} item={item} onClick={() => go(ctx.newPath ?? '/')} />
+            <MiniCard key={item.id} item={item} onClick={() => go(item.path ?? ctx.newPath ?? '/')} />
           ))
         ) : search.trim() ? (
           <p style={{ fontSize: 'var(--text-sm)', textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>

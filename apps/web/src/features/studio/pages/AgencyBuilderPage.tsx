@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   AlertTriangle,
   Boxes,
@@ -664,7 +664,7 @@ function pillStyle(background: string, border: string, color: string) {
   } as const;
 }
 
-function toolButton(withSoftFill = false): React.CSSProperties {
+function toolButton(withSoftFill = false): CSSProperties {
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -680,7 +680,7 @@ function toolButton(withSoftFill = false): React.CSSProperties {
   };
 }
 
-function primaryButton(): React.CSSProperties {
+function primaryButton(): CSSProperties {
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -696,25 +696,25 @@ function primaryButton(): React.CSSProperties {
   };
 }
 
-const bodyGridStyle: React.CSSProperties = {
+const bodyGridStyle: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 1.3fr) minmax(340px, 0.9fr)',
   gap: 14,
   alignItems: 'start',
 };
 
-const panelStackStyle: React.CSSProperties = {
+const panelStackStyle: CSSProperties = {
   display: 'grid',
   gap: 14,
 };
 
-const entityGridStyle: React.CSSProperties = {
+const entityGridStyle: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
   gap: 14,
 };
 
-const stepActionStyle: React.CSSProperties = {
+const stepActionStyle: CSSProperties = {
   borderRadius: 'var(--radius-full)',
   border: '1px solid var(--border-primary)',
   background: 'var(--bg-secondary)',
@@ -726,7 +726,7 @@ const stepActionStyle: React.CSSProperties = {
   color: 'var(--text-muted)',
 };
 
-const noticeBanner: React.CSSProperties = {
+const noticeBanner: CSSProperties = {
   borderRadius: 'var(--radius-md)',
   border: '1px solid var(--tone-success-border)',
   background: 'var(--tone-success-bg)',
@@ -739,7 +739,7 @@ const noticeBanner: React.CSSProperties = {
   fontWeight: 600,
 };
 
-const errorBanner: React.CSSProperties = {
+const errorBanner: CSSProperties = {
   borderRadius: 'var(--radius-md)',
   border: '1px solid var(--tone-danger-border)',
   background: 'var(--tone-danger-bg)',

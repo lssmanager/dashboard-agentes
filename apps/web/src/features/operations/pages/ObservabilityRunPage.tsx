@@ -1,8 +1,12 @@
-import type { CSSProperties } from 'react';
 import { ArrowLeft, Eye } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { ConsoleEmpty, ConsolePanel, ObservabilityShell } from '../components/ObservabilityShell';
+import {
+  ConsoleEmpty,
+  ConsolePanel,
+  ObservabilityShell,
+  consoleToolButtonStyle,
+} from '../components/ObservabilityShell';
 
 export default function ObservabilityRunPage() {
   const navigate = useNavigate();
@@ -16,7 +20,7 @@ export default function ObservabilityRunPage() {
       icon={Eye}
       runtimeOk
       actions={
-        <button type="button" style={buttonStyle()} onClick={() => navigate('/observability')}>
+        <button type="button" style={consoleToolButtonStyle()} onClick={() => navigate('/observability')}>
           <ArrowLeft size={14} />
           Back to Observability
         </button>
@@ -32,20 +36,4 @@ export default function ObservabilityRunPage() {
       </ConsolePanel>
     </ObservabilityShell>
   );
-}
-
-function buttonStyle(): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--border-primary)',
-    background: 'var(--card-bg)',
-    color: 'var(--text-primary)',
-    padding: '8px 12px',
-    fontSize: 13,
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    cursor: 'pointer',
-  };
 }

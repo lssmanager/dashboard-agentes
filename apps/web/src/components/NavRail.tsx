@@ -82,7 +82,7 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
         }}
         title="OpenClaw Studio"
       >
-        <span style={{ fontSize: 16, lineHeight: 1 }}>🦞</span>
+        <span style={{ fontSize: 12, lineHeight: 1, fontWeight: 800, letterSpacing: '0.04em' }}>OC</span>
       </button>
 
       {/* Nav items */}

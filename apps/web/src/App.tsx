@@ -56,7 +56,7 @@ export function App() {
       const result = await getStudioState();
       setState(result);
     } catch {
-      // silently fail — existing state remains visible
+      // Silently keep the last valid state visible
     }
   }
 
