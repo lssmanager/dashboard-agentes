@@ -5,9 +5,11 @@ import type { FlowNodeType } from '../../../lib/types';
 
 const CATEGORY_GROUPS: Array<{ name: string; types: FlowNodeType[] }> = [
   { name: 'Structure', types: ['trigger', 'agent', 'subagent'] },
-  { name: 'Catalog', types: ['skill', 'tool'] },
-  { name: 'Logic', types: ['condition', 'handoff', 'loop', 'approval'] },
-  { name: 'End', types: ['end'] },
+  { name: 'Catalog', types: ['skill', 'tool', 'mcp'] },
+  { name: 'Logic', types: ['condition', 'if_else', 'handoff', 'loop', 'approval', 'user_approval'] },
+  { name: 'Data', types: ['file_search', 'transform', 'set_state', 'classify'] },
+  { name: 'Safety', types: ['guardrails'] },
+  { name: 'End', types: ['end', 'note'] },
 ];
 
 export function ComponentLibrary() {

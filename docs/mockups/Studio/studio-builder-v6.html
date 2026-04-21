@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw Studio Builder V6</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #1e2130;
+    --border: #2a2f42;
+    --border2: #333850;
+    --text: #e8eaf0;
+    --muted: #7a84a0;
+    --primary: #6366f1;
+    --primary-soft: rgba(99,102,241,0.12);
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --radius: 8px;
+    --radius-sm: 5px;
+    --radius-full: 9999px;
+    --font: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── App topbar ─── */
+  .app-topbar {
+    height: 48px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .app-topbar .logo {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--primary);
+  }
+
+  .app-topbar .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .app-topbar .breadcrumb span { color: var(--text); }
+  .app-topbar .breadcrumb .sep { color: var(--border2); }
+
+  .pill {
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+  }
+
+  .pill.active {
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .pill.success {
+    background: rgba(34,197,94,0.1);
+    border-color: rgba(34,197,94,0.25);
+    color: var(--success);
+  }
+
+  /* ── Main layout ─── */
+  .main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Studio page shell ─── */
+  .studio-shell {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Tab group ─── */
+  .tab-groups {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .tab-group-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .tab {
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+
+  .tab:hover { border-color: var(--primary); color: var(--text); }
+  .tab.active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+
+  .divider-v { width: 1px; height: 28px; background: var(--border); }
+
+  /* ── Builder surface ─── */
+  .builder {
+    flex: 1;
+    min-height: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+  }
+
+  .builder-topbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .toggle-btn.active {
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .toggle-btn:hover { border-color: var(--primary); }
+
+  .toggle-btn svg { width: 13px; height: 13px; }
+
+  /* ── Builder main area ─── */
+  .builder-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    position: relative;
+  }
+
+  /* ── Left panel ─── */
+  .panel-left {
+    width: 220px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .lib-group-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+
+  .node-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: grab;
+    transition: all 0.12s;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .node-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+  }
+
+  .node-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  /* ── Canvas ─── */
+  .canvas-area {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .canvas-wrap {
+    flex: 1;
+    margin: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #0d0f18;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .canvas-lanes {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-rows: repeat(4, 1fr);
+    pointer-events: none;
+  }
+
+  .canvas-lane {
+    border-bottom: 1px dashed rgba(42,47,66,0.7);
+    position: relative;
+  }
+
+  .canvas-lane:last-child { border-bottom: none; }
+
+  .lane-label {
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(122,132,160,0.6);
+    background: rgba(26,29,39,0.9);
+    border: 1px solid rgba(42,47,66,0.6);
+    border-radius: var(--radius-full);
+    padding: 2px 7px;
+  }
+
+  /* Canvas nodes */
+  .flow-node {
+    position: absolute;
+    border-radius: var(--radius);
+    border: 1px solid;
+    padding: 8px 12px;
+    min-width: 140px;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+
+  .flow-node:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  .flow-node.selected { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  .node-type-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+    margin-bottom: 3px;
+  }
+
+  .node-name {
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .node-desc {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-top: 2px;
+  }
+
+  /* Edges (SVG) */
+  .canvas-edges {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* Bottom panel */
+  .panel-bottom {
+    height: 140px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Edge tab ─── */
+  .edge-tab {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    writing-mode: vertical-rl;
+    z-index: 20;
+    transition: color 0.12s, border-color 0.12s;
+  }
+
+  .edge-tab:hover { color: var(--primary); border-color: var(--primary); }
+  .edge-tab.right { right: 0; top: 50%; transform: translateY(-50%); border-radius: 7px 0 0 7px; }
+  .edge-tab.left { left: 0; top: 50%; transform: translateY(-50%); border-radius: 0 7px 7px 0; }
+  .edge-tab.bottom { bottom: 0; left: 50%; transform: translateX(-50%); writing-mode: horizontal-tb; border-radius: 7px 7px 0 0; }
+
+  /* ── Right panel (Inspector) ─── */
+  .panel-right {
+    width: 300px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .inspector-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .inspector-tab {
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.12s;
+  }
+
+  .inspector-tab.active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+
+  .inspector-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .form-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .form-section-header {
+    padding: 7px 10px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .form-section-body {
+    padding: 10px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .field {
+    display: grid;
+    gap: 4px;
+  }
+
+  .field label {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .field input, .field select, .field textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #12151e;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: var(--font);
+  }
+
+  .field textarea { resize: vertical; min-height: 70px; }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .toggle-row input { accent-color: var(--primary); width: 13px; height: 13px; }
+
+  /* helpers section */
+  .helpers-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .helper-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .helper-title {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  .helper-value {
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .var-chip {
+    display: inline-block;
+    padding: 1px 5px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--primary);
+    background: var(--surface2);
+    margin: 2px;
+  }
+
+  .preview-code {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    background: #0d0f18;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    color: var(--success);
+    overflow: auto;
+    white-space: pre;
+  }
+
+  /* View dropdown */
+  .view-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-width: 200px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 200;
+    overflow: hidden;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border: none;
+    background: none;
+    color: var(--text);
+    width: 100%;
+    text-align: left;
+  }
+
+  .dropdown-item:hover { background: var(--surface2); }
+
+  .resize-handle {
+    width: 4px;
+    flex-shrink: 0;
+    background: var(--border);
+    cursor: col-resize;
+    transition: background 0.15s;
+  }
+
+  .resize-handle:hover { background: var(--primary); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 999px; }
+
+  /* Context badges */
+  .ctx-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  .ctx-badge .ctx-label { color: var(--muted); font-size: 10px; }
+
+  /* Node connector ports */
+  .port {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: var(--surface);
+    position: absolute;
+  }
+
+  .port.out { right: -5px; top: 50%; transform: translateY(-50%); }
+  .port.out-approve { right: -5px; top: 30%; transform: translateY(-50%); }
+  .port.out-reject { right: -5px; top: 70%; transform: translateY(-50%); }
+  .port.in { left: -5px; top: 50%; transform: translateY(-50%); }
+
+  .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .add-btn:hover { border-color: var(--primary); color: var(--primary); }
+</style>
+</head>
+<body>
+
+<!-- App Topbar -->
+<div class="app-topbar">
+  <div class="logo">⬡ OpenClaw</div>
+  <div style="width:1px;height:20px;background:var(--border);"></div>
+  <div class="breadcrumb">
+    <span class="ctx-label">Agency</span>
+    <span>Acme Corp</span>
+    <span class="sep">›</span>
+    <span class="ctx-label">Dept</span>
+    <span>Customer Success</span>
+    <span class="sep">›</span>
+    <span class="ctx-label">Workspace</span>
+    <span>Support V2</span>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+    <span class="pill success">● runtime online</span>
+    <span class="pill">v0.3.1</span>
+  </div>
+</div>
+
+<!-- Studio Shell -->
+<div class="main">
+  <div class="studio-shell">
+
+    <!-- Tab Groups: Build + Admin -->
+    <div class="tab-groups">
+      <div>
+        <div class="tab-group-label">Build</div>
+        <div class="tabs">
+          <div class="tab active" onclick="setMainTab('builder', this)">Builder</div>
+          <div class="tab" onclick="setMainTab('test', this)">Test</div>
+          <div class="tab" onclick="setMainTab('debug', this)">Debug</div>
+          <div class="tab" onclick="setMainTab('topology', this)">Topology</div>
+          <div class="tab" onclick="setMainTab('diff', this)">Diff / Apply</div>
+        </div>
+      </div>
+      <div class="divider-v"></div>
+      <div>
+        <div class="tab-group-label">Admin</div>
+        <div class="tabs">
+          <div class="tab" onclick="setMainTab('overview', this)">Overview</div>
+          <div class="tab" onclick="setMainTab('routing', this)">Routing &amp; Channels</div>
+          <div class="tab" onclick="setMainTab('hooks', this)">Hooks</div>
+          <div class="tab" onclick="setMainTab('versions', this)">Versions</div>
+          <div class="tab" onclick="setMainTab('operations', this)">Operations</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Builder Surface -->
+    <div class="builder" id="builder-surface">
+
+      <!-- Builder Topbar (persistent panel toggles) -->
+      <div class="builder-topbar">
+        <button class="toggle-btn active" id="btn-explorer" onclick="togglePanel('left')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><path d="M14 3h7v18h-7"/></svg>
+          Explorer
+        </button>
+        <button class="toggle-btn active" id="btn-inspector" onclick="togglePanel('right')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="14" y="3" width="7" height="18" rx="1"/><path d="M3 3h7v18H3"/></svg>
+          Inspector
+        </button>
+        <button class="toggle-btn" id="btn-console" onclick="togglePanel('bottom')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="14" width="18" height="7" rx="1"/><path d="M3 3v7h18V3"/></svg>
+          Console
+        </button>
+
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+
+        <!-- View dropdown -->
+        <div style="position:relative;">
+          <button class="toggle-btn" id="btn-view" onclick="toggleViewMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            View
+          </button>
+          <div class="view-dropdown" id="view-dropdown" style="display:none;">
+            <button class="dropdown-item" onclick="resetLayout();closeViewMenu()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
+              Reset layout
+            </button>
+            <button class="dropdown-item" onclick="showAllPanels();closeViewMenu()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M9 3v18M15 3v18"/></svg>
+              Show all panels
+            </button>
+            <button class="dropdown-item" id="zen-btn" onclick="toggleZen();closeViewMenu()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              Zen mode
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Builder Main Area -->
+      <div class="builder-main" id="builder-main">
+
+        <!-- Left Panel -->
+        <div class="panel-left" id="panel-left">
+          <div class="panel-header">Components</div>
+          <div class="panel-content">
+            <!-- Structure group -->
+            <div>
+              <div class="lib-group-label">Structure</div>
+              <div style="display:grid;gap:5px;">
+                <div class="node-item" draggable="true">
+                  <div class="node-icon" style="background:rgba(37,99,235,0.15);color:#3b82f6;">⚡</div>
+                  Root
+                </div>
+                <div class="node-item" draggable="true" onclick="selectNode('agent')">
+                  <div class="node-icon" style="background:rgba(22,163,74,0.15);color:#22c55e;">🤖</div>
+                  Agent / Triage
+                </div>
+                <div class="node-item" draggable="true">
+                  <div class="node-icon" style="background:rgba(13,148,136,0.15);color:#14b8a6;">🧩</div>
+                  Subagent
+                </div>
+              </div>
+            </div>
+
+            <!-- Logic group -->
+            <div>
+              <div class="lib-group-label">Logic</div>
+              <div style="display:grid;gap:5px;">
+                <div class="node-item" draggable="true" onclick="selectNode('if_else')">
+                  <div class="node-icon" style="background:rgba(180,83,9,0.15);color:#f59e0b;">⑂</div>
+                  If / Else
+                </div>
+                <div class="node-item" draggable="true" onclick="selectNode('user_approval')">
+                  <div class="node-icon" style="background:rgba(8,145,178,0.15);color:#06b6d4;">👤</div>
+                  User Approval
+                </div>
+                <div class="node-item" draggable="true">
+                  <div class="node-icon" style="background:rgba(2,132,199,0.15);color:#0ea5e9;">🔁</div>
+                  While
+                </div>
+              </div>
+            </div>
+
+            <!-- Data group -->
+            <div>
+              <div class="lib-group-label">Data</div>
+              <div style="display:grid;gap:5px;">
+                <div class="node-item" draggable="true" onclick="selectNode('file_search')">
+                  <div class="node-icon" style="background:rgba(124,58,237,0.15);color:#8b5cf6;">📁</div>
+                  File Search
+                </div>
+                <div class="node-item" draggable="true" onclick="selectNode('transform')">
+                  <div class="node-icon" style="background:rgba(3,105,161,0.15);color:#0284c7;">⟲</div>
+                  Transform
+                </div>
+                <div class="node-item" draggable="true" onclick="selectNode('set_state')">
+                  <div class="node-icon" style="background:rgba(15,118,110,0.15);color:#0d9488;">📝</div>
+                  Set State
+                </div>
+                <div class="node-item" draggable="true" onclick="selectNode('classify')">
+                  <div class="node-icon" style="background:rgba(147,51,234,0.15);color:#a855f7;">🏷️</div>
+                  Classify
+                </div>
+              </div>
+            </div>
+
+            <!-- Safety -->
+            <div>
+              <div class="lib-group-label">Safety</div>
+              <div style="display:grid;gap:5px;">
+                <div class="node-item" draggable="true" onclick="selectNode('guardrails')">
+                  <div class="node-icon" style="background:rgba(220,38,38,0.15);color:#ef4444;">🛡️</div>
+                  Guardrails
+                </div>
+              </div>
+            </div>
+
+            <!-- End -->
+            <div>
+              <div class="lib-group-label">End</div>
+              <div style="display:grid;gap:5px;">
+                <div class="node-item" draggable="true" onclick="selectNode('end')">
+                  <div class="node-icon" style="background:rgba(75,85,99,0.15);color:#9ca3af;">⏹</div>
+                  End
+                </div>
+                <div class="node-item" draggable="true">
+                  <div class="node-icon" style="background:rgba(107,114,128,0.15);color:#6b7280;">📋</div>
+                  Note
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resize handle left -->
+        <div class="resize-handle" id="resize-left" title="Drag to resize"></div>
+
+        <!-- Center canvas + bottom console -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative;" id="center-area">
+          <!-- Canvas -->
+          <div class="canvas-wrap" id="canvas-wrap">
+            <!-- Lane overlays -->
+            <div class="canvas-lanes">
+              <div class="canvas-lane"><span class="lane-label">Orchestration lane</span></div>
+              <div class="canvas-lane"><span class="lane-label">Agent lane</span></div>
+              <div class="canvas-lane"><span class="lane-label">Logic lane</span></div>
+              <div class="canvas-lane"><span class="lane-label">Execution lane</span></div>
+            </div>
+
+            <!-- SVG edges -->
+            <svg class="canvas-edges" id="edges-svg" width="100%" height="100%">
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(99,102,241,0.5)"/>
+                </marker>
+              </defs>
+              <!-- Edges drawn by JS -->
+            </svg>
+
+            <!-- Flow Nodes -->
+            <div class="flow-node selected" id="node-trigger" style="left:40px;top:30px;border-color:#3b82f6;background:rgba(37,99,235,0.08);" onclick="selectNode('trigger')">
+              <div class="node-type-label" style="color:#3b82f6;">Root</div>
+              <div class="node-name">⚡ Trigger</div>
+              <div class="node-desc">manual</div>
+              <div class="port out" style="border-color:#3b82f6;"></div>
+            </div>
+
+            <div class="flow-node" id="node-agent" style="left:230px;top:80px;border-color:#22c55e;background:rgba(22,163,74,0.08);" onclick="selectNode('agent')">
+              <div class="node-type-label" style="color:#22c55e;">Agent / Triage</div>
+              <div class="node-name">🤖 Support Agent</div>
+              <div class="node-desc">gpt-4o · medium</div>
+              <div class="port in" style="border-color:#22c55e;"></div>
+              <div class="port out" style="border-color:#22c55e;"></div>
+            </div>
+
+            <div class="flow-node" id="node-if_else" style="left:430px;top:130px;border-color:#f59e0b;background:rgba(180,83,9,0.08);" onclick="selectNode('if_else')">
+              <div class="node-type-label" style="color:#f59e0b;">If / Else</div>
+              <div class="node-name">⑂ Route by intent</div>
+              <div class="node-desc">Case 1 · Case 2 · else</div>
+              <div class="port in" style="border-color:#f59e0b;"></div>
+              <div class="port out" style="border-color:#f59e0b;"></div>
+            </div>
+
+            <div class="flow-node" id="node-guardrails" style="left:230px;top:230px;border-color:#ef4444;background:rgba(220,38,38,0.08);" onclick="selectNode('guardrails')">
+              <div class="node-type-label" style="color:#ef4444;">Guardrails</div>
+              <div class="node-name">🛡️ Input safety</div>
+              <div class="node-desc">PII · jailbreak · moderation</div>
+              <div class="port in" style="border-color:#ef4444;"></div>
+              <div class="port out" style="border-color:#ef4444;"></div>
+            </div>
+
+            <div class="flow-node" id="node-user_approval" style="left:430px;top:280px;border-color:#06b6d4;background:rgba(8,145,178,0.08);" onclick="selectNode('user_approval')">
+              <div class="node-type-label" style="color:#06b6d4;">User Approval</div>
+              <div class="node-name">👤 Approve action</div>
+              <div class="node-desc">2 ports: Approve · Reject</div>
+              <div class="port in" style="border-color:#06b6d4;"></div>
+              <div class="port out-approve" style="border-color:var(--success);"></div>
+              <div class="port out-reject" style="border-color:var(--error);"></div>
+            </div>
+
+            <div class="flow-node" id="node-end" style="left:640px;top:200px;border-color:#9ca3af;background:rgba(75,85,99,0.08);" onclick="selectNode('end')">
+              <div class="node-type-label" style="color:#9ca3af;">End</div>
+              <div class="node-name">⏹ Complete</div>
+              <div class="node-desc">outcome: completed</div>
+              <div class="port in" style="border-color:#9ca3af;"></div>
+            </div>
+
+            <!-- Edge tab for bottom panel when closed -->
+            <div class="edge-tab bottom" id="edge-bottom" style="display:none;" onclick="togglePanel('bottom')">
+              ▲ Console
+            </div>
+          </div>
+
+          <!-- Bottom panel (Console / Logs) -->
+          <div class="panel-bottom" id="panel-bottom" style="display:none;">
+            <div class="panel-header" style="display:flex;align-items:center;gap:8px;">
+              <span>Console / Logs</span>
+              <button style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" onclick="togglePanel('bottom')">×</button>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:8px 10px;font-family:var(--font-mono);font-size:11px;color:var(--success);">
+              <div>[12:34:01] ✓ Flow compiled: 0 errors</div>
+              <div>[12:34:00] ✓ Runtime connected</div>
+              <div>[12:33:58] ⚠ Guardrail PII check: 2 matches found (non-blocking)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resize handle right -->
+        <div class="resize-handle" id="resize-right" title="Drag to resize"></div>
+
+        <!-- Right panel (Inspector) -->
+        <div class="panel-right" id="panel-right">
+          <div class="inspector-tabs">
+            <div class="inspector-tab active" onclick="setInspectorTab('properties', this)">Properties</div>
+            <div class="inspector-tab" onclick="setInspectorTab('test', this)">Test</div>
+            <div class="inspector-tab" onclick="setInspectorTab('diff', this)">Diff</div>
+          </div>
+
+          <!-- AGENT FORM (shown by default) -->
+          <div class="inspector-content" id="inspector-properties">
+            <!-- Form injected by JS based on selected node -->
+          </div>
+        </div>
+
+        <!-- Edge tabs for closed panels -->
+        <div class="edge-tab left" id="edge-left" style="display:none;" onclick="togglePanel('left')">
+          ▶ Explorer
+        </div>
+        <div class="edge-tab right" id="edge-right" style="display:none;" onclick="togglePanel('right')">
+          ◀ Inspector
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+const state = {
+  panels: { left: true, right: true, bottom: false },
+  selectedNode: 'agent',
+  zenMode: false,
+  viewMenuOpen: false,
+  inspectorTab: 'properties'
+};
+
+// ── Forms per node type ────────────────────────────────────────────────────────
+const FORMS = {
+  trigger: `
+    <div class="form-section">
+      <div class="form-section-header">Root / Trigger</div>
+      <div class="form-section-body">
+        <div class="field"><label>Trigger type</label>
+          <select><option>manual</option><option>scheduled</option><option>webhook</option><option>event</option></select>
+        </div>
+      </div>
+    </div>`,
+
+  agent: `
+    <div class="form-section">
+      <div class="form-section-header">Agent / Triage</div>
+      <div class="form-section-body">
+        <div class="field"><label>Name</label><input value="Support Agent"></div>
+        <div class="field"><label>Instructions</label>
+          <textarea>You are a support triage agent. Classify the incoming query and route to the appropriate handler.</textarea>
+        </div>
+        <div class="field"><label>Model</label>
+          <select><option>gpt-4o</option><option>gpt-4o-mini</option><option>gpt-4.1</option><option>claude-opus-4</option><option>gemini-2.5-pro</option></select>
+        </div>
+        <div class="field"><label>Reasoning effort</label>
+          <select><option>low</option><option selected>medium</option><option>high</option></select>
+        </div>
+        <div class="field"><label>Output format</label>
+          <select><option selected>text</option><option>json</option><option>markdown</option></select>
+        </div>
+        <label class="toggle-row"><input type="checkbox"> Include chat history</label>
+      </div>
+    </div>
+    <div class="helpers-toggle" onclick="toggleHelpers(this)">▸ Technical Helpers</div>`,
+
+  if_else: `
+    <div class="form-section">
+      <div class="form-section-header">If / Else</div>
+      <div class="form-section-body">
+        <div style="border:1px solid var(--border);border-radius:5px;padding:8px;display:grid;gap:6px;background:var(--surface2);">
+          <input value="Case 1" style="border:1px solid var(--border);border-radius:5px;background:#12151e;color:var(--text);padding:5px 8px;font-size:12px;font-weight:600;width:100%;">
+          <div class="field"><label>Condition</label><input placeholder="{{input.intent}} == 'billing'" value="{{input.intent}} == 'billing'"></div>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:5px;padding:8px;display:grid;gap:6px;background:var(--surface2);">
+          <input value="Case 2" style="border:1px solid var(--border);border-radius:5px;background:#12151e;color:var(--text);padding:5px 8px;font-size:12px;font-weight:600;width:100%;">
+          <div class="field"><label>Condition</label><input placeholder="{{input.intent}} == 'technical'"></div>
+        </div>
+        <button class="add-btn">+ Add case</button>
+      </div>
+    </div>
+    <div class="helpers-toggle" onclick="toggleHelpers(this)">▸ Technical Helpers</div>`,
+
+  guardrails: `
+    <div class="form-section">
+      <div class="form-section-header">Guardrails</div>
+      <div class="form-section-body">
+        <div class="field"><label>Input expression</label><input value="{{input.text}}" placeholder="{{input.text}}"></div>
+        <div style="display:grid;gap:6px;margin-top:4px;">
+          <label class="toggle-row"><input type="checkbox" checked> PII detection</label>
+          <label class="toggle-row"><input type="checkbox" checked> Content moderation</label>
+          <label class="toggle-row"><input type="checkbox" checked> Jailbreak detection</label>
+          <label class="toggle-row"><input type="checkbox"> Hallucination check</label>
+          <label class="toggle-row"><input type="checkbox"> NSFW text filter</label>
+          <label class="toggle-row"><input type="checkbox"> URL filter</label>
+          <label class="toggle-row"><input type="checkbox"> Prompt injection detection</label>
+          <label class="toggle-row"><input type="checkbox"> Custom prompt check</label>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+          <label class="toggle-row"><input type="checkbox"> Continue on error</label>
+        </div>
+      </div>
+    </div>
+    <div class="helpers-toggle" onclick="toggleHelpers(this)">▸ Technical Helpers</div>`,
+
+  file_search: `
+    <div class="form-section">
+      <div class="form-section-header">File Search</div>
+      <div class="form-section-body">
+        <div class="field"><label>Vector store</label>
+          <div style="display:flex;gap:6px;">
+            <input value="vs-abc123" style="flex:1;">
+            <button class="add-btn">Create</button>
+          </div>
+        </div>
+        <div class="field"><label>Max results</label><input type="number" value="5" min="1" max="20"></div>
+        <div class="field"><label>Query (supports {{variables}})</label><input value="{{input.question}}"></div>
+      </div>
+    </div>
+    <div class="helpers-toggle" onclick="toggleHelpers(this)">▸ Technical Helpers</div>`,
+
+  transform: `
+    <div class="form-section">
+      <div class="form-section-header">Transform</div>
+      <div class="form-section-body">
+        <div class="field"><label>Mode</label>
+          <select><option selected>Expressions</option><option>Object builder</option></select>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Key / Value mappings</div>
+          <div style="display:grid;gap:5px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 24px;gap:5px;">
+              <input placeholder="output key" value="fullName">
+              <input placeholder="{{expression}}" value="{{input.firstName}} + ' ' + {{input.lastName}}">
+              <button style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:12px;">×</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 24px;gap:5px;">
+              <input placeholder="output key" value="region">
+              <input placeholder="{{expression}}" value="{{state.userRegion}}">
+              <button style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:12px;">×</button>
+            </div>
+          </div>
+          <button class="add-btn" style="margin-top:6px;">+ Add row</button>
+        </div>
+        <p style="font-size:10px;color:var(--muted);line-height:1.5;">Use <code style="color:var(--primary);">{{state.varName}}</code> or <code style="color:var(--primary);">{{input.field}}</code> in values.</p>
+      </div>
+    </div>
+    <div class="helpers-toggle" onclick="toggleHelpers(this)">▸ Technical Helpers</div>`,
+
+  classify: `
+    <div class="form-section">
+      <div class="form-section-header">Classify</div>
+      <div class="form-section-body">
+        <div class="field"><label>Name</label><input value="Intent Classifier"></div>
+        <div class="field"><label>Input expression</label><input value="{{input.text}}"></div>
+        <div class="field"><label>Classifier</label>
+          <select><option selected>LLM</option><option>Embeddings</option><option>Regex</option></select>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Categories</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:var(--primary-soft);border:1px solid var(--primary);color:var(--primary);font-size:11px;">billing <button style="background:none;border:none;color:inherit;cursor:pointer;">×</button></span>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:var(--primary-soft);border:1px solid var(--primary);color:var(--primary);font-size:11px;">technical <button style="background:none;border:none;color:inherit;cursor:pointer;">×</button></span>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:var(--primary-soft);border:1px solid var(--primary);color:var(--primary);font-size:11px;">general <button style="background:none;border:none;color:inherit;cursor:pointer;">×</button></span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <input placeholder="Category name" style="flex:1;">
+            <button class="add-btn">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="helpers-toggle" onclick="toggleHelpers(this)">▸ Technical Helpers</div>`,
+
+  user_approval: `
+    <div class="form-section">
+      <div class="form-section-header">User Approval</div>
+      <div class="form-section-body">
+        <div class="field"><label>Name</label><input value="Approve Action"></div>
+        <div class="field"><label>Message</label>
+          <textarea>Please review and approve the following action before continuing.</textarea>
+        </div>
+        <div class="field"><label>Context</label>
+          <div style="display:grid;gap:5px;margin-bottom:5px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input value="{{state.actionSummary}}" style="flex:1;">
+              <button style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:12px;padding:4px 6px;">×</button>
+            </div>
+          </div>
+          <button class="add-btn">+ Add context</button>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Output ports</div>
+          <div style="display:grid;gap:5px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--success);font-size:12px;font-weight:600;">✓ Approve <span style="margin-left:auto;font-size:10px;color:var(--muted);font-weight:400;">→ output port</span></div>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--error);font-size:12px;font-weight:600;">✗ Reject <span style="margin-left:auto;font-size:10px;color:var(--muted);font-weight:400;">→ output port</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="helpers-toggle" onclick="toggleHelpers(this)">▸ Technical Helpers</div>`,
+
+  end: `
+    <div class="form-section">
+      <div class="form-section-header">End</div>
+      <div class="form-section-body">
+        <div class="field"><label>Outcome</label>
+          <select><option selected>completed</option><option>failed</option><option>escalated</option><option>timeout</option></select>
+        </div>
+        <div class="field"><label>Output schema</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:12px;color:var(--muted);">No schema</span>
+            <button class="add-btn">Add schema</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="helpers-toggle" onclick="toggleHelpers(this)">▸ Technical Helpers</div>`,
+};
+
+const HELPERS = {
+  agent: {
+    inputContract: 'Receives the current conversation context, instructions and tool bindings.',
+    outputContract: 'Returns a structured response object or free-form text based on outputFormat.',
+    variables: ['{{input}}', '{{history}}', '{{context}}', '{{tools}}'],
+    failure: 'On model error, propagates an error event to the parent flow. Retries if configured.',
+    preview: '{ "output": "Classified as billing inquiry", "confidence": 0.92 }'
+  },
+  if_else: {
+    inputContract: 'Evaluates each Case condition against the current workflow state.',
+    outputContract: 'Routes to the matching case branch, or to the default branch if no case matches.',
+    variables: ['{{state.*}}', '{{input}}', '{{output}}', '{{step.*}}'],
+    failure: 'If a condition throws, the step routes to the error port.',
+    preview: '{ "branch": "case_1", "matched": true }'
+  },
+  guardrails: {
+    inputContract: 'Receives a text payload and optionally a structured input object.',
+    outputContract: 'Passes through if all enabled checks pass. Emits a block event on violation.',
+    variables: ['{{input}}', '{{metadata}}'],
+    failure: 'If continueOnError is true, logs violations and continues. Otherwise halts.',
+    preview: '{ "pass": true, "violations": [] }'
+  },
+  file_search: {
+    inputContract: 'Requires a vectorStore ID and a query string. Supports {{variable}} interpolation.',
+    outputContract: 'Returns top-k matching chunks with score and metadata.',
+    variables: ['{{query}}', '{{context}}', '{{state.*}}'],
+    failure: 'Returns empty results array on store miss. Throws on auth/config error.',
+    preview: '{ "results": [{ "text": "...", "score": 0.87 }] }'
+  },
+  user_approval: {
+    inputContract: 'Suspends workflow and sends the configured message to the operator channel.',
+    outputContract: 'Routes to "Approve" or "Reject" output port based on operator response.',
+    variables: ['{{message}}', '{{context.*}}'],
+    failure: 'On timeout, emits a timeout event and routes to Reject by default.',
+    preview: '{ "decision": "approve", "operator": "ops-team" }'
+  },
+  end: {
+    inputContract: 'Receives the final output of the workflow.',
+    outputContract: 'Terminates the flow and exposes the output via the workflow result schema.',
+    variables: ['{{output}}', '{{state.*}}'],
+    failure: 'Always terminal. Schema validation errors are reported as warnings.',
+    preview: '{ "outcome": "completed", "result": { ... } }'
+  }
+};
+
+// ── Functions ──────────────────────────────────────────────────────────────────
+
+function selectNode(type) {
+  state.selectedNode = type;
+
+  // Highlight selected node
+  document.querySelectorAll('.flow-node').forEach(n => n.classList.remove('selected'));
+  const nodeEl = document.getElementById('node-' + type);
+  if (nodeEl) nodeEl.classList.add('selected');
+
+  // Update inspector
+  renderInspector();
+}
+
+function renderInspector() {
+  const container = document.getElementById('inspector-properties');
+  if (!container) return;
+
+  const form = FORMS[state.selectedNode] || `<div style="color:var(--muted);font-size:12px;padding:12px;border:1px dashed var(--border);border-radius:5px;">Select a node on the canvas to inspect it</div>`;
+  container.innerHTML = form;
+}
+
+function toggleHelpers(btn) {
+  const isOpen = btn.textContent.startsWith('▾');
+  if (isOpen) {
+    btn.textContent = '▸ Technical Helpers';
+    const helper = btn.nextElementSibling;
+    if (helper && helper.classList.contains('helper-block')) helper.remove();
+  } else {
+    btn.textContent = '▾ Technical Helpers';
+    const meta = HELPERS[state.selectedNode];
+    if (!meta) return;
+    const div = document.createElement('div');
+    div.className = 'helper-block';
+    div.innerHTML = `
+      <div><div class="helper-title">Input contract</div><div class="helper-value">${meta.inputContract}</div></div>
+      <div><div class="helper-title">Output contract</div><div class="helper-value">${meta.outputContract}</div></div>
+      <div><div class="helper-title">Available variables</div><div>${meta.variables.map(v => `<span class="var-chip">${v}</span>`).join('')}</div></div>
+      <div><div class="helper-title">Failure behavior</div><div class="helper-value">${meta.failure}</div></div>
+      <div><div class="helper-title">Preview example</div><div class="preview-code">${meta.preview}</div></div>
+    `;
+    btn.after(div);
+  }
+}
+
+function togglePanel(panel) {
+  state.panels[panel] = !state.panels[panel];
+  applyLayout();
+}
+
+function applyLayout() {
+  const { left, right, bottom } = state.panels;
+
+  // Left
+  const panelLeft = document.getElementById('panel-left');
+  const resizeLeft = document.getElementById('resize-left');
+  const edgeLeft = document.getElementById('edge-left');
+  if (panelLeft) panelLeft.style.display = left ? 'flex' : 'none';
+  if (resizeLeft) resizeLeft.style.display = left ? 'block' : 'none';
+  if (edgeLeft) edgeLeft.style.display = left ? 'none' : 'flex';
+  const btnExplorer = document.getElementById('btn-explorer');
+  if (btnExplorer) btnExplorer.className = left ? 'toggle-btn active' : 'toggle-btn';
+
+  // Right
+  const panelRight = document.getElementById('panel-right');
+  const resizeRight = document.getElementById('resize-right');
+  const edgeRight = document.getElementById('edge-right');
+  if (panelRight) panelRight.style.display = right ? 'flex' : 'none';
+  if (resizeRight) resizeRight.style.display = right ? 'block' : 'none';
+  if (edgeRight) edgeRight.style.display = right ? 'flex' : 'none';
+  const btnInspector = document.getElementById('btn-inspector');
+  if (btnInspector) btnInspector.className = right ? 'toggle-btn active' : 'toggle-btn';
+
+  // Bottom
+  const panelBottom = document.getElementById('panel-bottom');
+  const edgeBottom = document.getElementById('edge-bottom');
+  if (panelBottom) panelBottom.style.display = bottom ? 'flex' : 'none';
+  if (edgeBottom) edgeBottom.style.display = bottom ? 'none' : 'flex';
+  const btnConsole = document.getElementById('btn-console');
+  if (btnConsole) btnConsole.className = bottom ? 'toggle-btn active' : 'toggle-btn';
+}
+
+function resetLayout() {
+  state.panels = { left: true, right: true, bottom: false };
+  state.zenMode = false;
+  applyLayout();
+}
+
+function showAllPanels() {
+  state.panels = { left: true, right: true, bottom: true };
+  state.zenMode = false;
+  applyLayout();
+}
+
+function toggleZen() {
+  state.zenMode = !state.zenMode;
+  if (state.zenMode) {
+    state.panels = { left: false, right: false, bottom: false };
+  } else {
+    state.panels = { left: true, right: true, bottom: false };
+  }
+  const zenBtn = document.getElementById('zen-btn');
+  if (zenBtn) zenBtn.textContent = state.zenMode ? '⬜ Exit Zen mode' : '⬛ Zen mode';
+  applyLayout();
+}
+
+function toggleViewMenu() {
+  state.viewMenuOpen = !state.viewMenuOpen;
+  const dd = document.getElementById('view-dropdown');
+  if (dd) dd.style.display = state.viewMenuOpen ? 'block' : 'none';
+}
+
+function closeViewMenu() {
+  state.viewMenuOpen = false;
+  const dd = document.getElementById('view-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function setMainTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setInspectorTab(tab, el) {
+  state.inspectorTab = tab;
+  document.querySelectorAll('.inspector-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Draw SVG edges
+function drawEdges() {
+  const svg = document.getElementById('edges-svg');
+  if (!svg) return;
+
+  const edges = [
+    ['node-trigger', 'out', 'node-agent', 'in'],
+    ['node-agent', 'out', 'node-guardrails', 'in'],
+    ['node-agent', 'out', 'node-if_else', 'in'],
+    ['node-if_else', 'out', 'node-user_approval', 'in'],
+    ['node-user_approval', 'out-approve', 'node-end', 'in'],
+  ];
+
+  svg.innerHTML = `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(99,102,241,0.5)"/></marker></defs>`;
+
+  const canvas = document.getElementById('canvas-wrap');
+  if (!canvas) return;
+  const cr = canvas.getBoundingClientRect();
+
+  edges.forEach(([fromId, fromPort, toId, toPort]) => {
+    const from = document.getElementById(fromId);
+    const to = document.getElementById(toId);
+    if (!from || !to) return;
+
+    const fr = from.getBoundingClientRect();
+    const tr = to.getBoundingClientRect();
+
+    let fx, fy, tx, ty;
+
+    if (fromPort === 'out') {
+      fx = fr.right - cr.left;
+      fy = fr.top + fr.height / 2 - cr.top;
+    } else if (fromPort === 'out-approve') {
+      fx = fr.right - cr.left;
+      fy = fr.top + fr.height * 0.3 - cr.top;
+    } else {
+      fx = fr.right - cr.left;
+      fy = fr.top + fr.height * 0.7 - cr.top;
+    }
+
+    if (toPort === 'in') {
+      tx = tr.left - cr.left;
+      ty = tr.top + tr.height / 2 - cr.top;
+    }
+
+    const cp1x = fx + 60;
+    const cp1y = fy;
+    const cp2x = tx - 60;
+    const cp2y = ty;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${fx} ${fy} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${tx} ${ty}`);
+    path.setAttribute('stroke', 'rgba(99,102,241,0.45)');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('marker-end', 'url(#arrow)');
+    svg.appendChild(path);
+  });
+}
+
+// Close view menu on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#btn-view') && !e.target.closest('#view-dropdown')) {
+    closeViewMenu();
+  }
+});
+
+// Init
+renderInspector();
+selectNode('agent');
+setTimeout(drawEdges, 100);
+window.addEventListener('resize', drawEdges);
+</script>
+</body>
+</html>

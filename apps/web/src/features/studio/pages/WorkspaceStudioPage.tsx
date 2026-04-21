@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -6,7 +6,13 @@ import {
   Eye,
   GitBranch,
   LayoutGrid,
+  LayoutPanelLeft,
+  LayoutPanelTop,
+  Maximize2,
   MessageSquare,
+  PanelBottom,
+  PanelLeft,
+  PanelRight,
   RefreshCw,
   Rocket,
   Sparkles,
@@ -23,6 +29,7 @@ import { StudioTabBar, type StudioTab } from '../components/StudioTabBar';
 import { AgentBuilderModal } from '../components/AgentBuilderModal';
 import { CorefilesDiffPreviewModal } from '../components/CorefilesDiffPreviewModal';
 import { Toast } from '../../../components';
+import { LayoutStateProvider, useLayoutState } from '../../../lib/LayoutStateContext';
 import {
   RuntimeStatusBadge,
   StudioEmptyState,
@@ -32,6 +39,476 @@ import {
   StudioPageShell,
   StudioSectionCard,
 } from '../../../components/ui';
+
+
+// ─── Types for BuilderSurface ─────────────────────────────────────────────────
+
+interface BuilderSurfaceProps {
+  selectedAgent: import('../../../lib/types').AgentSpec | null;
+  flows: import('../../../lib/types').FlowSpec[];
+  skills: import('../../../lib/types').SkillSpec[];
+  agents: import('../../../lib/types').AgentSpec[];
+  diagnostics: string[];
+  sessions: unknown[];
+  deployPreview: import('../../../lib/types').DeployPreview | null;
+  selectedNodeId: string | null;
+  selectedNode: import('../../../lib/types').FlowNode | null;
+  onNodeSelect: (id: string | null) => void;
+}
+
+// ─── Resizer handle ───────────────────────────────────────────────────────────
+
+function ResizeHandle({
+  direction,
+  onResize,
+}: {
+  direction: 'horizontal' | 'vertical';
+  onResize: (delta: number) => void;
+}) {
+  const dragging = useRef(false);
+  const startPos = useRef(0);
+
+  function onMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
+    dragging.current = true;
+    startPos.current = direction === 'horizontal' ? e.clientX : e.clientY;
+
+    function onMove(ev: MouseEvent) {
+      if (!dragging.current) return;
+      const pos = direction === 'horizontal' ? ev.clientX : ev.clientY;
+      onResize(pos - startPos.current);
+      startPos.current = pos;
+    }
+    function onUp() {
+      dragging.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      style={{
+        flexShrink: 0,
+        [direction === 'horizontal' ? 'width' : 'height']: 4,
+        background: 'var(--shell-panel-border)',
+        cursor: direction === 'horizontal' ? 'col-resize' : 'row-resize',
+        transition: 'background 0.15s',
+        zIndex: 10,
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-primary)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--shell-panel-border)'; }}
+    />
+  );
+}
+
+// ─── Edge Tab (shown when panel is collapsed) ─────────────────────────────────
+
+function EdgeTab({
+  label,
+  icon,
+  side,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  side: 'left' | 'right' | 'bottom';
+  onClick: () => void;
+}) {
+  const isVertical = side === 'left' || side === 'right';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Open ${label}`}
+      style={{
+        position: 'absolute',
+        ...(side === 'left' ? { left: 0, top: '50%', transform: 'translateY(-50%)' } :
+           side === 'right' ? { right: 0, top: '50%', transform: 'translateY(-50%)' } :
+           { bottom: 0, left: '50%', transform: 'translateX(-50%)' }),
+        zIndex: 20,
+        display: 'flex',
+        flexDirection: isVertical ? 'column' : 'row',
+        alignItems: 'center',
+        gap: 4,
+        padding: isVertical ? '10px 5px' : '5px 10px',
+        background: 'var(--shell-panel-bg)',
+        border: '1px solid var(--shell-chip-border)',
+        borderRadius: side === 'left' ? '0 var(--radius-md) var(--radius-md) 0' :
+                      side === 'right' ? 'var(--radius-md) 0 0 var(--radius-md)' :
+                      'var(--radius-md) var(--radius-md) 0 0',
+        cursor: 'pointer',
+        color: 'var(--text-muted)',
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--color-primary)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-primary)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--shell-chip-border)'; }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+// ─── BuilderTopbar ────────────────────────────────────────────────────────────
+
+function BuilderTopbar() {
+  const { layout, toggleLeft, toggleRight, toggleBottom, resetLayout, showAllPanels, toggleZenMode } = useLayoutState();
+  const [viewMenuOpen, setViewMenuOpen] = useState(false);
+
+  const btnStyle = (active: boolean): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '5px 10px',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid',
+    borderColor: active ? 'var(--color-primary)' : 'var(--shell-chip-border)',
+    background: active ? 'var(--color-primary-soft)' : 'var(--shell-chip-bg)',
+    color: active ? 'var(--color-primary)' : 'var(--text-muted)',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  });
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '6px 12px',
+        borderBottom: '1px solid var(--shell-panel-border)',
+        background: 'var(--shell-panel-bg)',
+        flexWrap: 'wrap',
+      }}
+    >
+      <button type="button" style={btnStyle(layout.left.open)} onClick={toggleLeft} title="Toggle Explorer">
+        <PanelLeft size={13} />
+        Explorer
+      </button>
+      <button type="button" style={btnStyle(layout.right.open)} onClick={toggleRight} title="Toggle Inspector">
+        <PanelRight size={13} />
+        Inspector
+      </button>
+      <button type="button" style={btnStyle(layout.bottom.open)} onClick={toggleBottom} title="Toggle Console">
+        <PanelBottom size={13} />
+        Console
+      </button>
+
+      <div style={{ width: 1, height: 20, background: 'var(--shell-chip-border)', margin: '0 4px' }} />
+
+      <div style={{ position: 'relative' }}>
+        <button
+          type="button"
+          style={btnStyle(viewMenuOpen)}
+          onClick={() => setViewMenuOpen((v) => !v)}
+          title="View options"
+        >
+          <LayoutPanelTop size={13} />
+          View
+        </button>
+        {viewMenuOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              marginTop: 4,
+              background: 'var(--shell-panel-bg)',
+              border: '1px solid var(--shell-chip-border)',
+              borderRadius: 'var(--radius-md)',
+              minWidth: 200,
+              zIndex: 100,
+              boxShadow: 'var(--shadow-md)',
+              overflow: 'hidden',
+            }}
+          >
+            {[
+              { label: 'Reset layout', icon: <LayoutGrid size={12} />, action: () => { resetLayout(); setViewMenuOpen(false); } },
+              { label: 'Show all panels', icon: <Maximize2 size={12} />, action: () => { showAllPanels(); setViewMenuOpen(false); } },
+              { label: layout.zenMode ? 'Exit Zen mode' : 'Zen mode', icon: <MessageSquare size={12} />, action: () => { toggleZenMode(); setViewMenuOpen(false); } },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={item.action}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  width: '100%',
+                  padding: '9px 14px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--shell-chip-bg)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'none'; }}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── BuilderSurface ───────────────────────────────────────────────────────────
+
+function BuilderSurface({
+  selectedAgent,
+  flows,
+  skills,
+  agents,
+  diagnostics,
+  sessions,
+  deployPreview,
+  selectedNodeId,
+  selectedNode,
+  onNodeSelect,
+}: BuilderSurfaceProps) {
+  const { layout, toggleLeft, toggleRight, toggleBottom, setLeftSize, setRightSize, setBottomSize } = useLayoutState();
+
+  const leftWidth = layout.left.open ? layout.left.size : 0;
+  const rightWidth = layout.right.open ? layout.right.size : 0;
+  const bottomHeight = layout.bottom.open ? layout.bottom.size : 0;
+
+  return (
+    <div
+      style={{
+        borderRadius: 'var(--radius-xl)',
+        border: '1px solid var(--shell-panel-border)',
+        background: 'var(--shell-panel-bg)',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 720,
+      }}
+    >
+      <BuilderTopbar />
+
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, position: 'relative' }}>
+        {/* Left panel */}
+        {layout.left.open && (
+          <>
+            <div
+              style={{
+                width: leftWidth,
+                flexShrink: 0,
+                overflow: 'hidden',
+                background: 'var(--shell-panel-bg)',
+                borderRight: '1px solid var(--shell-panel-border)',
+                transition: layout.left.open ? 'none' : 'width 0.2s',
+              }}
+            >
+              <ComponentLibrary />
+            </div>
+            <ResizeHandle
+              direction="horizontal"
+              onResize={(delta) => setLeftSize(Math.max(160, Math.min(500, layout.left.size + delta)))}
+            />
+          </>
+        )}
+
+        {/* Edge tab for left panel when closed */}
+        {!layout.left.open && (
+          <EdgeTab
+            label="Explorer"
+            icon={<PanelLeft size={12} />}
+            side="left"
+            onClick={toggleLeft}
+          />
+        )}
+
+        {/* Center + bottom */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          {/* Canvas */}
+          <div style={{ flex: 1, minHeight: 0, position: 'relative', background: 'var(--canvas-surface-bg)' }}>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 10,
+                border: '1px solid var(--shell-panel-border)',
+                borderRadius: 'var(--radius-xl)',
+                background: 'var(--canvas-surface-bg)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                  display: 'grid',
+                  gridTemplateRows: 'repeat(4, minmax(0, 1fr))',
+                }}
+              >
+                {['Orchestration lane', 'Agent lane', 'Logic lane', 'Execution lane'].map((label, index) => (
+                  <div
+                    key={label}
+                    style={{ borderBottom: index === 3 ? 'none' : '1px dashed var(--shell-chip-border)', position: 'relative' }}
+                  >
+                    <span
+                      style={{
+                        position: 'absolute',
+                        left: 14,
+                        top: 10,
+                        fontSize: 10,
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        color: 'var(--text-muted)',
+                        background: 'var(--shell-chip-bg)',
+                        border: '1px solid var(--shell-chip-border)',
+                        borderRadius: 'var(--radius-full)',
+                        padding: '3px 8px',
+                      }}
+                    >
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
+                {selectedAgent ? (
+                  <StudioCanvas
+                    agents={[selectedAgent]}
+                    flows={flows}
+                    skills={skills}
+                    onNodeSelect={onNodeSelect}
+                  />
+                ) : (
+                  <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+                    <StudioEmptyState
+                      title="Select an agent"
+                      description="Choose a builder target to load nodes on the workspace canvas."
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom panel */}
+          {layout.bottom.open && (
+            <>
+              <ResizeHandle
+                direction="vertical"
+                onResize={(delta) => setBottomSize(Math.max(80, Math.min(400, layout.bottom.size - delta)))}
+              />
+              <div
+                style={{
+                  height: bottomHeight,
+                  flexShrink: 0,
+                  borderTop: '1px solid var(--shell-panel-border)',
+                  background: 'var(--shell-panel-bg)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--shell-chip-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>Console / Logs</span>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
+                  {diagnostics.length === 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>No diagnostics</div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 4 }}>
+                      {diagnostics.map((item) => (
+                        <div
+                          key={item}
+                          style={{
+                            fontSize: 11,
+                            color: '#F59E0B',
+                            background: 'rgba(245,158,11,0.08)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '4px 8px',
+                            fontFamily: 'var(--font-mono)',
+                          }}
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Edge tab for bottom panel when closed */}
+          {!layout.bottom.open && (
+            <EdgeTab
+              label="Console"
+              icon={<PanelBottom size={12} />}
+              side="bottom"
+              onClick={toggleBottom}
+            />
+          )}
+        </div>
+
+        {/* Resize handle before right panel */}
+        {layout.right.open && (
+          <ResizeHandle
+            direction="horizontal"
+            onResize={(delta) => setRightSize(Math.max(220, Math.min(600, layout.right.size - delta)))}
+          />
+        )}
+
+        {/* Right panel */}
+        {layout.right.open && (
+          <div
+            style={{
+              width: rightWidth,
+              flexShrink: 0,
+              overflow: 'hidden',
+              borderLeft: '1px solid var(--shell-panel-border)',
+              background: 'var(--shell-panel-bg)',
+            }}
+          >
+            <PropertiesPanel
+              diagnostics={diagnostics}
+              deployPreview={deployPreview}
+              sessions={sessions}
+              selectedNodeId={selectedNodeId}
+              selectedNode={selectedNode}
+              agents={agents}
+              skills={skills}
+            />
+          </div>
+        )}
+
+        {/* Edge tab for right panel when closed */}
+        {!layout.right.open && (
+          <EdgeTab
+            label="Inspector"
+            icon={<PanelRight size={12} />}
+            side="right"
+            onClick={toggleRight}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function WorkspaceStudioPage() {
   const { state, refresh } = useStudioState();
@@ -232,17 +709,37 @@ export default function WorkspaceStudioPage() {
           </button>
         }
       >
-        <StudioTabBar
-          active={activeTab}
-          onChange={setActiveTab}
-          tabs={[
-            { id: 'builder', label: 'Builder' },
-            { id: 'test', label: 'Test' },
-            { id: 'debug', label: 'Debug' },
-            { id: 'topology', label: 'Topology' },
-            { id: 'diff', label: 'Diff / Apply' },
-          ]}
-        />
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 5 }}>Build</div>
+            <StudioTabBar
+              active={activeTab}
+              onChange={setActiveTab}
+              tabs={[
+                { id: 'builder', label: 'Builder' },
+                { id: 'test', label: 'Test' },
+                { id: 'debug', label: 'Debug' },
+                { id: 'topology', label: 'Topology' },
+                { id: 'diff', label: 'Diff / Apply' },
+              ]}
+            />
+          </div>
+          <div style={{ width: 1, height: 32, background: 'var(--shell-chip-border)' }} />
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 5 }}>Admin</div>
+            <StudioTabBar
+              active={activeTab}
+              onChange={setActiveTab}
+              tabs={[
+                { id: 'overview', label: 'Overview' },
+                { id: 'routing', label: 'Routing & Channels' },
+                { id: 'hooks', label: 'Hooks' },
+                { id: 'versions', label: 'Versions' },
+                { id: 'operations', label: 'Operations' },
+              ]}
+            />
+          </div>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -285,105 +782,20 @@ export default function WorkspaceStudioPage() {
       </StudioSectionCard>
 
       {activeTab === 'builder' && (
-        <section
-          className="studio-builder-surface"
-          style={{
-            borderRadius: 'var(--radius-xl)',
-            border: '1px solid var(--shell-panel-border)',
-            background: 'var(--shell-panel-bg)',
-            overflow: 'hidden',
-            display: 'grid',
-            gridTemplateColumns: '280px minmax(0, 1fr) 340px',
-            minHeight: 720,
-          }}
-        >
-          <div style={{ borderRight: '1px solid var(--shell-panel-border)', background: 'var(--shell-panel-bg)' }}>
-            <ComponentLibrary />
-          </div>
-
-          <div style={{ minHeight: 0, position: 'relative', background: 'var(--canvas-surface-bg)' }}>
-            <div
-              style={{
-                position: 'absolute',
-                inset: 10,
-                border: '1px solid var(--shell-panel-border)',
-                borderRadius: 'var(--radius-xl)',
-                background: 'var(--canvas-surface-bg)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  pointerEvents: 'none',
-                  zIndex: 2,
-                  display: 'grid',
-                  gridTemplateRows: 'repeat(4, minmax(0, 1fr))',
-                }}
-              >
-                {['Orchestration lane', 'Agent lane', 'Logic lane', 'Execution lane'].map((label, index) => (
-                  <div
-                    key={label}
-                    style={{
-                      borderBottom: index === 3 ? 'none' : '1px dashed var(--shell-chip-border)',
-                      position: 'relative',
-                    }}
-                  >
-                    <span
-                      style={{
-                        position: 'absolute',
-                        left: 14,
-                        top: 10,
-                        fontSize: 10,
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
-                        color: 'var(--text-muted)',
-                        background: 'var(--shell-chip-bg)',
-                        border: '1px solid var(--shell-chip-border)',
-                        borderRadius: 'var(--radius-full)',
-                        padding: '3px 8px',
-                      }}
-                    >
-                      {label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
-                {selectedAgent ? (
-                  <StudioCanvas
-                    agents={[selectedAgent]}
-                    flows={state.flows}
-                    skills={state.skills}
-                    onNodeSelect={setSelectedNodeId}
-                  />
-                ) : (
-                  <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
-                    <StudioEmptyState
-                      title="Select an agent"
-                      description="Choose a builder target to load nodes on the workspace canvas."
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ borderLeft: '1px solid var(--shell-panel-border)', background: 'var(--shell-panel-bg)' }}>
-            <PropertiesPanel
-              diagnostics={diagnostics}
-              deployPreview={preview}
-              sessions={sessions}
-              selectedNodeId={selectedNodeId}
-              selectedNode={selectedNode}
-              agents={state.agents}
-              skills={state.skills}
-            />
-          </div>
-        </section>
+        <LayoutStateProvider>
+          <BuilderSurface
+            selectedAgent={selectedAgent ?? null}
+            flows={state.flows}
+            skills={state.skills}
+            agents={state.agents}
+            diagnostics={diagnostics}
+            sessions={sessions}
+            deployPreview={preview}
+            selectedNodeId={selectedNodeId}
+            selectedNode={selectedNode}
+            onNodeSelect={setSelectedNodeId}
+          />
+        </LayoutStateProvider>
       )}
 
       {activeTab === 'test' && (
@@ -566,6 +978,72 @@ export default function WorkspaceStudioPage() {
                 Apply Changes
               </button>
             </div>
+          </StudioSectionCard>
+        </section>
+      )}
+
+      {activeTab === 'overview' && (
+        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <StudioSectionCard title="Workspace Overview" description="Current workspace context, hierarchy and operational status.">
+            <StudioInspectorCard title="Hierarchy context">
+              <StudioMetricRow label="Agency" value={scope.agencyId ?? '—'} hint="Active agency" />
+              <StudioMetricRow label="Department" value={scope.departmentId ?? '—'} hint="Active department" />
+              <StudioMetricRow label="Workspace" value={workspaceId ?? '—'} hint="Active workspace" />
+              <StudioMetricRow label="Agent" value={selectedAgent?.name ?? '—'} hint={selectedAgent?.model ?? ''} />
+            </StudioInspectorCard>
+          </StudioSectionCard>
+          <StudioSectionCard title="Runtime Status" description="Live runtime health and session count.">
+            <StudioInspectorCard title="Runtime">
+              <StudioMetricRow label="Health" value={runtimeOk ? 'Healthy' : 'Degraded'} hint={runtimeOk ? 'All systems operational' : 'Check diagnostics'} />
+              <StudioMetricRow label="Active sessions" value={String(sessions.length)} hint="Current runtime sessions" />
+              <StudioMetricRow label="Compile diagnostics" value={diagnostics.length === 0 ? 'Clean' : `${diagnostics.length} issue(s)`} hint="Latest compile result" />
+            </StudioInspectorCard>
+          </StudioSectionCard>
+        </section>
+      )}
+
+      {activeTab === 'routing' && (
+        <section>
+          <StudioSectionCard title="Routing & Channels" description="Configure how messages flow between agents, departments and workspaces.">
+            <StudioEmptyState
+              title="Routing configuration"
+              description="Define routing rules, channel bindings, and handoff policies for this workspace. Routing rules determine how inbound messages are dispatched to agents."
+            />
+          </StudioSectionCard>
+        </section>
+      )}
+
+      {activeTab === 'hooks' && (
+        <section>
+          <StudioSectionCard title="Hooks" description="Lifecycle hooks triggered on workspace and agent events.">
+            <StudioEmptyState
+              title="No hooks configured"
+              description="Add pre/post hooks for events like onMessage, onComplete, onError, onHandoff. Hooks can run skills, call tools, or update state."
+            />
+          </StudioSectionCard>
+        </section>
+      )}
+
+      {activeTab === 'versions' && (
+        <section>
+          <StudioSectionCard title="Versions" description="Version history, snapshots, diffs and rollback.">
+            <StudioEmptyState
+              title="Version management"
+              description="Track deployed snapshots, compare versions, apply diffs and rollback to previous states. Preview → Diff → Apply → Rollback lifecycle."
+              actionLabel="Preview Diff"
+              onAction={() => void handlePreview()}
+            />
+          </StudioSectionCard>
+        </section>
+      )}
+
+      {activeTab === 'operations' && (
+        <section>
+          <StudioSectionCard title="Operations" description="Runtime operations, automations and scheduled routines.">
+            <StudioEmptyState
+              title="Operations & Automations"
+              description="Configure scheduled routines, automated triggers, and operational playbooks for this workspace."
+            />
           </StudioSectionCard>
         </section>
       )}
