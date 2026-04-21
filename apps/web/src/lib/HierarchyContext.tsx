@@ -420,21 +420,25 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const rootNode = tree.nodes[tree.rootKey];
-    if (!rootNode) {
+    if (selectedKey && tree.nodes[selectedKey]) {
+      return;
+    }
+
+    if (state.workspace) {
+      const workspaceKey = nodeKey('workspace', state.workspace.id);
+      if (tree.nodes[workspaceKey]) {
+        setSelectedKey(workspaceKey);
+        return;
+      }
+    }
+
+    if (!tree.nodes[tree.rootKey]) {
       setSelectedKey(null);
       return;
     }
 
-    if (!selectedKey) {
-      setSelectedKey(tree.rootKey);
-      return;
-    }
-
-    if (!tree.nodes[selectedKey]) {
-      setSelectedKey(tree.rootKey);
-    }
-  }, [selectedKey, tree.nodes, tree.rootKey]);
+    setSelectedKey(tree.rootKey);
+  }, [selectedKey, state.workspace, tree.nodes, tree.rootKey]);
 
   const value: HierarchyContextValue = {
     tree,

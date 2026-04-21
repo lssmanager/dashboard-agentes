@@ -55,7 +55,7 @@ export default function WorkspaceStudioPage() {
     [state.flows, selectedNodeId],
   );
 
-  const workspaceId = state.workspace?.id;
+  const workspaceId = scope.workspaceId ?? state.workspace?.id;
   const runtimeOk = state.runtime?.health?.ok ?? false;
   const diagnostics = state.compile?.diagnostics ?? [];
   const sessions = state.runtime?.sessions?.payload ?? [];

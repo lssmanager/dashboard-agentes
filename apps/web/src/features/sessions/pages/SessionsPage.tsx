@@ -3,6 +3,7 @@ import { MessageSquare, Circle, Send } from 'lucide-react';
 import { PageHeader, Card, Badge } from '../../../components';
 import { useStudioState } from '../../../lib/StudioStateContext';
 import { useHierarchy } from '../../../lib/HierarchyContext';
+import type { SessionState } from '../../../lib/types';
 
 export default function SessionsPage() {
   const { state } = useStudioState();
@@ -10,7 +11,22 @@ export default function SessionsPage() {
   const [draft, setDraft] = useState('');
   const [localMessages, setLocalMessages] = useState<string[]>([]);
 
-  const sessions = (state.runtime?.sessions?.payload ?? []) as Array<Record<string, unknown>>;
+  const sessions = useMemo<SessionState[]>(() => {
+    if (canonical?.runtimeControl.sessions?.length) {
+      return canonical.runtimeControl.sessions;
+    }
+    const fallback = (state.runtime?.sessions?.payload ?? []) as Array<Record<string, unknown>>;
+    return fallback.map((raw, index) => ({
+      ref: {
+        id: typeof raw.id === 'string' ? raw.id : `session-${index + 1}`,
+        agencyId: typeof raw.agencyId === 'string' ? raw.agencyId : undefined,
+        departmentId: typeof raw.departmentId === 'string' ? raw.departmentId : undefined,
+        workspaceId: typeof raw.workspaceId === 'string' ? raw.workspaceId : undefined,
+      },
+      status: typeof raw.status === 'string' ? (raw.status as SessionState['status']) : 'unknown',
+      metadata: raw,
+    }));
+  }, [canonical?.runtimeControl.sessions, state.runtime?.sessions?.payload]);
 
   const departmentWorkspaceIds = useMemo(() => {
     if (!scope.departmentId || !canonical) return null;
@@ -23,31 +39,31 @@ export default function SessionsPage() {
 
   const filteredSessions = useMemo(() => {
     if (scope.subagentId) {
-      return sessions.filter((session) => session.agentId === scope.subagentId);
+      return sessions.filter((session) => session.metadata?.agentId === scope.subagentId);
     }
 
     if (scope.agentId) {
-      return sessions.filter((session) => session.agentId === scope.agentId);
+      return sessions.filter((session) => session.metadata?.agentId === scope.agentId);
     }
 
     if (scope.workspaceId) {
-      return sessions.filter((session) => session.workspaceId === scope.workspaceId);
+      return sessions.filter((session) => session.ref.workspaceId === scope.workspaceId);
     }
 
     if (scope.departmentId && departmentWorkspaceIds) {
-      return sessions.filter((session) => typeof session.workspaceId === 'string' && departmentWorkspaceIds.has(session.workspaceId));
+      return sessions.filter((session) => Boolean(session.ref.workspaceId) && departmentWorkspaceIds.has(session.ref.workspaceId as string));
     }
 
     if (scope.agencyId) {
-      return sessions.filter((session) => session.agencyId === scope.agencyId || session.workspaceId !== undefined);
+      return sessions.filter((session) => session.ref.agencyId === scope.agencyId || session.ref.workspaceId !== undefined);
     }
 
     return sessions;
   }, [departmentWorkspaceIds, scope.agencyId, scope.agentId, scope.departmentId, scope.subagentId, scope.workspaceId, sessions]);
 
-  const hasStatusData = filteredSessions.some((s) => s?.status !== undefined);
+  const hasStatusData = filteredSessions.some((s) => s.status !== undefined);
   const activeCount = hasStatusData
-    ? filteredSessions.filter((s) => s?.status === 'active').length
+    ? filteredSessions.filter((s) => s.status === 'active').length
     : filteredSessions.length;
   const activeLabel = hasStatusData ? 'Active Now' : 'Sessions';
 
@@ -167,28 +183,25 @@ export default function SessionsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredSessions.map((session, idx) => {
-                  const s = session as {
-                    id?: string;
-                    agentId?: string;
-                    status?: string;
-                    channel?: string;
-                    messages?: unknown[];
-                  };
+                  const id = session.ref.id;
+                  const agentId = typeof session.metadata?.agentId === 'string' ? session.metadata.agentId : undefined;
+                  const channel = session.ref.channel ?? (typeof session.metadata?.channel === 'string' ? session.metadata.channel : undefined);
+                  const messages = Array.isArray(session.metadata?.messages) ? session.metadata.messages : [];
                   return (
-                    <tr key={s.id ?? idx} className="hover:bg-slate-50 transition-colors">
+                    <tr key={id ?? idx} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 text-sm">
-                        <code className="bg-slate-100 text-slate-900 px-2 py-1 rounded text-xs font-mono">{s.id ? s.id.substring(0, 20) : `sess-${idx + 1}`}</code>
+                        <code className="bg-slate-100 text-slate-900 px-2 py-1 rounded text-xs font-mono">{id ? id.substring(0, 20) : `sess-${idx + 1}`}</code>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <span className="inline-flex items-center gap-1.5">
-                          <Circle size={8} className={s.status === 'active' ? 'fill-emerald-500 text-emerald-500' : 'fill-slate-300 text-slate-300'} />
-                          <span className="text-xs text-slate-700">{s.status ?? 'unknown'}</span>
+                          <Circle size={8} className={session.status === 'active' ? 'fill-emerald-500 text-emerald-500' : 'fill-slate-300 text-slate-300'} />
+                          <span className="text-xs text-slate-700">{session.status ?? 'unknown'}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{s.channel ?? '—'}</td>
-                      <td className="px-6 py-4 text-sm"><span className="font-mono text-xs text-slate-900">{s.agentId ?? '—'}</span></td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{channel ?? '—'}</td>
+                      <td className="px-6 py-4 text-sm"><span className="font-mono text-xs text-slate-900">{agentId ?? '—'}</span></td>
                       <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-2 text-slate-600"><MessageSquare size={14} /><span>{s.messages?.length ?? 0}</span></div>
+                        <div className="flex items-center gap-2 text-slate-600"><MessageSquare size={14} /><span>{messages.length}</span></div>
                       </td>
                     </tr>
                   );
@@ -221,7 +234,12 @@ export default function SessionsPage() {
           <p className="text-sm text-slate-600">Avg Messages/Session</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">
             {filteredSessions.length > 0
-              ? Math.round(filteredSessions.reduce((sum, s) => sum + ((s.messages as unknown[] | undefined)?.length ?? 0), 0) / filteredSessions.length)
+              ? Math.round(
+                filteredSessions.reduce((sum, current) => {
+                  const messages = Array.isArray(current.metadata?.messages) ? current.metadata.messages : [];
+                  return sum + messages.length;
+                }, 0) / filteredSessions.length,
+              )
               : '—'}
           </p>
         </Card>

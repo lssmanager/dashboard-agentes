@@ -174,6 +174,10 @@ export function App() {
 
                   <Route path="/agency-topology" element={<Navigate to="/agency-builder?tab=topology" replace />} />
                   <Route path="/workspaces" element={<Navigate to="/agency-builder?tab=structure" replace />} />
+                  <Route path="/studio" element={<Navigate to="/workspace-studio" replace />} />
+                  <Route path="/agents" element={<Navigate to="/entity-editor" replace />} />
+                  <Route path="/agents/new" element={<Navigate to="/entity-editor" replace />} />
+                  <Route path="/agents/:id" element={<Navigate to="/entity-editor" replace />} />
                   <Route path="/routing" element={<Navigate to="/agency-builder?tab=routing" replace />} />
                   <Route path="/hooks" element={<Navigate to="/agency-builder?tab=hooks" replace />} />
                   <Route path="/versions" element={<Navigate to="/agency-builder?tab=versions" replace />} />

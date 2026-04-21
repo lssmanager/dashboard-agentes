@@ -316,7 +316,23 @@ export default function AgencyBuilderPage() {
             Agency hierarchy, lineage and active selection context.
           </p>
           <div style={{ marginTop: 12 }}>
-            <button type="button" onClick={() => navigate('/workspace-studio')} style={actionBtnStyle('var(--btn-primary-bg)', 'var(--btn-primary-text)')}>
+            <button
+              type="button"
+              onClick={() => {
+                const candidateWorkspaceId =
+                  scope.workspaceId ??
+                  (scope.departmentId
+                    ? canonical?.workspaces.find((workspace) => workspace.departmentId === scope.departmentId)?.id
+                    : canonical?.workspaces[0]?.id);
+
+                if (candidateWorkspaceId) {
+                  selectByEntity('workspace', candidateWorkspaceId);
+                }
+
+                navigate('/workspace-studio');
+              }}
+              style={actionBtnStyle('var(--btn-primary-bg)', 'var(--btn-primary-text)')}
+            >
               Open Workspace Studio
             </button>
           </div>
