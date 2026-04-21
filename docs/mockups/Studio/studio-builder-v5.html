@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workspace Studio Builder V5</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#090c10;
+      --bg-2:#0d1218;
+      --panel:#111821;
+      --panel-2:#151f2a;
+      --panel-3:#1b2531;
+      --line:#283444;
+      --line-soft:#1a2430;
+      --text:#edf3fa;
+      --muted:#9cabbc;
+      --faint:#708092;
+      --accent:#7ab2ff;
+      --accent-2:#5f90ff;
+      --green:#79d6a4;
+      --yellow:#f3c15d;
+      --orange:#ff9f4d;
+      --purple:#bb8bff;
+      --pink:#f28db2;
+      --teal:#72d7d0;
+      --red:#ef7388;
+      --shadow:0 16px 44px rgba(0,0,0,.38);
+      --radius:18px;
+      --left-width:300px;
+      --right-width:390px;
+      --bottom-height:170px;
+    }
+    * { box-sizing:border-box; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family:Inter,sans-serif; overflow:hidden; }
+    button, input, textarea, select { font:inherit; color:inherit; }
+    .app { height:100vh; display:grid; grid-template-columns:56px 1fr; background:linear-gradient(180deg,#0a0d10,#07090c 60%); }
+    .rail { background:#0a0e13; border-right:1px solid var(--line-soft); padding:10px 7px; display:grid; grid-template-rows:auto 1fr auto; gap:12px; }
+    .rail-logo { width:40px; height:40px; border-radius:14px; margin:0 auto; background:linear-gradient(135deg,var(--accent),var(--purple)); position:relative; box-shadow:var(--shadow); }
+    .rail-logo:before,.rail-logo:after{content:"";position:absolute;background:#fff;border-radius:999px;opacity:.95}
+    .rail-logo:before{width:16px;height:6px;left:12px;top:17px;transform:rotate(-28deg)}
+    .rail-logo:after{width:6px;height:16px;left:17px;top:12px;transform:rotate(-28deg)}
+    .rail-group { display:grid; gap:8px; }
+    .rail-btn { width:42px; height:42px; margin:0 auto; border-radius:14px; border:1px solid transparent; background:transparent; color:var(--muted); cursor:pointer; }
+    .rail-btn.active,.rail-btn:hover{background:var(--panel); color:var(--text); border-color:var(--line)}
+
+    .shell { min-width:0; display:grid; grid-template-rows:auto auto 1fr; }
+    .topbar { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid var(--line-soft); background:rgba(9,13,17,.9); backdrop-filter:blur(10px); }
+    .topbar h1 { margin:0; font-size:20px; font-weight:800; }
+    .topbar p { margin:5px 0 0; font-size:13px; color:var(--muted); }
+    .mode-switch { display:flex; gap:6px; padding:4px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+    .mode-btn { padding:9px 12px; border:none; background:transparent; color:var(--muted); border-radius:10px; font-weight:700; cursor:pointer; }
+    .mode-btn.active { background:#0b1117; color:var(--text); }
+    .top-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn { border:1px solid var(--line); background:var(--panel); color:var(--text); border-radius:12px; padding:10px 12px; cursor:pointer; font-weight:700; }
+    .btn.primary { background:linear-gradient(135deg,var(--accent-2),var(--accent)); border-color:transparent; color:#fff; }
+    .btn.warn { color:var(--yellow); }
+    .btn.ghost { background:transparent; }
+
+    .contextbar { padding:10px 18px; display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:center; border-bottom:1px solid var(--line-soft); background:rgba(12,17,23,.8); }
+    .crumbs { display:flex; gap:8px; flex-wrap:wrap; color:var(--muted); font-size:12px; }
+    .crumbs b { color:var(--text); }
+    .pills { display:flex; gap:8px; flex-wrap:wrap; }
+    .pill { padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--muted); font-size:11px; font-weight:700; }
+    .pill.blue{color:var(--accent)} .pill.green{color:var(--green)} .pill.yellow{color:var(--yellow)}
+
+    .mode-view { display:none; min-height:0; }
+    .mode-view.active { display:block; height:100%; }
+
+    .admin-grid { height:100%; padding:18px; display:grid; grid-template-columns:minmax(0,1.3fr) minmax(360px,.8fr); gap:16px; overflow:auto; }
+    .stack { display:grid; gap:16px; align-content:start; }
+    .card { border:1px solid var(--line); background:linear-gradient(180deg,var(--panel-2),var(--panel)); border-radius:20px; box-shadow:var(--shadow); }
+    .card-head { padding:16px 16px 0; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .card-head h3 { margin:0; font-size:17px; }
+    .card-head p { margin:6px 0 0; font-size:13px; color:var(--muted); line-height:1.5; }
+    .card-body { padding:16px; }
+    .mini-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .kpi { padding:14px; border-radius:16px; border:1px solid var(--line); background:var(--panel-3); }
+    .kpi span { display:block; font-size:11px; color:var(--faint); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+    .kpi strong { display:block; margin-top:8px; font-size:24px; }
+    .kpi small { display:block; margin-top:6px; color:var(--muted); font-size:12px; }
+    .badge { display:inline-flex; padding:5px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); font-size:11px; font-weight:800; color:var(--muted); }
+    .badge.blue{color:var(--accent)} .badge.green{color:var(--green)} .badge.yellow{color:var(--yellow)} .badge.pink{color:var(--pink)}
+    .topology { min-height:320px; position:relative; overflow:hidden; border-radius:18px; border:1px solid var(--line); background:radial-gradient(circle at top left, rgba(122,178,255,.12), transparent 30%), radial-gradient(circle at bottom right, rgba(114,215,208,.08), transparent 24%), linear-gradient(180deg,#10161b,#0c1015); }
+    .topology:before { content:""; position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px), linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px); background-size:34px 34px; opacity:.35; }
+    .topology-inner { position:relative; z-index:1; height:100%; display:flex; justify-content:space-between; gap:16px; padding:24px; }
+    .lane { flex:1; display:flex; flex-direction:column; gap:14px; align-items:center; }
+    .lane-label { font-size:11px; color:var(--faint); letter-spacing:.12em; text-transform:uppercase; font-weight:800; }
+    .mini-node { width:100%; max-width:180px; padding:12px; border-radius:16px; border:1px solid var(--line); background:rgba(18,24,30,.82); }
+    .mini-node strong{display:block;font-size:13px} .mini-node span{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+    .list { display:grid; gap:10px; }
+    .row { padding:12px 0; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .row:last-child{border-bottom:none}
+    .row strong{display:block;font-size:13px} .row span{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
+
+    .studio-layout { height:100%; display:grid; grid-template-columns:var(--left-width) 6px 1fr 6px var(--right-width); grid-template-rows:1fr 6px var(--bottom-height); }
+    .pane { min-width:0; min-height:0; overflow:hidden; background:rgba(10,15,20,.92); }
+    .left-pane { border-right:1px solid var(--line-soft); } .right-pane { border-left:1px solid var(--line-soft); } .bottom-pane { grid-column:1 / 6; border-top:1px solid var(--line-soft); }
+    .resizer { background:transparent; position:relative; z-index:6; }
+    .resizer.vertical{cursor:col-resize} .resizer.horizontal{cursor:row-resize}
+    .resizer:before { content:""; position:absolute; inset:0; transition:.14s ease; }
+    .resizer:hover:before { background:rgba(122,178,255,.12); }
+    .pane-head { padding:12px 14px; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; gap:10px; align-items:center; background:rgba(16,22,28,.94); }
+    .pane-head strong { font-size:13px; }
+    .pane-actions { display:flex; gap:6px; }
+    .pane-btn { width:28px; height:28px; border-radius:9px; border:1px solid var(--line); background:var(--panel); color:var(--muted); cursor:pointer; }
+    .pane-body { height:calc(100% - 53px); overflow:auto; padding:14px; }
+
+    .node-search { width:100%; padding:11px 12px; border-radius:12px; border:1px solid var(--line); background:var(--panel); margin-bottom:12px; outline:none; }
+    .group { display:grid; gap:8px; margin-bottom:14px; }
+    .group-label { font-size:11px; color:var(--faint); letter-spacing:.12em; text-transform:uppercase; font-weight:800; }
+    .palette-item { padding:12px; border-radius:14px; border:1px solid var(--line); background:linear-gradient(180deg,var(--panel-2),var(--panel)); cursor:grab; }
+    .palette-item strong{display:block;font-size:13px} .palette-item span{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
+
+    .canvas-pane { position:relative; }
+    .canvas-bg { position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px), linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px), radial-gradient(circle at center, rgba(122,178,255,.08), transparent 36%); background-size:26px 26px,26px 26px,100% 100%; }
+    .canvas-toolbar { position:absolute; left:16px; right:16px; top:14px; z-index:5; display:flex; justify-content:space-between; gap:10px; align-items:center; pointer-events:none; }
+    .canvas-tools { display:flex; gap:8px; flex-wrap:wrap; pointer-events:auto; }
+    .tool-pill { padding:7px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(15,21,27,.86); color:var(--muted); font-size:12px; font-weight:700; backdrop-filter:blur(10px); }
+    .canvas-scroll { position:absolute; inset:0; overflow:auto; padding:80px 60px 60px; }
+    .flow { position:relative; width:2000px; height:1220px; transform-origin:top left; }
+    svg.edges { position:absolute; inset:0; overflow:visible; pointer-events:none; }
+    .edge { fill:none; stroke:#4d5d70; stroke-width:2.3; }
+    .edge.active { stroke:var(--accent); } .edge.warn { stroke:var(--yellow); } .edge.success { stroke:var(--green); }
+    .edge-label { fill:#a4b2c3; font-size:12px; font-weight:700; }
+    .workflow-node { position:absolute; width:242px; border-radius:22px; overflow:hidden; border:1px solid #334050; background:rgba(18,24,31,.97); box-shadow:var(--shadow); cursor:grab; user-select:none; }
+    .workflow-node.selected { border-color:var(--accent); box-shadow:0 0 0 5px rgba(122,178,255,.14), var(--shadow); }
+    .workflow-node.multi { box-shadow:0 0 0 4px rgba(243,193,93,.14), var(--shadow); }
+    .workflow-node.dragging { cursor:grabbing; }
+    .node-bar { height:6px; }
+    .b-start{background:linear-gradient(90deg,var(--green),#b0f0c9)} .b-agent{background:linear-gradient(90deg,var(--accent-2),var(--accent))} .b-logic{background:linear-gradient(90deg,var(--yellow),#ffd57d)} .b-data{background:linear-gradient(90deg,var(--purple),#d4bbff)} .b-tool{background:linear-gradient(90deg,var(--teal),#bbf1eb)} .b-end{background:linear-gradient(90deg,#9babc0,#d8e3ee)}
+    .node-body { padding:14px; }
+    .node-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+    .node-title strong { display:block; font-size:15px; line-height:1.2; } .node-title span { display:block; margin-top:4px; font-size:12px; color:var(--muted); }
+    .node-icon { width:32px; height:32px; border-radius:11px; border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.05); display:grid; place-items:center; font-size:15px; font-weight:900; }
+    .node-code { margin-top:12px; border-radius:12px; border:1px solid var(--line-soft); background:#0b1015; color:#aeb9c6; padding:10px 11px; font-size:12px; line-height:1.45; white-space:pre-line; }
+    .node-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+    .node-tag { padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); color:var(--muted); font-size:11px; }
+    .port { position:absolute; width:12px; height:12px; border-radius:50%; background:#0f1419; border:2px solid #718196; }
+    .port.in{left:-6px;top:50%;transform:translateY(-50%)} .port.out{right:-6px;top:50%;transform:translateY(-50%)} .port.top{left:50%;top:-6px;transform:translateX(-50%)} .port.bottom{left:50%;bottom:-6px;transform:translateX(-50%)}
+    .sticky-note { position:absolute; width:220px; padding:15px 16px; border-radius:20px; background:#b98919; color:#261700; font-weight:700; line-height:1.45; box-shadow:var(--shadow); }
+    .mini-map { position:absolute; right:18px; bottom:18px; width:220px; height:144px; border-radius:16px; border:1px solid var(--line); background:rgba(15,21,27,.88); backdrop-filter:blur(10px); z-index:4; box-shadow:var(--shadow); overflow:hidden; }
+    .mini-map h4 { margin:0; padding:10px 12px 8px; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); }
+    .mini-map-inner { position:relative; height:calc(100% - 34px); margin:0 10px 10px; border-radius:12px; background:#0d1217; border:1px solid var(--line-soft); }
+    .map-dot { position:absolute; width:10px; height:10px; border-radius:4px; background:var(--accent); opacity:.85; }
+    .map-dot.logic{background:var(--yellow)} .map-dot.tool{background:var(--teal)} .map-dot.data{background:var(--purple)} .map-dot.end{background:#d0dbe6}
+    .map-viewport { position:absolute; left:22px; top:34px; width:120px; height:74px; border:1px solid rgba(122,178,255,.5); border-radius:10px; background:rgba(122,178,255,.08); }
+    .floating-controls { position:absolute; left:50%; bottom:18px; transform:translateX(-50%); z-index:4; display:flex; gap:8px; padding:8px; border-radius:999px; border:1px solid var(--line); background:rgba(14,19,25,.92); backdrop-filter:blur(12px); box-shadow:var(--shadow); }
+    .control-btn { width:38px; height:38px; border:none; border-radius:12px; background:transparent; color:var(--muted); cursor:pointer; font-size:16px; }
+    .control-btn:hover{background:var(--panel-2);color:var(--text)}
+
+    .inspect-card { border:1px solid var(--line); background:linear-gradient(180deg,var(--panel-2),var(--panel)); border-radius:16px; padding:14px; margin-bottom:12px; }
+    .inspect-card h4 { margin:0 0 10px; font-size:14px; }
+    .field { display:grid; gap:6px; margin-bottom:12px; } .field:last-child{margin-bottom:0}
+    .field label { font-size:11px; color:var(--faint); letter-spacing:.08em; text-transform:uppercase; font-weight:800; }
+    .field input,.field textarea,.field select { width:100%; border-radius:12px; border:1px solid var(--line); background:var(--panel-3); padding:10px 12px; outline:none; }
+    .kv { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--line-soft); font-size:13px; } .kv:last-child{border-bottom:none} .kv span{color:var(--muted)}
+    .switch { width:38px; height:22px; border-radius:999px; background:#2f3946; border:1px solid #3d4855; position:relative; } .switch:after{content:"";position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px} .switch.on{background:#276efe} .switch.on:after{left:18px}
+    .segment { display:flex; gap:6px; padding:4px; border:1px solid var(--line); border-radius:12px; background:var(--panel-3); }
+    .segment button { flex:1; border:none; background:transparent; border-radius:10px; color:var(--muted); padding:8px 10px; cursor:pointer; font-weight:700; }
+    .segment button.active { background:#0c1218; color:var(--text); }
+    .schema-chip { display:inline-flex; padding:5px 8px; border-radius:999px; background:rgba(187,139,255,.12); color:var(--purple); border:1px solid rgba(187,139,255,.16); font-size:11px; font-weight:800; }
+
+    .bottom-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+    .bottom-tab { padding:8px 10px; border-radius:10px; border:1px solid transparent; color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; }
+    .bottom-tab.active { background:rgba(122,178,255,.1); border-color:rgba(122,178,255,.18); color:var(--accent); }
+    .log-list { display:grid; gap:10px; margin-top:12px; }
+    .log-item { padding:12px; border-radius:14px; border:1px solid var(--line); background:var(--panel-2); display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .log-item strong{display:block;font-size:13px} .log-item span{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
+
+    .collapsed-left .left-pane,.collapsed-left .left-resizer{display:none}
+    .collapsed-right .right-pane,.collapsed-right .right-resizer{display:none}
+    .collapsed-bottom .bottom-pane,.collapsed-bottom .bottom-resizer{display:none}
+    .collapsed-left .studio-layout{grid-template-columns:1fr 6px var(--right-width)}
+    .collapsed-right .studio-layout{grid-template-columns:var(--left-width) 6px 1fr}
+    .collapsed-left.collapsed-right .studio-layout{grid-template-columns:1fr}
+
+    @media (max-width:1400px){.mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-grid{grid-template-columns:1fr}}
+    @media (max-width:1100px){.app{grid-template-columns:1fr}.rail{display:none}.studio-layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}.left-pane,.left-resizer,.right-pane,.right-resizer{display:none !important}.bottom-pane{grid-column:1}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="rail">
+      <div><div class="rail-logo"></div></div>
+      <div class="rail-group">
+        <button class="rail-btn active">⌂</button>
+        <button class="rail-btn">◧</button>
+        <button class="rail-btn">⌘</button>
+        <button class="rail-btn">⚙</button>
+        <button class="rail-btn">◎</button>
+      </div>
+      <div class="rail-group"><button class="rail-btn">?</button></div>
+    </aside>
+
+    <div class="shell" id="shellRoot">
+      <header class="topbar">
+        <div>
+          <h1>Workspace Studio Builder V5</h1>
+          <p>Prototipo más cercano a producto: ambiente admin + creator con paneles dockeables, minimap e inspector dinámico.</p>
+        </div>
+        <div class="mode-switch">
+          <button class="mode-btn active" data-mode="admin">Admin Environment</button>
+          <button class="mode-btn" data-mode="builder">Studio / Creator</button>
+        </div>
+        <div class="top-actions">
+          <button class="btn ghost" id="themeBtn">Theme</button>
+          <button class="btn warn">Validate</button>
+          <button class="btn">Preview</button>
+          <button class="btn primary">Publish</button>
+        </div>
+      </header>
+
+      <div class="contextbar">
+        <div class="crumbs">
+          <span>Agency</span><span>›</span><b>LSS Manager Network</b><span>›</span><span>Department</span><span>›</span><b>Growth & Admissions</b><span>›</span><span>Workspace</span><span>›</span><b>Lead Intake Orchestrator</b>
+        </div>
+        <div class="pills">
+          <span class="pill blue">Workspace Studio</span>
+          <span class="pill yellow">Draft v2.0.0</span>
+          <span class="pill green">Preview ready</span>
+        </div>
+      </div>
+
+      <section class="mode-view active" id="adminMode">
+        <div class="admin-grid">
+          <div class="stack">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Ambiente administrativo</h3>
+                  <p>Este modo conserva la administración del sistema: estructura, perfiles, observabilidad, sesiones, settings, versions y operaciones en la misma experiencia general. [file:5]</p>
+                </div>
+                <span class="badge blue">Dashboard</span>
+              </div>
+              <div class="card-body">
+                <div class="mini-grid">
+                  <div class="kpi"><span>Departments</span><strong>4</strong><small>Routing por dominio</small></div>
+                  <div class="kpi"><span>Workspaces</span><strong>9</strong><small>Build + operate</small></div>
+                  <div class="kpi"><span>Agents</span><strong>28</strong><small>Handoffs activos</small></div>
+                  <div class="kpi"><span>Runs today</span><strong>814</strong><small>Trace y costo visibles</small></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Topology y contexto</h3>
+                  <p>La administración sigue mostrando departments, workspaces, canales y handoffs reales para conservar el modelo operativo definido en el mockup anterior. [file:5]</p>
+                </div>
+                <span class="badge green">Topology</span>
+              </div>
+              <div class="card-body">
+                <div class="topology">
+                  <div class="topology-inner">
+                    <div class="lane"><div class="lane-label">Agency</div><div class="mini-node"><strong>LSS Manager Network</strong><span>Root policies</span></div></div>
+                    <div class="lane"><div class="lane-label">Departments</div><div class="mini-node"><strong>Growth & Admissions</strong><span>Qualification and routing</span></div><div class="mini-node"><strong>Learning Ops</strong><span>Lifecycle operations</span></div></div>
+                    <div class="lane"><div class="lane-label">Workspaces</div><div class="mini-node"><strong>Lead Intake Orchestrator</strong><span>Builder + runtime</span></div><div class="mini-node"><strong>Retention Studio</strong><span>Interventions</span></div></div>
+                    <div class="lane"><div class="lane-label">Agents</div><div class="mini-node"><strong>Admissions Router</strong><span>Prompt stack + tools</span></div><div class="mini-node"><strong>WhatsApp Qualification</strong><span>Channel subagent</span></div></div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Operate / Configure</h3>
+                  <p>Runs, sessions, profiles y settings permanecen como superficies de administración y observabilidad alrededor del workspace seleccionado. [file:5]</p>
+                </div>
+                <span class="badge yellow">Operate</span>
+              </div>
+              <div class="card-body list">
+                <div class="row"><div><strong>Profiles</strong><span>Catálogo jerárquico reusable por nivel.</span></div><span class="badge blue">17 profiles</span></div>
+                <div class="row"><div><strong>Runs</strong><span>Filtros por replay, trace, costo y latencia.</span></div><span class="badge green">Live</span></div>
+                <div class="row"><div><strong>Sessions</strong><span>Mensajes activos y cadena de delegación.</span></div><span class="badge yellow">18 active</span></div>
+                <div class="row"><div><strong>Settings</strong><span>Providers, runtimes, integrations y diagnostics.</span></div><span class="badge pink">2 warnings</span></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="stack">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Runtime summary</h3>
+                  <p>El resumen lateral conserva estado del workspace, delegación y salud operativa.</p>
+                </div>
+                <span class="badge green">Healthy</span>
+              </div>
+              <div class="card-body list">
+                <div class="row"><div><strong>Workspace</strong><span>Lead Intake Orchestrator · WhatsApp → Agent</span></div><span class="badge blue">Bound</span></div>
+                <div class="row"><div><strong>Delegation</strong><span>Growth Dept → Lead Intake → Lead Qualifier Agent</span></div><span class="badge green">Traceable</span></div>
+                <div class="row"><div><strong>Latency p95</strong><span>1.7s last 24h</span></div><span class="badge yellow">Review</span></div>
+                <div class="row"><div><strong>Cost</strong><span>$31.42 today</span></div><span class="badge blue">Visible</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Entrar al creator</h3>
+                  <p>El modo builder concentra el canvas, la edición de nodos y la composición visual del workflow.</p>
+                </div>
+                <span class="badge yellow">Creator</span>
+              </div>
+              <div class="card-body">
+                <button class="btn primary" id="jumpToBuilder" style="width:100%;">Open Studio / Creator</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="mode-view" id="builderMode">
+        <div class="studio-layout" id="studioLayout">
+          <aside class="pane left-pane" id="leftPane" style="grid-column:1;grid-row:1 / span 3;">
+            <div class="pane-head">
+              <strong>Explorer / Library</strong>
+              <div class="pane-actions">
+                <button class="pane-btn" data-toggle="left">—</button>
+              </div>
+            </div>
+            <div class="pane-body">
+              <input class="node-search" placeholder="Buscar nodos, templates o snippets..." />
+              <div class="group">
+                <div class="group-label">Core</div>
+                <div class="palette-item"><strong>Start</strong><span>Inputs del workflow.</span></div>
+                <div class="palette-item"><strong>Agent</strong><span>Modelo, instrucciones y tools.</span></div>
+                <div class="palette-item"><strong>Subagent</strong><span>Delegación especializada.</span></div>
+                <div class="palette-item"><strong>End</strong><span>Output final.</span></div>
+              </div>
+              <div class="group">
+                <div class="group-label">Logic</div>
+                <div class="palette-item"><strong>If / Else</strong><span>Branch por condición o score.</span></div>
+                <div class="palette-item"><strong>User Approval</strong><span>Pausa y aprobación humana.</span></div>
+                <div class="palette-item"><strong>Guardrails</strong><span>PII, moderation, jailbreak checks.</span></div>
+              </div>
+              <div class="group">
+                <div class="group-label">Data</div>
+                <div class="palette-item"><strong>Transform</strong><span>Expressions y object mapping.</span></div>
+                <div class="palette-item"><strong>Set State</strong><span>Variables globales o locales.</span></div>
+                <div class="palette-item"><strong>Classify</strong><span>Clasificación de input.</span></div>
+              </div>
+              <div class="group">
+                <div class="group-label">Tools</div>
+                <div class="palette-item"><strong>File Search</strong><span>Knowledge base y vector search.</span></div>
+                <div class="palette-item"><strong>CRM Action</strong><span>Lookup y update de leads.</span></div>
+                <div class="palette-item"><strong>Webhook</strong><span>Integración externa.</span></div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="resizer vertical left-resizer" id="leftResizer" style="grid-column:2;grid-row:1 / span 3;"></div>
+
+          <main class="pane canvas-pane" style="grid-column:3;grid-row:1;">
+            <div class="canvas-bg"></div>
+            <div class="canvas-toolbar">
+              <div class="canvas-tools">
+                <span class="tool-pill">Mode: Build</span>
+                <span class="tool-pill">Workspace: Lead Intake Orchestrator</span>
+                <span class="tool-pill">Zoom: <span id="zoomLabel">100%</span></span>
+              </div>
+              <div class="canvas-tools">
+                <span class="tool-pill">Selected: <span id="selectionLabel">Triage</span></span>
+                <span class="tool-pill">Multi-select: shift+click</span>
+                <span class="tool-pill">Dynamic inspector</span>
+              </div>
+            </div>
+            <div class="canvas-scroll" id="canvasScroll">
+              <div class="flow" id="flow">
+                <svg class="edges" id="edgeLayer"></svg>
+
+                <div class="sticky-note" style="left: 648px; top: 320px;">Check if required business details are present before delegating.</div>
+                <div class="sticky-note" style="left: 1316px; top: 244px;">If complete, produce plan or hand off to a helper.</div>
+                <div class="sticky-note" style="left: 1322px; top: 820px;">If incomplete, search data, transform and retry.</div>
+
+                <div class="workflow-node" data-node="Start" data-type="Start" style="left:120px;top:520px;">
+                  <i class="port out"></i>
+                  <div class="node-bar b-start"></div>
+                  <div class="node-body">
+                    <div class="node-head"><div class="node-title"><strong>Start</strong><span>Workflow inputs</span></div><div class="node-icon">▶</div></div>
+                    <div class="node-tags"><span class="node-tag">input_as_text</span><span class="node-tag">state vars</span></div>
+                  </div>
+                </div>
+
+                <div class="workflow-node selected" data-node="Triage" data-type="Agent" style="left:430px;top:500px;">
+                  <i class="port in"></i><i class="port out"></i>
+                  <div class="node-bar b-agent"></div>
+                  <div class="node-body">
+                    <div class="node-head"><div class="node-title"><strong>Triage</strong><span>Agent · gather key details</span></div><div class="node-icon">A</div></div>
+                    <div class="node-code">model: gpt-5
+reasoning: minimal
+output: JSON</div>
+                    <div class="node-tags"><span class="node-tag">chat history</span><span class="node-tag">response_schema</span></div>
+                  </div>
+                </div>
+
+                <div class="workflow-node" data-node="Guardrails" data-type="Guardrails" style="left:900px;top:190px;width:240px;">
+                  <i class="port bottom"></i>
+                  <div class="node-bar b-logic"></div>
+                  <div class="node-body">
+                    <div class="node-head"><div class="node-title"><strong>Guardrails</strong><span>Moderation · PII · jailbreak</span></div><div class="node-icon">🛡</div></div>
+                    <div class="node-tags"><span class="node-tag">policy</span><span class="node-tag">safe</span></div>
+                  </div>
+                </div>
+
+                <div class="workflow-node" data-node="Condition" data-type="IfElse" style="left:900px;top:500px;width:250px;">
+                  <i class="port in"></i><i class="port out"></i>
+                  <div class="node-bar b-logic"></div>
+                  <div class="node-body">
+                    <div class="node-head"><div class="node-title"><strong>Condition</strong><span>If all details exist</span></div><div class="node-icon">?</div></div>
+                    <div class="node-code">input.output_parsed.has_all_details == true</div>
+                    <div class="node-tags"><span class="node-tag">true / else</span><span class="node-tag">branch</span></div>
+                  </div>
+                </div>
+
+                <div class="workflow-node" data-node="Launch helper" data-type="Agent" style="left:1360px;top:320px;">
+                  <i class="port in"></i><i class="port out"></i>
+                  <div class="node-bar b-agent"></div>
+                  <div class="node-body">
+                    <div class="node-head"><div class="node-title"><strong>Launch helper</strong><span>Specialist agent</span></div><div class="node-icon">↗</div></div>
+                    <div class="node-tags"><span class="node-tag">handoff</span><span class="node-tag">agent</span></div>
+                  </div>
+                </div>
+
+                <div class="workflow-node" data-node="Get data" data-type="FileSearch" style="left:1360px;top:700px;">
+                  <i class="port in"></i><i class="port out"></i>
+                  <div class="node-bar b-tool"></div>
+                  <div class="node-body">
+                    <div class="node-head"><div class="node-title"><strong>Get data</strong><span>File search / CRM lookup</span></div><div class="node-icon">⌕</div></div>
+                    <div class="node-tags"><span class="node-tag">vector store</span><span class="node-tag">crm</span></div>
+                  </div>
+                </div>
+
+                <div class="workflow-node" data-node="Transform" data-type="Transform" style="left:1670px;top:700px;width:230px;">
+                  <i class="port in"></i><i class="port out"></i>
+                  <div class="node-bar b-data"></div>
+                  <div class="node-body">
+                    <div class="node-head"><div class="node-title"><strong>Transform</strong><span>Expressions and mapping</span></div><div class="node-icon">⇄</div></div>
+                    <div class="node-tags"><span class="node-tag">schema</span><span class="node-tag">normalize</span></div>
+                  </div>
+                </div>
+
+                <div class="workflow-node" data-node="End" data-type="End" style="left:1910px;top:700px;width:140px;">
+                  <i class="port in"></i>
+                  <div class="node-bar b-end"></div>
+                  <div class="node-body">
+                    <div class="node-head"><div class="node-title"><strong>End</strong><span>Final output</span></div><div class="node-icon">■</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mini-map">
+              <h4>Minimap</h4>
+              <div class="mini-map-inner">
+                <span class="map-dot" style="left:12px;top:62px"></span>
+                <span class="map-dot" style="left:47px;top:58px"></span>
+                <span class="map-dot logic" style="left:95px;top:22px"></span>
+                <span class="map-dot logic" style="left:95px;top:58px"></span>
+                <span class="map-dot" style="left:146px;top:40px"></span>
+                <span class="map-dot tool" style="left:146px;top:88px"></span>
+                <span class="map-dot data" style="left:180px;top:88px"></span>
+                <span class="map-dot end" style="left:206px;top:88px"></span>
+                <div class="map-viewport"></div>
+              </div>
+            </div>
+
+            <div class="floating-controls">
+              <button class="control-btn" id="zoomOut">−</button>
+              <button class="control-btn" id="zoomReset">⟳</button>
+              <button class="control-btn" id="zoomIn">＋</button>
+              <button class="control-btn" id="fitBtn">⌖</button>
+              <button class="control-btn" id="clearSelection">✕</button>
+            </div>
+          </main>
+
+          <div class="resizer vertical right-resizer" id="rightResizer" style="grid-column:4;grid-row:1 / span 3;"></div>
+
+          <aside class="pane right-pane" id="rightPane" style="grid-column:5;grid-row:1 / span 3;">
+            <div class="pane-head">
+              <strong>Inspector / Properties</strong>
+              <div class="pane-actions">
+                <button class="pane-btn" data-toggle="right">—</button>
+              </div>
+            </div>
+            <div class="pane-body" id="inspectorRoot"></div>
+          </aside>
+
+          <div class="resizer horizontal bottom-resizer" id="bottomResizer" style="grid-column:1 / 6;grid-row:2;"></div>
+
+          <section class="pane bottom-pane" id="bottomPane" style="grid-column:1 / 6;grid-row:3;">
+            <div class="pane-head">
+              <strong>Logs / Validation / Execution Trace</strong>
+              <div class="pane-actions">
+                <button class="pane-btn" data-toggle="bottom">—</button>
+              </div>
+            </div>
+            <div class="pane-body">
+              <div class="bottom-tabs">
+                <button class="bottom-tab active">Logs</button>
+                <button class="bottom-tab">Validation</button>
+                <button class="bottom-tab">Execution Trace</button>
+                <button class="bottom-tab">Diff</button>
+              </div>
+              <div class="log-list">
+                <div class="log-item"><div><strong>Triage parsed input</strong><span>Schema valid, 3 required fields present, 1 follow-up field missing.</span></div><span class="badge yellow">warning</span></div>
+                <div class="log-item"><div><strong>Condition executed</strong><span>Branch = else because `has_all_details` returned false.</span></div><span class="badge blue">branch</span></div>
+                <div class="log-item"><div><strong>Get data lookup</strong><span>CRM matched lead source and historical notes successfully.</span></div><span class="badge green">ok</span></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const shellRoot = document.getElementById('shellRoot');
+    const modeButtons = document.querySelectorAll('.mode-btn');
+    const adminMode = document.getElementById('adminMode');
+    const builderMode = document.getElementById('builderMode');
+    const jumpToBuilder = document.getElementById('jumpToBuilder');
+    const flow = document.getElementById('flow');
+    const edgeLayer = document.getElementById('edgeLayer');
+    const selectionLabel = document.getElementById('selectionLabel');
+    const inspectorRoot = document.getElementById('inspectorRoot');
+    const zoomLabel = document.getElementById('zoomLabel');
+    const canvasScroll = document.getElementById('canvasScroll');
+
+    function setMode(mode) {
+      modeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+      adminMode.classList.toggle('active', mode === 'admin');
+      builderMode.classList.toggle('active', mode === 'builder');
+    }
+    modeButtons.forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+    jumpToBuilder.addEventListener('click', () => setMode('builder'));
+
+    document.querySelectorAll('[data-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        shellRoot.classList.toggle(`collapsed-${btn.dataset.toggle}`);
+      });
+    });
+
+    function startResize(type, e) {
+      resizeState = {
+        type,
+        x: e.clientX,
+        y: e.clientY,
+        left: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--left-width')),
+        right: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--right-width')),
+        bottom: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bottom-height'))
+      };
+      document.body.style.userSelect = 'none';
+    }
+    let resizeState = null;
+    document.getElementById('leftResizer').addEventListener('pointerdown', e => startResize('left', e));
+    document.getElementById('rightResizer').addEventListener('pointerdown', e => startResize('right', e));
+    document.getElementById('bottomResizer').addEventListener('pointerdown', e => startResize('bottom', e));
+    window.addEventListener('pointermove', e => {
+      if (!resizeState) return;
+      if (resizeState.type === 'left') {
+        const next = Math.min(420, Math.max(220, resizeState.left + (e.clientX - resizeState.x)));
+        document.documentElement.style.setProperty('--left-width', `${next}px`);
+      }
+      if (resizeState.type === 'right') {
+        const next = Math.min(520, Math.max(280, resizeState.right - (e.clientX - resizeState.x)));
+        document.documentElement.style.setProperty('--right-width', `${next}px`);
+      }
+      if (resizeState.type === 'bottom') {
+        const next = Math.min(320, Math.max(110, resizeState.bottom - (e.clientY - resizeState.y)));
+        document.documentElement.style.setProperty('--bottom-height', `${next}px`);
+      }
+    });
+    window.addEventListener('pointerup', () => { resizeState = null; document.body.style.userSelect=''; });
+
+    const nodeData = {
+      'Start': {
+        type: 'Start',
+        title: 'Start',
+        html: `
+          <div class="inspect-card"><h4>Start node</h4>
+            <div class="field"><label>Input variable</label><input value="input_as_text"></div>
+            <div class="field"><label>State variables</label><input value="lead_context, follow_up_needed"></div>
+          </div>
+          <div class="inspect-card"><h4>State</h4>
+            <div class="kv"><span>Status</span><b>Ready</b></div>
+            <div class="kv"><span>Version</span><b>v2.0.0</b></div>
+          </div>`
+      },
+      'Triage': {
+        type: 'Agent',
+        title: 'Triage',
+        html: `
+          <div class="inspect-card"><h4>Agent</h4>
+            <div class="field"><label>Name</label><input value="Triage"></div>
+            <div class="field"><label>Instructions</label><textarea rows="5">You are an assistant that gathers the key details needed to create a business initiative plan.</textarea></div>
+            <div class="field"><label>Model</label><select><option>gpt-5</option><option>claude-sonnet</option><option>gemini-2.5-pro</option></select></div>
+            <div class="field"><label>Reasoning effort</label><select><option>minimal</option><option>medium</option><option>high</option></select></div>
+            <div class="kv"><span>Include chat history</span><div class="switch on"></div></div>
+          </div>
+          <div class="inspect-card"><h4>Output format</h4>
+            <div class="segment"><button>Text</button><button class="active">JSON</button><button>Tool</button></div>
+            <div style="margin-top:12px"><span class="schema-chip">response_schema</span></div>
+            <div class="field" style="margin-top:12px"><label>Structured output</label><textarea rows="4">company_name: string\nindustry: string\nproblem_statement: string</textarea></div>
+          </div>
+          <div class="inspect-card"><h4>Node state</h4>
+            <div class="kv"><span>Status</span><b>Selected</b></div>
+            <div class="kv"><span>Latency p95</span><b>1.2s</b></div>
+            <div class="kv"><span>Last preview</span><b>2 min ago</b></div>
+          </div>`
+      },
+      'Guardrails': {
+        type: 'Guardrails',
+        title: 'Guardrails',
+        html: `
+          <div class="inspect-card"><h4>Guardrails</h4>
+            <div class="field"><label>Name</label><input value="Guardrails"></div>
+            <div class="kv"><span>Personally identifiable info</span><div class="switch on"></div></div>
+            <div class="kv"><span>Moderation</span><div class="switch on"></div></div>
+            <div class="kv"><span>Jailbreak</span><div class="switch on"></div></div>
+            <div class="kv"><span>Hallucination</span><div class="switch"></div></div>
+            <div class="kv"><span>Prompt injection detection</span><div class="switch on"></div></div>
+          </div>
+          <div class="inspect-card"><h4>Behavior</h4>
+            <div class="kv"><span>Continue on error</span><div class="switch"></div></div>
+            <div class="kv"><span>Input</span><b>input_as_text</b></div>
+          </div>`
+      },
+      'Condition': {
+        type: 'IfElse',
+        title: 'Condition',
+        html: `
+          <div class="inspect-card"><h4>If / Else</h4>
+            <div class="field"><label>Case name</label><input value="Has required details"></div>
+            <div class="field"><label>Condition</label><textarea rows="4">input.output_parsed.has_all_details == true</textarea></div>
+          </div>
+          <div class="inspect-card"><h4>Branches</h4>
+            <div class="kv"><span>true</span><b>Launch helper</b></div>
+            <div class="kv"><span>else</span><b>Get data</b></div>
+          </div>`
+      },
+      'Launch helper': {
+        type: 'Agent',
+        title: 'Launch helper',
+        html: `
+          <div class="inspect-card"><h4>Agent handoff</h4>
+            <div class="field"><label>Name</label><input value="Launch helper"></div>
+            <div class="field"><label>Target specialist</label><select><option>Planning helper</option><option>Admissions helper</option><option>Retention helper</option></select></div>
+            <div class="kv"><span>Handoff mode</span><b>delegate</b></div>
+          </div>
+          <div class="inspect-card"><h4>Runtime</h4>
+            <div class="kv"><span>Status</span><b>Delegated</b></div>
+            <div class="kv"><span>Latency p95</span><b>1.8s</b></div>
+          </div>`
+      },
+      'Get data': {
+        type: 'FileSearch',
+        title: 'Get data',
+        html: `
+          <div class="inspect-card"><h4>File search</h4>
+            <div class="field"><label>Vector store</label><input value="lead_knowledge_base"></div>
+            <div class="field"><label>Max results</label><input value="10"></div>
+            <div class="field"><label>Query</label><textarea rows="4">{{ input_as_text }}</textarea></div>
+          </div>
+          <div class="inspect-card"><h4>Connected tools</h4>
+            <div class="kv"><span>CRM lookup</span><b>enabled</b></div>
+            <div class="kv"><span>Knowledge base</span><b>enabled</b></div>
+          </div>`
+      },
+      'Transform': {
+        type: 'Transform',
+        title: 'Transform',
+        html: `
+          <div class="inspect-card"><h4>Transform</h4>
+            <div class="field"><label>Name</label><input value="Transform"></div>
+            <div class="segment"><button class="active">Expressions</button><button>Object</button></div>
+            <div class="field" style="margin-top:12px"><label>Key</label><input value="result"></div>
+            <div class="field"><label>Value</label><textarea rows="4">input.foo + 1</textarea></div>
+          </div>
+          <div class="inspect-card"><h4>Schema</h4>
+            <div class="kv"><span>Output</span><b>response_schema</b></div>
+            <div class="kv"><span>Status</span><b>Mapped</b></div>
+          </div>`
+      },
+      'End': {
+        type: 'End',
+        title: 'End',
+        html: `
+          <div class="inspect-card"><h4>End</h4>
+            <div class="field"><label>Output schema</label><input value="response_schema"></div>
+            <div class="kv"><span>Final output</span><b>JSON</b></div>
+          </div>`
+      }
+    };
+
+    function renderInspector(name) {
+      selectionLabel.textContent = name;
+      inspectorRoot.innerHTML = nodeData[name]?.html || '<div class="inspect-card"><h4>No selection</h4></div>';
+    }
+
+    const nodes = Array.from(document.querySelectorAll('.workflow-node'));
+    let selected = nodes.find(n => n.classList.contains('selected'));
+    let multiSelection = new Set([selected]);
+
+    function updateSelectionVisual() {
+      nodes.forEach(n => {
+        n.classList.remove('selected', 'multi');
+        if (n === selected) n.classList.add('selected');
+        else if (multiSelection.has(n)) n.classList.add('multi');
+      });
+    }
+
+    nodes.forEach(node => {
+      node.addEventListener('click', e => {
+        if (e.shiftKey) {
+          if (multiSelection.has(node)) multiSelection.delete(node); else multiSelection.add(node);
+          if (!selected) selected = node;
+        } else {
+          selected = node;
+          multiSelection = new Set([node]);
+          renderInspector(node.dataset.node);
+        }
+        updateSelectionVisual();
+      });
+    });
+
+    document.getElementById('clearSelection').addEventListener('click', () => {
+      multiSelection = new Set();
+      selected = null;
+      nodes.forEach(n => n.classList.remove('selected','multi'));
+      selectionLabel.textContent = 'None';
+      inspectorRoot.innerHTML = '<div class="inspect-card"><h4>No selection</h4><div class="kv"><span>Tip</span><b>Select a node to edit it.</b></div></div>';
+    });
+
+    let scale = 1;
+    function applyZoom() { flow.style.transform = `scale(${scale})`; zoomLabel.textContent = `${Math.round(scale*100)}%`; drawEdges(); }
+    document.getElementById('zoomIn').addEventListener('click', () => { scale = Math.min(1.6, scale + 0.1); applyZoom(); });
+    document.getElementById('zoomOut').addEventListener('click', () => { scale = Math.max(0.55, scale - 0.1); applyZoom(); });
+    document.getElementById('zoomReset').addEventListener('click', () => { scale = 1; applyZoom(); });
+    document.getElementById('fitBtn').addEventListener('click', () => { scale = 0.85; applyZoom(); canvasScroll.scrollTo({left:320, top:220, behavior:'smooth'}); });
+
+    const connections = [
+      ['Start','Triage','active',''],
+      ['Triage','Condition','success',''],
+      ['Guardrails','Condition','', ''],
+      ['Condition','Launch helper','warn','true'],
+      ['Condition','Get data','active','else'],
+      ['Get data','Transform','success',''],
+      ['Transform','End','success','']
+    ];
+
+    function centerOf(node, side='out') {
+      const left = parseFloat(node.style.left || 0);
+      const top = parseFloat(node.style.top || 0);
+      const width = node.offsetWidth;
+      const height = node.offsetHeight;
+      if (side === 'out') return {x:left + width, y:top + height/2};
+      if (side === 'in') return {x:left, y:top + height/2};
+      if (side === 'top') return {x:left + width/2, y:top};
+      if (side === 'bottom') return {x:left + width/2, y:top + height};
+    }
+
+    function drawEdges() {
+      edgeLayer.setAttribute('viewBox', '0 0 2000 1220');
+      edgeLayer.innerHTML = '';
+      connections.forEach(([fromName, toName, cls, label]) => {
+        const from = nodes.find(n => n.dataset.node === fromName);
+        const to = nodes.find(n => n.dataset.node === toName);
+        if (!from || !to) return;
+        const s = centerOf(from, 'out');
+        const t = centerOf(to, 'in');
+        const c1x = s.x + Math.max(80, (t.x - s.x) * .35);
+        const c2x = t.x - Math.max(80, (t.x - s.x) * .35);
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${s.x} ${s.y} C ${c1x} ${s.y}, ${c2x} ${t.y}, ${t.x} ${t.y}`);
+        path.setAttribute('class', `edge ${cls}`.trim());
+        edgeLayer.appendChild(path);
+        if (label) {
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', (s.x + t.x)/2);
+          text.setAttribute('y', (s.y + t.y)/2 - 8);
+          text.setAttribute('class', 'edge-label');
+          text.textContent = label;
+          edgeLayer.appendChild(text);
+        }
+      });
+    }
+
+    let drag = null;
+    nodes.forEach(node => {
+      node.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        const draggingNodes = multiSelection.has(node) ? Array.from(multiSelection) : [node];
+        drag = {
+          items: draggingNodes.map(n => ({el:n, x:parseFloat(n.style.left), y:parseFloat(n.style.top)})),
+          startX:e.clientX,
+          startY:e.clientY
+        };
+        draggingNodes.forEach(n => n.classList.add('dragging'));
+        node.setPointerCapture(e.pointerId);
+      });
+      node.addEventListener('pointermove', e => {
+        if (!drag) return;
+        const dx = (e.clientX - drag.startX) / scale;
+        const dy = (e.clientY - drag.startY) / scale;
+        drag.items.forEach(item => {
+          item.el.style.left = `${Math.max(0, item.x + dx)}px`;
+          item.el.style.top = `${Math.max(0, item.y + dy)}px`;
+        });
+        drawEdges();
+      });
+      node.addEventListener('pointerup', () => {
+        if (!drag) return;
+        drag.items.forEach(item => item.el.classList.remove('dragging'));
+        drag = null;
+      });
+    });
+
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+
+    renderInspector('Triage');
+    drawEdges();
+  </script>
+</body>
+</html>
