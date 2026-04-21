@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OpenClaw Studio · Redesign v2 — Navegación por Niveles Operativos</title>
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root {
+  --bg:#f4f7fb; --surface:#ffffff; --surface-2:#f8fafc; --surface-3:#eef3fb;
+  --text:#101828; --muted:#475467; --faint:#667085; --border:#dfe6ef;
+  --primary:#2563eb; --primary-soft:rgba(37,99,235,.12);
+  --success:#16a34a; --success-soft:rgba(22,163,74,.12);
+  --warning:#d97706; --warning-soft:rgba(217,119,6,.12);
+  --danger:#dc2626;  --danger-soft:rgba(220,38,38,.12);
+  --rail:#0f1b38;    --rail-text:#d9e3f5;
+  --left-bg:#0e1f3d; --left-border:rgba(255,255,255,.07);
+  --shadow:0 1px 3px rgba(16,24,40,.06),0 8px 20px rgba(16,24,40,.07);
+  --shadow-md:0 8px 24px rgba(16,24,40,.10);
+  --r1:8px; --r2:12px; --r3:16px; --r4:20px;
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+html[data-theme="dark"] {
+  --bg:#07111f; --surface:#0d1a2b; --surface-2:#0b1626; --surface-3:#122034;
+  --text:#edf3fb; --muted:#c0cfe0; --faint:#8fa3bc; --border:#1e2f48;
+  --primary:#4c8dff; --primary-soft:rgba(76,141,255,.14);
+  --success:#34d399; --success-soft:rgba(52,211,153,.14);
+  --warning:#fbbf24; --warning-soft:rgba(251,191,36,.14);
+  --danger:#f87171;  --danger-soft:rgba(248,113,113,.14);
+  --rail:#07101f;    --rail-text:#dae7fa;
+  --left-bg:#07101e; --left-border:rgba(255,255,255,.05);
+  --shadow:none; --shadow-md:0 0 0 1px rgba(255,255,255,.04),0 16px 32px rgba(0,0,0,.28);
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:inherit}
+button{font:inherit;cursor:pointer}
+a{text-decoration:none;color:inherit}
+
+/* ============================================================
+   APP SHELL — 3-column: left | center | right
+   ============================================================ */
+.app {
+  display:grid;
+  grid-template-columns:272px 1fr 300px;
+  grid-template-rows:100vh;
+  min-height:100vh;
+  overflow:hidden;
+}
+
+/* ============================================================
+   LEFT SIDEBAR
+   ============================================================ */
+.left {
+  background:var(--left-bg);
+  border-right:1px solid var(--left-border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  position:relative;
+  height:100vh;
+}
+.left * { color: var(--rail-text); }
+
+/* — — — Block A: Agency Switcher — — — */
+.left-top {
+  flex-shrink:0;
+  padding:16px 14px 0;
+  border-bottom:1px solid var(--left-border);
+  padding-bottom:14px;
+}
+.switcher-label {
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:#6a84ad;
+  margin-bottom:8px;
+}
+.agency-btn {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:10px 10px;
+  border-radius:var(--r2);
+  border:1px solid transparent;
+  background:transparent;
+  font-size:13px;
+  font-weight:600;
+  color:#c5d5ee;
+  transition:background .14s,border-color .14s;
+}
+.agency-btn:hover { background:rgba(255,255,255,.05); }
+.agency-btn.active {
+  background:rgba(76,141,255,.13);
+  border-color:rgba(76,141,255,.26);
+  color:#dce9ff;
+}
+.agency-btn .agency-icon {
+  width:28px;height:28px;border-radius:8px;
+  display:grid;place-items:center;font-size:12px;font-weight:800;
+  flex-shrink:0;
+}
+.agency-btn .agency-meta { display:flex;flex-direction:column;min-width:0; }
+.agency-btn .agency-name { font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.agency-btn .agency-sub  { font-size:11px;color:#7a96be;margin-top:1px; }
+.switcher-actions {
+  display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;
+}
+.switcher-action {
+  font-size:11px;font-weight:700;color:#7a96be;
+  padding:5px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.07);
+  background:transparent;
+}
+.switcher-action:hover { background:rgba(255,255,255,.05);color:#b0c8e8; }
+
+/* — — — Block B: Hierarchical Tree — — — */
+.left-tree {
+  flex:1;
+  overflow-y:auto;
+  padding:14px 10px;
+}
+.left-tree::-webkit-scrollbar { width:4px; }
+.left-tree::-webkit-scrollbar-track { background:transparent; }
+.left-tree::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1);border-radius:2px; }
+.tree-label {
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:#6a84ad;padding:0 8px;margin-bottom:6px;
+}
+.tree-node {
+  display:flex;align-items:center;gap:6px;
+  padding:7px 8px;border-radius:var(--r1);
+  font-size:13px;font-weight:500;color:#b0c6e8;
+  cursor:pointer;position:relative;
+  transition:background .12s;user-select:none;
+}
+.tree-node:hover { background:rgba(255,255,255,.04);color:#ccdaef; }
+.tree-node.active {
+  background:rgba(76,141,255,.16);
+  color:#dce9ff;
+  font-weight:700;
+}
+.tree-node.active::before {
+  content:"";position:absolute;left:0;top:20%;height:60%;
+  width:3px;border-radius:2px;background:#4c8dff;
+}
+.tree-node .toggle {
+  width:16px;height:16px;border-radius:4px;flex-shrink:0;
+  display:grid;place-items:center;font-size:10px;color:#6a84ad;
+  background:transparent;border:none;
+}
+.tree-node .node-icon {
+  width:20px;height:20px;border-radius:5px;flex-shrink:0;
+  display:grid;place-items:center;font-size:11px;
+}
+.tree-node .node-name { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.tree-node .node-badge {
+  font-size:10px;font-weight:700;padding:2px 6px;border-radius:999px;
+  background:rgba(255,255,255,.07);color:#7a96be;flex-shrink:0;
+}
+/* indentation guides */
+.tree-children { padding-left:18px;position:relative; }
+.tree-children::before {
+  content:"";position:absolute;left:14px;top:0;bottom:6px;
+  width:1px;background:rgba(255,255,255,.06);
+}
+/* node icon colors by level */
+.icon-agency  { background:rgba(76,141,255,.2);color:#80aaff; }
+.icon-dept    { background:rgba(99,102,241,.2);color:#a5a8ff; }
+.icon-ws      { background:rgba(16,185,129,.2);color:#6ee7b7; }
+.icon-agent   { background:rgba(245,158,11,.2);color:#fcd34d; }
+.icon-sub     { background:rgba(236,72,153,.18);color:#f9a8d4; }
+
+/* — — — Block C: Main Surfaces — — — */
+.left-footer {
+  flex-shrink:0;
+  border-top:1px solid var(--left-border);
+  padding:12px 10px;
+  display:flex;flex-direction:column;gap:4px;
+}
+.surface-group { margin-bottom:6px; }
+.surface-group-label {
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:#526680;padding:2px 8px;margin-bottom:4px;
+}
+.surface-btn {
+  display:flex;align-items:center;gap:9px;
+  width:100%;padding:8px 10px;border-radius:var(--r1);
+  border:1px solid transparent;background:transparent;
+  font-size:13px;font-weight:500;color:#9ab4cf;
+  transition:background .12s;
+}
+.surface-btn:hover { background:rgba(255,255,255,.04);color:#b8ccdf; }
+.surface-btn.active {
+  background:rgba(76,141,255,.14);
+  border-color:rgba(76,141,255,.22);
+  color:#c8deff;
+  font-weight:700;
+}
+.surface-btn .s-icon {
+  width:22px;height:22px;border-radius:6px;
+  display:grid;place-items:center;font-size:12px;flex-shrink:0;
+}
+.s-build   { background:rgba(76,141,255,.16);color:#80aaff; }
+.s-operate { background:rgba(16,185,129,.16);color:#6ee7b7; }
+.s-config  { background:rgba(148,163,184,.14);color:#94a3b8; }
+
+/* ============================================================
+   CENTER COLUMN
+   ============================================================ */
+.center {
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--bg);
+}
+
+/* — topbar — */
+.topbar {
+  flex-shrink:0;
+  height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;gap:12px;
+  background:color-mix(in srgb,var(--surface) 85%,transparent);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  z-index:5;
+}
+.crumb { display:flex;align-items:center;gap:8px;font-size:13px;color:var(--faint); }
+.crumb .sep { opacity:.5; }
+.crumb strong { color:var(--text);font-size:14px;font-weight:700; }
+.topbar-right { display:flex;align-items:center;gap:8px; }
+.t-btn {
+  height:32px;padding:0 12px;border-radius:var(--r1);
+  border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-size:12px;font-weight:700;
+}
+.t-btn.primary { background:var(--primary);color:#fff;border-color:transparent; }
+.t-btn.icon-only { width:32px;padding:0;display:grid;place-items:center; }
+.theme-btn {
+  width:32px;height:32px;border-radius:var(--r1);
+  border:1px solid var(--border);background:var(--surface);
+  display:grid;place-items:center;font-size:15px;
+}
+
+/* — subbar / contextual tabs — */
+.subbar {
+  flex-shrink:0;
+  height:44px;
+  display:flex;align-items:center;gap:2px;
+  padding:0 20px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface-2);
+  overflow-x:auto;
+}
+.subbar::-webkit-scrollbar { height:0; }
+.subbar-tab {
+  height:36px;padding:0 14px;border-radius:var(--r1);
+  border:1px solid transparent;background:transparent;
+  font-size:13px;font-weight:500;color:var(--faint);
+  white-space:nowrap;
+  transition:background .12s,color .12s;
+}
+.subbar-tab:hover { background:var(--surface-3);color:var(--text); }
+.subbar-tab.active {
+  background:var(--primary-soft);
+  border-color:color-mix(in srgb,var(--primary) 22%, var(--border));
+  color:var(--primary);
+  font-weight:700;
+}
+
+/* — content area — */
+.content-area {
+  flex:1;overflow-y:auto;padding:22px;
+  display:flex;flex-direction:column;gap:18px;
+}
+.content-area::-webkit-scrollbar { width:6px; }
+.content-area::-webkit-scrollbar-track { background:transparent; }
+.content-area::-webkit-scrollbar-thumb { background:var(--border);border-radius:3px; }
+
+/* content panels (hidden/shown) */
+.view { display:none; }
+.view.active { display:flex;flex-direction:column;gap:18px; }
+
+/* ============================================================
+   CARD SYSTEM
+   ============================================================ */
+.card {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r4);box-shadow:var(--shadow);overflow:hidden;
+}
+.card-header { padding:18px 18px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px; }
+.card-header h2 { font-size:16px;font-weight:800;margin-bottom:3px; }
+.card-header h3 { font-size:15px;font-weight:800;margin-bottom:3px; }
+.card-header p  { font-size:13px;color:var(--muted);line-height:1.5; }
+.card-body { padding:0 18px 18px; }
+
+.badge {
+  display:inline-flex;align-items:center;gap:5px;
+  border-radius:999px;padding:5px 9px;
+  font-size:11px;font-weight:800;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--muted);
+  white-space:nowrap;
+}
+.badge.primary { background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 20%,var(--border)); }
+.badge.success { background:var(--success-soft);color:var(--success);border-color:color-mix(in srgb,var(--success) 20%,var(--border)); }
+.badge.warning { background:var(--warning-soft);color:var(--warning);border-color:color-mix(in srgb,var(--warning) 20%,var(--border)); }
+.badge.danger  { background:var(--danger-soft) ;color:var(--danger) ;border-color:color-mix(in srgb,var(--danger)  20%,var(--border)); }
+
+.grid2 { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px; }
+.grid3 { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px; }
+.grid4 { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px; }
+
+.stat-card {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r3);padding:16px;
+}
+.stat-card .label { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--faint); }
+.stat-card .value { font-size:28px;font-weight:800;letter-spacing:-.03em;margin-top:8px; }
+.stat-card .delta { font-size:13px;font-weight:700;margin-top:6px; }
+.good { color:var(--success); } .warn { color:var(--warning); } .bad { color:var(--danger); }
+
+.field { display:flex;flex-direction:column;gap:6px; }
+.field-label { font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--faint); }
+.input,.textarea,.select-input {
+  border:1px solid var(--border);border-radius:var(--r2);
+  background:var(--surface-2);color:var(--text);
+  padding:10px 12px;font-size:13px;font:inherit;
+}
+.textarea { min-height:80px;resize:none; }
+
+.list { display:flex;flex-direction:column;gap:10px; }
+.list-item {
+  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:12px 14px;border:1px solid var(--border);
+  border-radius:var(--r2);background:var(--surface-2);
+}
+.li-main strong { display:block;font-size:13px;font-weight:700; }
+.li-main small  { display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4; }
+.li-side { font-size:12px;color:var(--faint);font-weight:700;text-align:right;flex-shrink:0; }
+
+/* diff blocks */
+.diff-block { padding:12px 14px;border-radius:var(--r2);margin-bottom:8px;border:1px solid var(--border);background:var(--surface-2); }
+.diff-add    { border-left:4px solid var(--success); }
+.diff-change { border-left:4px solid var(--warning); }
+.diff-remove { border-left:4px solid var(--danger); }
+.diff-block strong { font-size:13px;font-weight:700;display:block; }
+.diff-block small  { font-size:12px;color:var(--muted);line-height:1.4; }
+
+/* canvas */
+.canvas-area {
+  position:relative;min-height:500px;
+  border:1px solid var(--border);border-radius:var(--r3);
+  background:
+    radial-gradient(circle at 1px 1px,color-mix(in srgb,var(--border) 60%,transparent) 1px,transparent 0),
+    var(--surface-2);
+  background-size:22px 22px,100% 100%;
+  overflow:hidden;
+}
+.canvas-node {
+  position:absolute;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r3);
+  box-shadow:var(--shadow);padding:12px 14px;min-width:180px;
+}
+.canvas-node h4 { font-size:13px;font-weight:700; }
+.canvas-node small { font-size:12px;color:var(--muted);display:block;margin-top:3px; }
+.canvas-node.selected { outline:2px solid color-mix(in srgb,var(--primary) 45%,transparent); }
+.canvas-hint {
+  position:absolute;left:50%;top:20px;transform:translateX(-50%);
+  font-size:12px;color:var(--faint);
+  padding:8px 14px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--border);
+}
+
+/* topology svg */
+.topology-wrap {
+  width:100%;min-height:440px;position:relative;
+  border:1px solid var(--border);border-radius:var(--r3);
+  background:var(--surface-2);overflow:hidden;
+}
+.topology-wrap svg { width:100%;height:100%;min-height:440px; }
+
+/* run/session rows */
+.run-row {
+  display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;
+  padding:12px 14px;border:1px solid var(--border);
+  border-radius:var(--r2);background:var(--surface-2);
+}
+.run-row .run-name { font-size:13px;font-weight:700; }
+.run-row .run-meta { font-size:12px;color:var(--muted);margin-top:3px; }
+.run-row .run-status { font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px; }
+
+.session-row {
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 14px;border:1px solid var(--border);
+  border-radius:var(--r2);background:var(--surface-2);
+}
+.session-row .ava {
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  display:grid;place-items:center;font-weight:800;font-size:13px;
+}
+.session-row .session-name { font-size:13px;font-weight:700; }
+.session-row .session-meta { font-size:12px;color:var(--muted);margin-top:2px; }
+
+/* chat area */
+.chat-wrap {
+  display:flex;flex-direction:column;
+  border:1px solid var(--border);border-radius:var(--r3);
+  background:var(--surface);overflow:hidden;min-height:340px;
+}
+.chat-messages {
+  flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;
+}
+.chat-msg { display:flex;gap:10px;align-items:flex-start; }
+.chat-msg .bubble { padding:10px 13px;border-radius:14px;font-size:13px;line-height:1.5;max-width:68ch; }
+.chat-msg.agent .bubble { background:var(--surface-2);border:1px solid var(--border); }
+.chat-msg.user  .bubble { background:var(--primary-soft);border:1px solid color-mix(in srgb,var(--primary) 20%,var(--border));margin-left:auto; }
+.chat-msg.user  { flex-direction:row-reverse; }
+.chat-input-row {
+  display:flex;gap:8px;padding:12px;
+  border-top:1px solid var(--border);
+}
+.chat-input {
+  flex:1;padding:10px 12px;border-radius:var(--r2);
+  border:1px solid var(--border);background:var(--surface-2);
+  color:var(--text);font:inherit;font-size:13px;
+}
+.chat-send { height:36px;padding:0 14px;border-radius:var(--r2);background:var(--primary);color:#fff;border:none;font-weight:700;font-size:13px; }
+
+/* helper chips */
+.chip-row { display:flex;flex-wrap:wrap;gap:8px; }
+.chip {
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 11px;border-radius:999px;
+  border:1px solid var(--border);background:var(--surface-2);
+  font-size:12px;font-weight:700;color:var(--muted);
+}
+.chip.active,.chip:hover { background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 22%,var(--border));color:var(--primary); }
+
+/* ============================================================
+   RIGHT — PROPS PANEL (Entity Editor / Inspector)
+   ============================================================ */
+.props-panel {
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  height:100vh;
+}
+.props-head {
+  flex-shrink:0;padding:16px 16px 12px;
+  border-bottom:1px solid var(--border);
+}
+.props-head .entity-label {
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:6px;
+}
+.props-head .entity-name { font-size:18px;font-weight:800;line-height:1.15; }
+.props-head .entity-meta { font-size:12px;color:var(--muted);margin-top:4px; }
+.props-tabs {
+  display:flex;gap:2px;overflow-x:auto;padding:10px 14px;
+  border-bottom:1px solid var(--border);background:var(--surface-2);
+}
+.props-tabs::-webkit-scrollbar { height:0; }
+.props-tab {
+  height:30px;padding:0 10px;border-radius:var(--r1);
+  border:1px solid transparent;background:transparent;
+  font-size:12px;font-weight:600;color:var(--faint);white-space:nowrap;
+}
+.props-tab:hover { background:var(--surface-3);color:var(--text); }
+.props-tab.active {
+  background:var(--primary-soft);
+  border-color:color-mix(in srgb,var(--primary) 22%,var(--border));
+  color:var(--primary);font-weight:700;
+}
+.props-body {
+  flex:1;overflow-y:auto;padding:16px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.props-body::-webkit-scrollbar { width:4px; }
+.props-body::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
+.props-section { display:flex;flex-direction:column;gap:8px; }
+.props-section-title {
+  font-size:11px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--faint);
+  padding-bottom:5px;border-bottom:1px solid var(--border);
+}
+.props-row {
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:10px;font-size:13px;
+}
+.props-row .pk { font-weight:700;color:var(--muted);flex-shrink:0;min-width:90px; }
+.props-row .pv { color:var(--text);text-align:right; }
+.props-field { display:flex;flex-direction:column;gap:5px; }
+.props-field label { font-size:11px;font-weight:700;color:var(--faint); }
+.mini-diff { padding:8px 10px;border-radius:var(--r1);font-size:12px;line-height:1.5; }
+.mini-diff.add    { background:var(--success-soft);border-left:3px solid var(--success); }
+.mini-diff.change { background:var(--warning-soft);border-left:3px solid var(--warning); }
+.props-footer {
+  flex-shrink:0;padding:12px 16px;border-top:1px solid var(--border);
+  display:flex;gap:8px;flex-wrap:wrap;
+}
+.p-btn { height:32px;padding:0 12px;border-radius:var(--r1);font-size:12px;font-weight:700; border:1px solid var(--border);background:var(--surface-2);color:var(--text); }
+.p-btn.primary { background:var(--primary);color:#fff;border-color:transparent; }
+.p-btn.danger  { background:var(--danger-soft);color:var(--danger);border-color:var(--danger-soft); }
+
+/* ============================================================
+   PROFILE CATALOG
+   ============================================================ */
+.profile-level-section { display:flex;flex-direction:column;gap:10px; }
+.profile-level-label {
+  font-size:12px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--faint);display:flex;align-items:center;gap:8px;
+}
+.profile-level-label::after { content:"";flex:1;height:1px;background:var(--border); }
+.profile-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
+.profile-card {
+  padding:14px;border:1px solid var(--border);border-radius:var(--r3);
+  background:var(--surface-2);cursor:pointer;
+  transition:border-color .14s,box-shadow .14s;
+}
+.profile-card:hover { border-color:color-mix(in srgb,var(--primary) 30%,var(--border));box-shadow:var(--shadow); }
+.profile-card strong { font-size:13px;font-weight:800;display:block;margin-bottom:4px; }
+.profile-card small  { font-size:12px;color:var(--muted);line-height:1.4; }
+.profile-card .tag-row { display:flex;gap:6px;flex-wrap:wrap;margin-top:8px; }
+.profile-tag { font-size:10px;font-weight:700;padding:3px 7px;border-radius:999px;background:var(--primary-soft);color:var(--primary); }
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty {
+  display:grid;place-items:center;text-align:center;
+  min-height:200px;border:1.5px dashed var(--border);
+  border-radius:var(--r3);background:var(--surface-2);
+  color:var(--faint);padding:24px;
+}
+.empty strong { display:block;color:var(--text);font-size:14px;margin-bottom:6px; }
+.empty p { font-size:13px;line-height:1.5;max-width:38ch; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:1400px){
+  .app { grid-template-columns:272px 1fr; }
+  .props-panel { display:none; }
+}
+@media(max-width:1000px){
+  .app { grid-template-columns:1fr; }
+  .left { display:none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- =========================================================
+       BLOCK A+B+C · LEFT SIDEBAR
+       ========================================================= -->
+  <aside class="left" id="leftSidebar">
+
+    <!-- Block A: Agency Switcher -->
+    <div class="left-top">
+      <div class="switcher-label">Agency Switcher</div>
+      <button class="agency-btn active" onclick="selectAgency('lss')" id="agency-lss">
+        <div class="agency-icon" style="background:rgba(76,141,255,.22);color:#80aaff;">LS</div>
+        <div class="agency-meta">
+          <span class="agency-name">LSS Manager Network</span>
+          <span class="agency-sub">6 depts · 14 workspaces · 42 agents</span>
+        </div>
+      </button>
+      <button class="agency-btn" onclick="selectAgency('nova')" id="agency-nova">
+        <div class="agency-icon" style="background:rgba(99,102,241,.22);color:#a5a8ff;">NV</div>
+        <div class="agency-meta">
+          <span class="agency-name">Nova Agency</span>
+          <span class="agency-sub">4 depts · 8 workspaces · 21 agents</span>
+        </div>
+      </button>
+      <div class="switcher-actions">
+        <button class="switcher-action">+ New Agency</button>
+        <button class="switcher-action">Manage</button>
+      </div>
+    </div>
+
+    <!-- Block B: Hierarchical Tree -->
+    <div class="left-tree" id="hierarchyTree">
+      <div class="tree-label">Hierarchy</div>
+
+      <!-- Agency root -->
+      <div class="tree-node active" data-level="agency" data-id="lss" onclick="selectNode('agency','lss','LSS Manager Network')">
+        <span class="node-icon icon-agency">🏢</span>
+        <span class="node-name">LSS Manager Network</span>
+        <span class="node-badge">Agency</span>
+      </div>
+
+      <!-- Departments -->
+      <div class="tree-children">
+
+        <!-- Dept: Growth & Admissions -->
+        <div class="tree-node" data-level="dept" data-id="growth" onclick="selectNode('dept','growth','Growth &amp; Admissions')">
+          <button class="toggle" onclick="event.stopPropagation();toggleSubtree('growth-ws')">▾</button>
+          <span class="node-icon icon-dept">🧩</span>
+          <span class="node-name">Growth &amp; Admissions</span>
+          <span class="node-badge">Dept</span>
+        </div>
+        <div class="tree-children" id="growth-ws">
+          <!-- Workspace -->
+          <div class="tree-node" data-level="workspace" data-id="lead-intake" onclick="selectNode('workspace','lead-intake','Lead Intake Orchestrator')">
+            <button class="toggle" onclick="event.stopPropagation();toggleSubtree('lead-agents')">▾</button>
+            <span class="node-icon icon-ws">🗂</span>
+            <span class="node-name">Lead Intake Orchestrator</span>
+            <span class="node-badge">WS</span>
+          </div>
+          <div class="tree-children" id="lead-agents">
+            <div class="tree-node" data-level="agent" data-id="qualifier" onclick="selectNode('agent','qualifier','Lead Qualifier Agent')">
+              <button class="toggle" onclick="event.stopPropagation();toggleSubtree('qualifier-subs')">▸</button>
+              <span class="node-icon icon-agent">🤖</span>
+              <span class="node-name">Lead Qualifier Agent</span>
+              <span class="node-badge">Agent</span>
+            </div>
+            <div class="tree-children" id="qualifier-subs" style="display:none">
+              <div class="tree-node" data-level="subagent" data-id="fb-scraper" onclick="selectNode('subagent','fb-scraper','FB Scraper Subagent')">
+                <span class="node-icon icon-sub">⚡</span>
+                <span class="node-name">FB Scraper Subagent</span>
+              </div>
+              <div class="tree-node" data-level="subagent" data-id="email-validator" onclick="selectNode('subagent','email-validator','Email Validator')">
+                <span class="node-icon icon-sub">⚡</span>
+                <span class="node-name">Email Validator</span>
+              </div>
+            </div>
+            <div class="tree-node" data-level="agent" data-id="crm-sync" onclick="selectNode('agent','crm-sync','CRM Sync Agent')">
+              <span class="node-icon icon-agent">🤖</span>
+              <span class="node-name">CRM Sync Agent</span>
+              <span class="node-badge">Agent</span>
+            </div>
+          </div>
+          <div class="tree-node" data-level="workspace" data-id="nurture-ws" onclick="selectNode('workspace','nurture-ws','Nurture Campaigns WS')">
+            <span class="node-icon icon-ws">🗂</span>
+            <span class="node-name">Nurture Campaigns WS</span>
+            <span class="node-badge">WS</span>
+          </div>
+        </div>
+
+        <!-- Dept: Operations -->
+        <div class="tree-node" data-level="dept" data-id="ops" onclick="selectNode('dept','ops','Operations')">
+          <button class="toggle" onclick="event.stopPropagation();toggleSubtree('ops-ws')">▸</button>
+          <span class="node-icon icon-dept">🧩</span>
+          <span class="node-name">Operations</span>
+          <span class="node-badge">Dept</span>
+        </div>
+        <div class="tree-children" id="ops-ws" style="display:none">
+          <div class="tree-node" data-level="workspace" data-id="support-ws" onclick="selectNode('workspace','support-ws','Support Desk WS')">
+            <span class="node-icon icon-ws">🗂</span>
+            <span class="node-name">Support Desk WS</span>
+            <span class="node-badge">WS</span>
+          </div>
+        </div>
+
+        <!-- Dept: Marketing -->
+        <div class="tree-node" data-level="dept" data-id="mkt" onclick="selectNode('dept','mkt','Marketing')">
+          <button class="toggle" onclick="event.stopPropagation();toggleSubtree('mkt-ws')">▸</button>
+          <span class="node-icon icon-dept">🧩</span>
+          <span class="node-name">Marketing</span>
+          <span class="node-badge">Dept</span>
+        </div>
+        <div class="tree-children" id="mkt-ws" style="display:none">
+          <div class="tree-node" data-level="workspace" data-id="ads-ws" onclick="selectNode('workspace','ads-ws','Ads Workspace')">
+            <span class="node-icon icon-ws">🗂</span>
+            <span class="node-name">Ads Workspace</span>
+            <span class="node-badge">WS</span>
+          </div>
+          <div class="tree-node" data-level="workspace" data-id="content-ws" onclick="selectNode('workspace','content-ws','Content WS')">
+            <span class="node-icon icon-ws">🗂</span>
+            <span class="node-name">Content WS</span>
+            <span class="node-badge">WS</span>
+          </div>
+        </div>
+
+      </div><!-- /tree-children (departments) -->
+    </div><!-- /left-tree -->
+
+    <!-- Block C: Main Surfaces grouped by category -->
+    <div class="left-footer">
+
+      <!-- Build -->
+      <div class="surface-group">
+        <div class="surface-group-label">Build</div>
+        <button class="surface-btn active" onclick="setSurface('agency-builder')" id="btn-agency-builder">
+          <span class="s-icon s-build">◫</span>Agency Builder
+        </button>
+        <button class="surface-btn" onclick="setSurface('workspace-studio')" id="btn-workspace-studio">
+          <span class="s-icon s-build">⚙</span>Workspace Studio
+        </button>
+        <button class="surface-btn" onclick="setSurface('profiles')" id="btn-profiles">
+          <span class="s-icon s-build">✦</span>Profiles
+        </button>
+      </div>
+
+      <!-- Operate -->
+      <div class="surface-group">
+        <div class="surface-group-label">Operate</div>
+        <button class="surface-btn" onclick="setSurface('runs')" id="btn-runs">
+          <span class="s-icon s-operate">◉</span>Runs
+        </button>
+        <button class="surface-btn" onclick="setSurface('sessions')" id="btn-sessions">
+          <span class="s-icon s-operate">⌘</span>Sessions
+        </button>
+      </div>
+
+      <!-- Configure -->
+      <div class="surface-group">
+        <div class="surface-group-label">Configure</div>
+        <button class="surface-btn" onclick="setSurface('settings')" id="btn-settings">
+          <span class="s-icon s-config">⚙</span>Settings
+        </button>
+      </div>
+
+    </div><!-- /left-footer -->
+  </aside><!-- /left -->
+
+
+  <!-- =========================================================
+       CENTER COLUMN
+       ========================================================= -->
+  <div class="center">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="crumb" id="topCrumb">
+        <span>LSS Manager Network</span>
+        <span class="sep">/</span>
+        <strong id="crumbSurface">Agency Builder</strong>
+      </div>
+      <div class="topbar-right">
+        <button class="t-btn" onclick="logState()">Debug state</button>
+        <button class="t-btn primary" id="topbarCTA">Generate</button>
+        <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
+      </div>
+    </div>
+
+    <!-- Subbar — contextual tabs (change based on selected level + surface) -->
+    <div class="subbar" id="subbar"></div>
+
+    <!-- Content Area -->
+    <div class="content-area">
+
+      <!-- ─────── Agency Builder ─────── -->
+      <div class="view active" id="view-agency-builder">
+        <!-- Topology tab content -->
+        <div class="tab-content active" id="tc-topology">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2>Agency Topology</h2>
+                <p>Mapa de conexiones reales: departments, workspaces, canales y handoffs. Las acciones son real-time: connect, disconnect, pause, reactivate, redirect.</p>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <span class="badge success">● Runtime live</span>
+                <button class="t-btn">Export JSON</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="topology-wrap">
+                <svg viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Agency root -->
+                  <rect x="360" y="20" width="180" height="56" rx="14" fill="rgba(76,141,255,.12)" stroke="rgba(76,141,255,.35)" stroke-width="1.5"/>
+                  <text x="450" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="#4c8dff">LSS Manager Network</text>
+                  <text x="450" y="65" text-anchor="middle" font-size="11" fill="#6a84ad">Agency · 6 Departments</text>
+
+                  <!-- Lines agency → depts -->
+                  <line x1="450" y1="76" x2="160" y2="165" stroke="rgba(76,141,255,.3)" stroke-width="1.5" stroke-dasharray="5,3"/>
+                  <line x1="450" y1="76" x2="450" y2="165" stroke="rgba(76,141,255,.3)" stroke-width="1.5" stroke-dasharray="5,3"/>
+                  <line x1="450" y1="76" x2="740" y2="165" stroke="rgba(76,141,255,.3)" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+                  <!-- Dept: Growth -->
+                  <rect x="60" y="165" width="200" height="52" rx="12" fill="rgba(99,102,241,.1)" stroke="rgba(99,102,241,.3)" stroke-width="1.5"/>
+                  <text x="160" y="191" text-anchor="middle" font-size="12" font-weight="700" fill="#a5a8ff">Growth &amp; Admissions</text>
+                  <text x="160" y="207" text-anchor="middle" font-size="11" fill="#7a96be">Dept · 3 workspaces</text>
+
+                  <!-- Dept: Operations -->
+                  <rect x="350" y="165" width="200" height="52" rx="12" fill="rgba(16,185,129,.09)" stroke="rgba(16,185,129,.28)" stroke-width="1.5"/>
+                  <text x="450" y="191" text-anchor="middle" font-size="12" font-weight="700" fill="#34d399">Operations</text>
+                  <text x="450" y="207" text-anchor="middle" font-size="11" fill="#7a96be">Dept · 2 workspaces</text>
+
+                  <!-- Dept: Marketing -->
+                  <rect x="640" y="165" width="200" height="52" rx="12" fill="rgba(245,158,11,.1)" stroke="rgba(245,158,11,.28)" stroke-width="1.5"/>
+                  <text x="740" y="191" text-anchor="middle" font-size="12" font-weight="700" fill="#fbbf24">Marketing</text>
+                  <text x="740" y="207" text-anchor="middle" font-size="11" fill="#7a96be">Dept · 4 workspaces</text>
+
+                  <!-- Workspaces under Growth -->
+                  <line x1="160" y1="217" x2="100" y2="305" stroke="rgba(99,102,241,.25)" stroke-width="1.2"/>
+                  <line x1="160" y1="217" x2="220" y2="305" stroke="rgba(99,102,241,.25)" stroke-width="1.2"/>
+                  <rect x="30" y="305" width="140" height="44" rx="10" fill="rgba(16,185,129,.08)" stroke="rgba(16,185,129,.22)" stroke-width="1.2"/>
+                  <text x="100" y="327" text-anchor="middle" font-size="11" font-weight="700" fill="#6ee7b7">Lead Intake</text>
+                  <text x="100" y="341" text-anchor="middle" font-size="10" fill="#7a96be">WS · 3 agents</text>
+                  <rect x="150" y="305" width="140" height="44" rx="10" fill="rgba(16,185,129,.08)" stroke="rgba(16,185,129,.22)" stroke-width="1.2"/>
+                  <text x="220" y="327" text-anchor="middle" font-size="11" font-weight="700" fill="#6ee7b7">Nurture WS</text>
+                  <text x="220" y="341" text-anchor="middle" font-size="10" fill="#7a96be">WS · 2 agents</text>
+
+                  <!-- Cross-dept handoff arrow -->
+                  <path d="M 260 217 Q 350 250 350 217" stroke="rgba(245,158,11,.4)" stroke-width="1.5" stroke-dasharray="4,3" fill="none" marker-end="url(#arr)"/>
+                  <defs>
+                    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                      <path d="M0,0 L0,6 L8,3 z" fill="rgba(245,158,11,.6)"/>
+                    </marker>
+                  </defs>
+                  <text x="308" y="242" text-anchor="middle" font-size="10" fill="#fbbf24">handoff</text>
+                </svg>
+              </div>
+              <div class="chip-row" style="margin-top:12px">
+                <span class="chip">connect</span>
+                <span class="chip">disconnect</span>
+                <span class="chip">pause</span>
+                <span class="chip">reactivate</span>
+                <span class="chip">redirect</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Structure tab content -->
+        <div class="tab-content" id="tc-structure" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2>Structure</h2>
+                <p>Define la composición jerárquica: departments, workspaces, orchestrators y conexiones.</p>
+              </div>
+              <button class="t-btn primary">+ Add Department</button>
+            </div>
+            <div class="card-body">
+              <div class="grid2">
+                <div class="card" style="padding:16px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <strong>Growth &amp; Admissions</strong><span class="badge success">Channel enabled</span>
+                  </div>
+                  <div class="field" style="margin-bottom:10px">
+                    <div class="field-label">Orchestrator</div>
+                    <select class="select-input"><option>Growth Central Orchestrator</option></select>
+                  </div>
+                  <div class="field">
+                    <div class="field-label">Workspaces</div>
+                    <div class="chip-row"><span class="chip active">Lead Intake</span><span class="chip active">Nurture WS</span><span class="chip active">Ads WS</span></div>
+                  </div>
+                </div>
+                <div class="card" style="padding:16px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <strong>Operations</strong><span class="badge warning">Review</span>
+                  </div>
+                  <div class="field" style="margin-bottom:10px">
+                    <div class="field-label">Orchestrator</div>
+                    <select class="select-input"><option>Ops Central Orchestrator</option></select>
+                  </div>
+                  <div class="field">
+                    <div class="field-label">Workspaces</div>
+                    <div class="chip-row"><span class="chip active">Support Desk</span><span class="chip active">Automation WS</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Routing & Channels tab — contextual tab, NOT top-level menu item -->
+        <div class="tab-content" id="tc-routing" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2>Routing &amp; Channels</h2>
+                <p>Canales de entrada, políticas de routing y reglas de handoff entre departments y workspaces.</p>
+              </div>
+              <span class="badge primary">Agency level</span>
+            </div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item">
+                  <div class="li-main"><strong>WhatsApp Main Intake</strong><small>Canal principal de agency · conecta a Growth &amp; Admissions</small></div>
+                  <div class="li-side"><span class="badge success">Active</span></div>
+                </div>
+                <div class="list-item">
+                  <div class="li-main"><strong>Agency API Gateway</strong><small>REST endpoint para triggers externos y webhooks</small></div>
+                  <div class="li-side"><span class="badge primary">Connected</span></div>
+                </div>
+                <div class="list-item">
+                  <div class="li-main"><strong>Internal Handoff Bus</strong><small>Routing interno entre departments · policy: fail-closed</small></div>
+                  <div class="li-side"><span class="badge success">Active</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hooks tab — contextual, NOT top-level -->
+        <div class="tab-content" id="tc-hooks" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2>Hooks</h2>
+                <p>Hooks pre/post ejecución a nivel agency. Se propagan top-down a departments y workspaces.</p>
+              </div>
+              <button class="t-btn">+ Add Hook</button>
+            </div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item">
+                  <div class="li-main"><strong>onAgencyStart</strong><small>Trigger: inicialización de agency · ejecuta HEARTBEAT check</small></div>
+                  <div class="li-side"><span class="badge success">Enabled</span></div>
+                </div>
+                <div class="list-item">
+                  <div class="li-main"><strong>onHandoffReceived</strong><small>Pre-process: valida canal de origen y permisos</small></div>
+                  <div class="li-side"><span class="badge success">Enabled</span></div>
+                </div>
+                <div class="list-item">
+                  <div class="li-main"><strong>onError (global)</strong><small>Post-process: notifica canal de alerta y registra en MEMORY</small></div>
+                  <div class="li-side"><span class="badge warning">Review</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Versions tab — includes diff/apply/rollback, NOT a separate top-level item -->
+        <div class="tab-content" id="tc-versions" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2>Versions</h2>
+                <p>Historial de versiones del agency. Preview diff → apply → rollback. Core files afectados se muestran aquí.</p>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="t-btn">Rollback</button>
+                <button class="t-btn primary">Apply changes</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+                <span class="badge primary">v1.4.2 — current</span>
+                <span class="badge">v1.4.1 — snapshot</span>
+                <span class="badge">v1.4.0 — published</span>
+              </div>
+              <div class="diff-block diff-add">
+                <strong>BOOTSTRAP</strong>
+                <small>+ Added Growth &amp; Admissions department links and channel binding to WhatsApp Main Intake.</small>
+              </div>
+              <div class="diff-block diff-change">
+                <strong>IDENTITY</strong>
+                <small>~ Agency now declares three channel entry points: Agency, Marketing, Operations.</small>
+              </div>
+              <div class="diff-block diff-change">
+                <strong>TOOLS</strong>
+                <small>~ Global MCP Connector scoped to Operations and Backend workspaces.</small>
+              </div>
+              <div class="diff-block diff-add">
+                <strong>MEMORY</strong>
+                <small>+ Cross-workspace handoff memory policy for Lead Intake and Support Desk.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Operations tab — consolidates run/test/publish actions -->
+        <div class="tab-content" id="tc-operations" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2>Operations</h2>
+                <p>Acciones de alto nivel: Run test, Preview diff, Publish, Export. También Automations / Routines configuradas a nivel agency.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="grid3">
+                <button class="t-btn" style="height:auto;padding:14px;border-radius:14px;display:block;text-align:left">
+                  <div style="font-size:20px;margin-bottom:6px">▶</div>
+                  <strong style="display:block;font-size:13px">Run test</strong>
+                  <small style="font-size:12px;color:var(--muted)">Execute agency in sandbox mode</small>
+                </button>
+                <button class="t-btn" style="height:auto;padding:14px;border-radius:14px;display:block;text-align:left">
+                  <div style="font-size:20px;margin-bottom:6px">⊕</div>
+                  <strong style="display:block;font-size:13px">Preview diff</strong>
+                  <small style="font-size:12px;color:var(--muted)">Show pending core file changes</small>
+                </button>
+                <button class="t-btn primary" style="height:auto;padding:14px;border-radius:14px;display:block;text-align:left">
+                  <div style="font-size:20px;margin-bottom:6px">🚀</div>
+                  <strong style="display:block;font-size:13px">Publish agency</strong>
+                  <small style="font-size:12px;color:rgba(255,255,255,.8)">Deploy to production runtime</small>
+                </button>
+              </div>
+              <div style="margin-top:16px">
+                <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);margin-bottom:10px">Automations / Routines</div>
+                <div class="list">
+                  <div class="list-item">
+                    <div class="li-main"><strong>Daily Health Check</strong><small>Cron: 08:00 UTC · verifica canales y agentes activos</small></div>
+                    <div class="li-side"><span class="badge success">Active</span></div>
+                  </div>
+                  <div class="list-item">
+                    <div class="li-main"><strong>Weekly Report Generation</strong><small>Cada lunes · genera reporte de KPIs y envía por canal</small></div>
+                    <div class="li-side"><span class="badge primary">Scheduled</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view agency-builder -->
+
+
+      <!-- ─────── Workspace Studio ─────── -->
+      <div class="view" id="view-workspace-studio">
+        <div class="tab-content active" id="tc-ws-overview">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2>Workspace Studio</h2>
+                <p>Constructor visual de workspaces. Arrastra componentes al canvas, conecta agentes y define el flujo interno.</p>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="t-btn">Save draft</button>
+                <button class="t-btn primary">Publish workspace</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-ws-canvas" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div><h2>Studio Canvas</h2><p>Canvas de construcción interna del workspace seleccionado.</p></div>
+              <div style="display:flex;gap:8px">
+                <span class="badge">Lead Intake Orchestrator</span>
+                <button class="t-btn">Test run</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="canvas-area" style="min-height:420px">
+                <div class="canvas-hint">Arrastra componentes aquí para construir el workspace</div>
+                <div class="canvas-node selected" style="top:80px;left:60px">
+                  <h4>🔵 WhatsApp Trigger</h4>
+                  <small>Entry point · canal principal</small>
+                  <div style="margin-top:6px"><span class="badge primary">Trigger</span></div>
+                </div>
+                <div class="canvas-node" style="top:80px;left:310px">
+                  <h4>🤖 Lead Qualifier Agent</h4>
+                  <small>Clasifica lead · GPT-4o · 3 tools</small>
+                  <div style="margin-top:6px"><span class="badge">Agent</span></div>
+                </div>
+                <div class="canvas-node" style="top:80px;left:560px">
+                  <h4>⚡ CRM Sync Agent</h4>
+                  <small>Sincroniza con HubSpot</small>
+                  <div style="margin-top:6px"><span class="badge">Agent</span></div>
+                </div>
+                <div class="canvas-node" style="top:220px;left:310px">
+                  <h4>⇄ Handoff → Nurture WS</h4>
+                  <small>Si lead no calificado → transfer</small>
+                  <div style="margin-top:6px"><span class="badge warning">Handoff</span></div>
+                </div>
+                <svg style="position:absolute;inset:0;pointer-events:none;width:100%;height:100%">
+                  <line x1="200" y1="112" x2="310" y2="112" stroke="rgba(76,141,255,.5)" stroke-width="1.5" marker-end="url(#a2)"/>
+                  <line x1="460" y1="112" x2="560" y2="112" stroke="rgba(76,141,255,.5)" stroke-width="1.5" marker-end="url(#a2)"/>
+                  <line x1="400" y1="148" x2="400" y2="220" stroke="rgba(245,158,11,.5)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a3)"/>
+                  <defs>
+                    <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="rgba(76,141,255,.7)"/></marker>
+                    <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="rgba(245,158,11,.7)"/></marker>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-ws-routing" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div><h2>Routing &amp; Channels</h2><p>Canales y reglas de routing específicas del workspace seleccionado.</p></div>
+            </div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item"><div class="li-main"><strong>WhatsApp Main Intake</strong><small>Canal de entrada del workspace · binding: Growth dept</small></div><div class="li-side"><span class="badge success">Active</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>Internal Agent Bus</strong><small>Routing interno entre Lead Qualifier y CRM Sync</small></div><div class="li-side"><span class="badge primary">Connected</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-ws-hooks" style="display:none">
+          <div class="card">
+            <div class="card-header"><div><h2>Hooks</h2><p>Hooks pre/post a nivel workspace.</p></div><button class="t-btn">+ Add Hook</button></div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item"><div class="li-main"><strong>onWorkspaceStart</strong><small>Verifica estado de agentes y canales</small></div><div class="li-side"><span class="badge success">Enabled</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>onAgentError</strong><small>Fallback: reroute al departamento padre</small></div><div class="li-side"><span class="badge warning">Review</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-ws-versions" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div><h2>Versions</h2><p>Preview → diff → apply → rollback del workspace.</p></div>
+              <div style="display:flex;gap:8px"><button class="t-btn">Rollback</button><button class="t-btn primary">Apply</button></div>
+            </div>
+            <div class="card-body">
+              <div class="diff-block diff-add"><strong>BOOTSTRAP</strong><small>+ Lead Qualifier Agent binding to WhatsApp channel updated.</small></div>
+              <div class="diff-block diff-change"><strong>TOOLS</strong><small>~ CRM Sync now uses scoped API key instead of global tool.</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-ws-operations" style="display:none">
+          <div class="card">
+            <div class="card-header"><div><h2>Operations</h2><p>Test, publish y automations del workspace.</p></div></div>
+            <div class="card-body">
+              <div class="grid3">
+                <button class="t-btn" style="height:auto;padding:14px;border-radius:14px;display:block;text-align:left"><div style="font-size:20px;margin-bottom:6px">▶</div><strong style="display:block">Run test</strong><small style="color:var(--muted)">Sandbox mode</small></button>
+                <button class="t-btn" style="height:auto;padding:14px;border-radius:14px;display:block;text-align:left"><div style="font-size:20px;margin-bottom:6px">⊕</div><strong style="display:block">Preview diff</strong><small style="color:var(--muted)">Core files impact</small></button>
+                <button class="t-btn primary" style="height:auto;padding:14px;border-radius:14px;display:block;text-align:left"><div style="font-size:20px;margin-bottom:6px">🚀</div><strong style="display:block">Publish workspace</strong><small style="color:rgba(255,255,255,.8)">Deploy to runtime</small></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view workspace-studio -->
+
+
+      <!-- ─────── Profiles ─────── -->
+      <div class="view" id="view-profiles">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Profiles</h2>
+              <p>Catálogo jerárquico de perfiles reutilizables. Organizado por nivel: Agency, Department, Workspace, Agent, Subagent.</p>
+            </div>
+            <button class="t-btn primary">+ New Profile</button>
+          </div>
+          <div class="card-body">
+            <!-- Agency profiles -->
+            <div class="profile-level-section" style="margin-bottom:22px">
+              <div class="profile-level-label"><span class="node-icon icon-agency" style="width:20px;height:20px;display:inline-grid;place-items:center;border-radius:5px;font-size:11px;margin-right:4px">🏢</span>Agency Profiles</div>
+              <div class="profile-grid">
+                <div class="profile-card">
+                  <strong>Enterprise Agency Template</strong>
+                  <small>Estructura completa con 4+ departments, canales y runtime config para agencies grandes.</small>
+                  <div class="tag-row"><span class="profile-tag">Agency</span><span class="profile-tag">Enterprise</span><span class="profile-tag">Multi-dept</span></div>
+                </div>
+                <div class="profile-card">
+                  <strong>Startup Agency Minimal</strong>
+                  <small>1-2 departments, canal único, sin orchestrator central. Ideal para arrancar rápido.</small>
+                  <div class="tag-row"><span class="profile-tag">Agency</span><span class="profile-tag">Minimal</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- Department profiles -->
+            <div class="profile-level-section" style="margin-bottom:22px">
+              <div class="profile-level-label"><span style="margin-right:4px">🧩</span>Department Profiles</div>
+              <div class="profile-grid">
+                <div class="profile-card">
+                  <strong>Sales &amp; Admissions Dept</strong>
+                  <small>Lead intake, qualification y CRM sync. Incluye WhatsApp + email como canales.</small>
+                  <div class="tag-row"><span class="profile-tag">Department</span><span class="profile-tag">Sales</span></div>
+                </div>
+                <div class="profile-card">
+                  <strong>Operations Dept Standard</strong>
+                  <small>Support desk, ticket routing y automatizaciones básicas de operaciones.</small>
+                  <div class="tag-row"><span class="profile-tag">Department</span><span class="profile-tag">Ops</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- Workspace profiles -->
+            <div class="profile-level-section" style="margin-bottom:22px">
+              <div class="profile-level-label"><span style="margin-right:4px">🗂</span>Workspace Profiles</div>
+              <div class="profile-grid">
+                <div class="profile-card">
+                  <strong>Lead Intake Workspace</strong>
+                  <small>Qualifier agent + CRM sync + handoff bus. Funciona en cualquier Sales dept.</small>
+                  <div class="tag-row"><span class="profile-tag">Workspace</span><span class="profile-tag">Lead</span></div>
+                </div>
+                <div class="profile-card">
+                  <strong>Support Triage Workspace</strong>
+                  <small>Clasificación de tickets, escalation rules y notificaciones.</small>
+                  <div class="tag-row"><span class="profile-tag">Workspace</span><span class="profile-tag">Support</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- Agent profiles -->
+            <div class="profile-level-section" style="margin-bottom:22px">
+              <div class="profile-level-label"><span style="margin-right:4px">🤖</span>Agent Profiles</div>
+              <div class="profile-grid">
+                <div class="profile-card">
+                  <strong>Lead Qualifier Agent</strong>
+                  <small>GPT-4o · tools: CRM lookup, email validator, lead scoring. Prompt base incluido.</small>
+                  <div class="tag-row"><span class="profile-tag">Agent</span><span class="profile-tag">Sales</span><span class="profile-tag">GPT-4o</span></div>
+                </div>
+                <div class="profile-card">
+                  <strong>Support Responder Agent</strong>
+                  <small>Claude 3.5 Sonnet · tools: ticket DB, KB search. Multi-language.</small>
+                  <div class="tag-row"><span class="profile-tag">Agent</span><span class="profile-tag">Support</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- Subagent profiles -->
+            <div class="profile-level-section">
+              <div class="profile-level-label"><span style="margin-right:4px">⚡</span>Subagent Profiles</div>
+              <div class="profile-grid">
+                <div class="profile-card">
+                  <strong>Email Validator Subagent</strong>
+                  <small>Valida formato, MX records y spam score. Reutilizable en cualquier lead workflow.</small>
+                  <div class="tag-row"><span class="profile-tag">Subagent</span><span class="profile-tag">Validation</span></div>
+                </div>
+                <div class="profile-card">
+                  <strong>Data Extractor Subagent</strong>
+                  <small>Extrae campos estructurados de texto libre usando herramientas de parsing.</small>
+                  <div class="tag-row"><span class="profile-tag">Subagent</span><span class="profile-tag">Data</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view profiles -->
+
+
+      <!-- ─────── Runs ─────── -->
+      <div class="view" id="view-runs">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Runs</h2>
+              <p>Observabilidad jerárquica de ejecuciones. Filtra por nivel, replay, trace, condiciones, handoffs, costo y latencia.</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span class="badge">Agency: LSS Manager</span>
+              <span class="badge">Last 24h</span>
+              <button class="t-btn">Filters</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="grid4" style="margin-bottom:16px">
+              <div class="stat-card"><div class="label">Total runs</div><div class="value">1,284</div><div class="delta good">↑ 12% vs yesterday</div></div>
+              <div class="stat-card"><div class="label">Successful</div><div class="value">1,218</div><div class="delta good">94.8% success rate</div></div>
+              <div class="stat-card"><div class="label">Failed</div><div class="value">66</div><div class="delta bad">↑ 3 from avg</div></div>
+              <div class="stat-card"><div class="label">Avg latency</div><div class="value">1.4s</div><div class="delta warn">p95: 4.2s</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="run-row">
+                <div><div class="run-name">run_a9f2b · Lead Intake Orchestrator</div><div class="run-meta">Agency → Growth → Lead Intake WS · Started 3m ago · Cost: $0.014 · 1,200 tokens</div></div>
+                <span class="run-status" style="background:var(--success-soft);color:var(--success)">● Completed</span>
+                <button class="t-btn">Replay</button>
+              </div>
+              <div class="run-row">
+                <div><div class="run-name">run_c3e1a · CRM Sync Agent</div><div class="run-meta">Agency → Growth → Lead Intake WS → CRM Sync · 1m ago · Cost: $0.008</div></div>
+                <span class="run-status" style="background:var(--success-soft);color:var(--success)">● Completed</span>
+                <button class="t-btn">Replay</button>
+              </div>
+              <div class="run-row">
+                <div><div class="run-name">run_d7c9f · Support Desk WS</div><div class="run-meta">Agency → Operations → Support Desk · 8m ago · handoff from Growth</div></div>
+                <span class="run-status" style="background:var(--warning-soft);color:var(--warning)">⚠ Retrying</span>
+                <button class="t-btn">Trace</button>
+              </div>
+              <div class="run-row">
+                <div><div class="run-name">run_e4b2c · Lead Qualifier Agent</div><div class="run-meta">Agency → Growth → Lead Intake WS → Qualifier · 15m ago · Cost: $0.022</div></div>
+                <span class="run-status" style="background:var(--danger-soft);color:var(--danger)">✕ Failed</span>
+                <button class="t-btn">Trace</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view runs -->
+
+
+      <!-- ─────── Sessions ─────── -->
+      <div class="view" id="view-sessions">
+        <div class="grid2">
+          <!-- Session list -->
+          <div class="card" style="height:fit-content">
+            <div class="card-header">
+              <div><h2>Sessions</h2><p>Superficie operativa activa. Ver sesiones, enviar mensajes al nivel seleccionado, ver cadena de delegación.</p></div>
+            </div>
+            <div class="card-body">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div class="session-row" style="cursor:pointer;border:2px solid var(--primary)">
+                  <div class="ava" style="background:var(--primary-soft);color:var(--primary)">JD</div>
+                  <div>
+                    <div class="session-name">Juan Díaz · Lead Intake</div>
+                    <div class="session-meta">WhatsApp · Lead Qualifier Agent · Active</div>
+                    <div class="session-meta" style="margin-top:4px"><span class="badge success">● Live</span> <span class="badge">Workspace: Lead Intake</span></div>
+                  </div>
+                </div>
+                <div class="session-row">
+                  <div class="ava" style="background:rgba(99,102,241,.12);color:#a5a8ff">MG</div>
+                  <div>
+                    <div class="session-name">María García · Support</div>
+                    <div class="session-meta">Email · Support Responder Agent · Waiting</div>
+                    <div class="session-meta" style="margin-top:4px"><span class="badge warning">⏳ Waiting</span></div>
+                  </div>
+                </div>
+                <div class="session-row">
+                  <div class="ava" style="background:rgba(16,185,129,.12);color:#34d399">AL</div>
+                  <div>
+                    <div class="session-name">Ana López · Nurture WS</div>
+                    <div class="session-meta">WhatsApp · CRM Sync Agent · Delegated</div>
+                    <div class="session-meta" style="margin-top:4px"><span class="badge primary">↳ Delegated</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Active session chat -->
+          <div class="card">
+            <div class="card-header" style="padding-bottom:8px">
+              <div>
+                <h3>Juan Díaz · Lead Intake Orchestrator</h3>
+                <p style="margin-top:2px">Channel: WhatsApp · Level: Workspace → Agent · Delegation: Growth Dept → Lead Intake → Lead Qualifier Agent</p>
+              </div>
+              <span class="badge success">● Active</span>
+            </div>
+            <div class="card-body" style="padding-top:0">
+              <div class="chat-wrap">
+                <div class="chat-messages">
+                  <div class="chat-msg agent">
+                    <div class="ava" style="width:28px;height:28px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0">LI</div>
+                    <div class="bubble">¡Hola! Soy el asistente de LSS Manager. ¿En qué puedo ayudarte hoy?</div>
+                  </div>
+                  <div class="chat-msg user">
+                    <div class="bubble">Hola, estoy interesado en sus servicios de marketing digital.</div>
+                  </div>
+                  <div class="chat-msg agent">
+                    <div class="ava" style="width:28px;height:28px;border-radius:50%;background:var(--warning-soft);color:var(--warning);display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0">LQ</div>
+                    <div class="bubble">¡Perfecto! Déjame hacerte algunas preguntas para entender mejor tus necesidades. ¿Cuál es el tamaño de tu empresa y tu presupuesto mensual aproximado?</div>
+                  </div>
+                </div>
+                <div style="padding:8px 16px;background:var(--surface-2);border-top:1px solid var(--border);font-size:11px;color:var(--faint)">
+                  Delegation chain: Agency → Growth &amp; Admissions → Lead Intake Orchestrator → <strong style="color:var(--warning)">Lead Qualifier Agent</strong> (active)
+                </div>
+                <div class="chat-input-row">
+                  <input type="text" class="chat-input" placeholder="Send message to active level..."/>
+                  <button class="chat-send">Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view sessions -->
+
+
+      <!-- ─────── Settings ─────── -->
+      <div class="view" id="view-settings">
+        <div class="tab-content active" id="tc-settings-general">
+          <div class="card">
+            <div class="card-header"><div><h2>General Settings</h2><p>Configuración general de OpenClaw Studio para esta agency.</p></div></div>
+            <div class="card-body">
+              <div class="grid2">
+                <div class="field"><div class="field-label">Default language</div><select class="select-input"><option>English</option><option>Spanish</option></select></div>
+                <div class="field"><div class="field-label">Timezone</div><select class="select-input"><option>UTC</option><option>UTC-5 (EST)</option><option>UTC-6 (CST)</option></select></div>
+                <div class="field"><div class="field-label">Studio mode</div><select class="select-input"><option>Production</option><option>Sandbox</option></select></div>
+                <div class="field"><div class="field-label">Default model</div><select class="select-input"><option>GPT-4o</option><option>Claude 3.5 Sonnet</option><option>Gemini 1.5 Pro</option></select></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-settings-providers" style="display:none">
+          <div class="card">
+            <div class="card-header"><div><h2>Providers</h2><p>Configuración de API keys y modelos disponibles.</p></div></div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item"><div class="li-main"><strong>OpenAI</strong><small>GPT-4o, GPT-4o mini, o3, o4-mini · API key configurada</small></div><div class="li-side"><span class="badge success">Connected</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>Anthropic</strong><small>Claude 3.5 Sonnet, Claude 3 Haiku · API key configurada</small></div><div class="li-side"><span class="badge success">Connected</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>Google</strong><small>Gemini 1.5 Pro, Gemini Flash · pendiente configuración</small></div><div class="li-side"><span class="badge warning">Pending</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>Local Models</strong><small>Ollama · LM Studio · sin configurar</small></div><div class="li-side"><span class="badge">Not configured</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-settings-runtimes" style="display:none">
+          <div class="card">
+            <div class="card-header"><div><h2>Runtimes</h2><p>Configuración de runtimes de OpenClaw y adaptadores de compatibilidad.</p></div></div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item"><div class="li-main"><strong>OpenClaw Runtime v2.3</strong><small>Primary runtime · fail-closed · heartbeat: 30s</small></div><div class="li-side"><span class="badge success">Active</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>Compat Adapter (OpenAI)</strong><small>Wraps OpenClaw for OpenAI-compatible clients</small></div><div class="li-side"><span class="badge primary">Enabled</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-settings-channels" style="display:none">
+          <div class="card">
+            <div class="card-header"><div><h2>Channels</h2><p>Configuración de canales globales disponibles para todas las agencies.</p></div></div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item"><div class="li-main"><strong>WhatsApp Business API</strong><small>Token configurado · webhook activo</small></div><div class="li-side"><span class="badge success">Active</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>Email (SMTP/IMAP)</strong><small>Conectado a Google Workspace</small></div><div class="li-side"><span class="badge success">Active</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>Slack Integration</strong><small>OAuth pendiente · workspace no conectado</small></div><div class="li-side"><span class="badge warning">Pending</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-settings-integrations" style="display:none">
+          <div class="card">
+            <div class="card-header"><div><h2>Integrations</h2><p>n8n, webhooks externos y conectores de terceros.</p></div></div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item"><div class="li-main"><strong>n8n Automation</strong><small>Webhook endpoint activo · 12 flows conectados</small></div><div class="li-side"><span class="badge success">Connected</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>HubSpot CRM</strong><small>API key configurada · sync bidireccional</small></div><div class="li-side"><span class="badge success">Connected</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-settings-diagnostics" style="display:none">
+          <div class="card">
+            <div class="card-header"><div><h2>Diagnostics</h2><p>Estado del runtime, latencia, logs de errores y salud de canales. Absorbido dentro de Settings.</p></div></div>
+            <div class="card-body">
+              <div class="grid2">
+                <div class="stat-card"><div class="label">Runtime status</div><div class="value good">Healthy</div><div class="delta good">All systems operational</div></div>
+                <div class="stat-card"><div class="label">Last error</div><div class="value warn">8m ago</div><div class="delta warn">Support Desk WS retry loop</div></div>
+              </div>
+              <div class="list" style="margin-top:14px">
+                <div class="list-item"><div class="li-main"><strong>Channel heartbeat</strong><small>WhatsApp: OK · Email: OK · Slack: timeout</small></div><div class="li-side"><span class="badge warning">1 issue</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>Agent memory check</strong><small>All agents within memory budget</small></div><div class="li-side"><span class="badge success">OK</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tc-settings-security" style="display:none">
+          <div class="card">
+            <div class="card-header"><div><h2>Security &amp; Policies</h2><p>Permisos, políticas de acceso y configuración de seguridad.</p></div></div>
+            <div class="card-body">
+              <div class="list">
+                <div class="list-item"><div class="li-main"><strong>Fail-closed policy</strong><small>Si el runtime falla, todos los channels se cierran automáticamente</small></div><div class="li-side"><span class="badge success">Enabled</span></div></div>
+                <div class="list-item"><div class="li-main"><strong>API key rotation</strong><small>Auto-rotation cada 90 días · próximo: 23 Jul 2025</small></div><div class="li-side"><span class="badge primary">Scheduled</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view settings -->
+
+    </div><!-- /content-area -->
+  </div><!-- /center -->
+
+
+  <!-- =========================================================
+       RIGHT — PROPS PANEL / ENTITY EDITOR
+       ========================================================= -->
+  <aside class="props-panel" id="propsPanel">
+    <div class="props-head">
+      <div class="entity-label" id="propLevel">Agency</div>
+      <div class="entity-name" id="propName">LSS Manager Network</div>
+      <div class="entity-meta" id="propMeta">6 departments · 14 workspaces · 42 agents · 79 subagents</div>
+    </div>
+    <div class="props-tabs" id="propsTabs">
+      <button class="props-tab active" onclick="setPropTab('identity')">Identity</button>
+      <button class="props-tab" onclick="setPropTab('routing')">Routing</button>
+      <button class="props-tab" onclick="setPropTab('hooks')">Hooks</button>
+      <button class="props-tab" onclick="setPropTab('versions')">Versions</button>
+      <button class="props-tab" onclick="setPropTab('operations')">Operations</button>
+    </div>
+
+    <div class="props-body" id="propsBody">
+
+      <!-- Identity tab (default) -->
+      <div id="prop-tab-identity">
+        <div class="props-section">
+          <div class="props-section-title">Identity</div>
+          <div class="props-row"><span class="pk">Name</span><span class="pv" id="pi-name">LSS Manager Network</span></div>
+          <div class="props-row"><span class="pk">Level</span><span class="pv" id="pi-level"><span class="badge primary">Agency</span></span></div>
+          <div class="props-row"><span class="pk">Status</span><span class="pv"><span class="badge success">Active</span></span></div>
+          <div class="props-row"><span class="pk">ID</span><span class="pv" style="font-family:monospace;font-size:12px">agency_lss_001</span></div>
+        </div>
+        <div class="props-section">
+          <div class="props-section-title">Description</div>
+          <textarea class="input textarea" style="width:100%;font:inherit;font-size:13px" id="pi-description">Agencia principal que coordina Growth, Operations y Marketing con handoffs reales y runtime OpenClaw.</textarea>
+        </div>
+        <div class="props-section">
+          <div class="props-section-title">Tags</div>
+          <div class="chip-row">
+            <span class="chip active">enterprise</span>
+            <span class="chip active">multi-dept</span>
+            <span class="chip active">whatsapp</span>
+            <span class="chip">+ Add tag</span>
+          </div>
+        </div>
+        <div class="props-section">
+          <div class="props-section-title">Shareability</div>
+          <div class="props-row"><span class="pk">Visibility</span><span class="pv">Private</span></div>
+          <div class="props-row"><span class="pk">Export</span><span class="pv">Allowed</span></div>
+        </div>
+      </div>
+
+      <!-- Routing tab -->
+      <div id="prop-tab-routing" style="display:none">
+        <div class="props-section">
+          <div class="props-section-title">Routing &amp; Channels</div>
+          <div class="props-row"><span class="pk">Primary channel</span><span class="pv">WhatsApp Main</span></div>
+          <div class="props-row"><span class="pk">Handoff policy</span><span class="pv">fail-closed</span></div>
+          <div class="props-row"><span class="pk">Routing type</span><span class="pv">Orchestrator-first</span></div>
+        </div>
+        <div class="props-section">
+          <div class="props-section-title">Active Connections</div>
+          <div class="list">
+            <div class="list-item" style="padding:8px 12px"><div class="li-main"><strong style="font-size:12px">WhatsApp Main Intake</strong><small>→ Growth &amp; Admissions Dept</small></div><span class="badge success" style="font-size:10px">Live</span></div>
+            <div class="list-item" style="padding:8px 12px"><div class="li-main"><strong style="font-size:12px">Internal Handoff Bus</strong><small>Multi-dept routing</small></div><span class="badge primary" style="font-size:10px">Active</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hooks tab -->
+      <div id="prop-tab-hooks" style="display:none">
+        <div class="props-section">
+          <div class="props-section-title">Hooks</div>
+          <div class="list">
+            <div class="list-item" style="padding:8px 12px"><div class="li-main"><strong style="font-size:12px">onAgencyStart</strong><small>HEARTBEAT check</small></div><span class="badge success" style="font-size:10px">Enabled</span></div>
+            <div class="list-item" style="padding:8px 12px"><div class="li-main"><strong style="font-size:12px">onHandoffReceived</strong><small>Validate origin</small></div><span class="badge success" style="font-size:10px">Enabled</span></div>
+            <div class="list-item" style="padding:8px 12px"><div class="li-main"><strong style="font-size:12px">onError</strong><small>Alert + MEMORY log</small></div><span class="badge warning" style="font-size:10px">Review</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Versions tab -->
+      <div id="prop-tab-versions" style="display:none">
+        <div class="props-section">
+          <div class="props-section-title">Current version</div>
+          <div class="props-row"><span class="pk">Version</span><span class="pv">v1.4.2</span></div>
+          <div class="props-row"><span class="pk">Status</span><span class="pv"><span class="badge primary">Draft</span></span></div>
+          <div class="props-row"><span class="pk">Last published</span><span class="pv">v1.4.0 · 3 days ago</span></div>
+        </div>
+        <div class="props-section">
+          <div class="props-section-title">Pending changes</div>
+          <div class="mini-diff add">+ BOOTSTRAP: New dept links added.</div>
+          <div class="mini-diff change" style="margin-top:6px">~ IDENTITY: 3 channel entry points declared.</div>
+        </div>
+      </div>
+
+      <!-- Operations tab -->
+      <div id="prop-tab-operations" style="display:none">
+        <div class="props-section">
+          <div class="props-section-title">Quick actions</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="p-btn" style="text-align:left">▶ Run test (sandbox)</button>
+            <button class="p-btn" style="text-align:left">⊕ Preview diff</button>
+            <button class="p-btn primary" style="text-align:left">🚀 Publish agency</button>
+            <button class="p-btn danger" style="text-align:left">↩ Rollback to v1.4.1</button>
+          </div>
+        </div>
+        <div class="props-section">
+          <div class="props-section-title">Runs summary</div>
+          <div class="props-row"><span class="pk">Today</span><span class="pv">1,284 runs</span></div>
+          <div class="props-row"><span class="pk">Success rate</span><span class="pv good">94.8%</span></div>
+          <div class="props-row"><span class="pk">Cost 24h</span><span class="pv">$42.30</span></div>
+        </div>
+      </div>
+
+    </div><!-- /props-body -->
+
+    <div class="props-footer">
+      <button class="p-btn primary">Save changes</button>
+      <button class="p-btn">Export</button>
+      <button class="p-btn danger" style="margin-left:auto">Delete</button>
+    </div>
+  </aside><!-- /props-panel -->
+
+</div><!-- /app -->
+
+<script>
+/* ============================================================
+   GLOBAL SELECTION STATE
+   (simulado para el mockup — en producción este objeto estaría
+   en un store reactivo como Zustand o Redux)
+   ============================================================ */
+const state = {
+  currentAgency: 'lss',
+  selectedNode: { type: 'agency', id: 'lss', name: 'LSS Manager Network' },
+  activeSurface: 'agency-builder',
+  activeTab: 'topology'
+};
+
+function logState() {
+  console.log('[OpenClaw Studio] Global state:', JSON.stringify(state, null, 2));
+  alert('Global state logged to console:\n\n' + JSON.stringify(state, null, 2));
+}
+
+/* ============================================================
+   TABS CONFIG — which tabs to show per surface/level combo
+   ============================================================ */
+const TAB_CONFIGS = {
+  'agency-builder': {
+    agency:    [
+      { id:'topology',   label:'Topology' },
+      { id:'structure',  label:'Structure' },
+      { id:'routing',    label:'Routing & Channels' },
+      { id:'hooks',      label:'Hooks' },
+      { id:'versions',   label:'Versions' },
+      { id:'operations', label:'Operations' }
+    ],
+    dept:      [
+      { id:'structure',  label:'Structure' },
+      { id:'routing',    label:'Routing & Channels' },
+      { id:'hooks',      label:'Hooks' },
+      { id:'versions',   label:'Versions' },
+      { id:'operations', label:'Operations' }
+    ],
+    workspace: [
+      { id:'ws-overview',   label:'Overview' },
+      { id:'ws-canvas',     label:'Studio Canvas' },
+      { id:'ws-routing',    label:'Routing & Channels' },
+      { id:'ws-hooks',      label:'Hooks' },
+      { id:'ws-versions',   label:'Versions' },
+      { id:'ws-operations', label:'Operations' }
+    ],
+    agent:     [
+      { id:'structure',  label:'Overview' },
+      { id:'routing',    label:'Connections' },
+      { id:'hooks',      label:'Hooks' },
+      { id:'versions',   label:'Versions' },
+      { id:'operations', label:'Operations' }
+    ],
+    subagent:  [
+      { id:'structure',  label:'Overview' },
+      { id:'hooks',      label:'Hooks' },
+      { id:'versions',   label:'Versions' }
+    ]
+  },
+  'workspace-studio': {
+    _default: [
+      { id:'ws-overview',   label:'Overview' },
+      { id:'ws-canvas',     label:'Studio Canvas' },
+      { id:'ws-routing',    label:'Routing & Channels' },
+      { id:'ws-hooks',      label:'Hooks' },
+      { id:'ws-versions',   label:'Versions' },
+      { id:'ws-operations', label:'Operations' }
+    ]
+  },
+  profiles: { _default: [{ id:'profiles-all', label:'All Profiles' }] },
+  runs:     { _default: [
+    { id:'runs-all',        label:'All Runs' },
+    { id:'runs-agency',     label:'Agency Runs' },
+    { id:'runs-dept',       label:'Department Runs' },
+    { id:'runs-workspace',  label:'Workspace Runs' },
+    { id:'runs-agent',      label:'Agent Runs' }
+  ]},
+  sessions: { _default: [
+    { id:'sessions-active', label:'Active' },
+    { id:'sessions-history',label:'History' }
+  ]},
+  settings: { _default: [
+    { id:'settings-general',      label:'General' },
+    { id:'settings-providers',    label:'Providers' },
+    { id:'settings-runtimes',     label:'Runtimes' },
+    { id:'settings-channels',     label:'Channels' },
+    { id:'settings-integrations', label:'Integrations' },
+    { id:'settings-diagnostics',  label:'Diagnostics' },
+    { id:'settings-security',     label:'Security / Policies' }
+  ]}
+};
+
+/* ============================================================
+   ENTITY DATA for props panel
+   ============================================================ */
+const ENTITY_DATA = {
+  agency: {
+    lss:  { name:'LSS Manager Network', meta:'6 departments · 14 workspaces · 42 agents · 79 subagents', desc:'Agencia principal que coordina Growth, Operations y Marketing.', level:'Agency' },
+    nova: { name:'Nova Agency',          meta:'4 departments · 8 workspaces · 21 agents · 30 subagents', desc:'Agencia secundaria para proyectos especiales.', level:'Agency' }
+  },
+  dept: {
+    growth: { name:'Growth & Admissions', meta:'Department · 3 workspaces · 8 agents', desc:'Responsable de lead intake, calificación y admisiones.', level:'Department' },
+    ops:    { name:'Operations',          meta:'Department · 2 workspaces · 5 agents', desc:'Soporte y automatización de operaciones internas.', level:'Department' },
+    mkt:    { name:'Marketing',           meta:'Department · 4 workspaces · 12 agents', desc:'Campañas, contenido y gestión de canales digitales.', level:'Department' }
+  },
+  workspace: {
+    'lead-intake': { name:'Lead Intake Orchestrator', meta:'Workspace · 3 agents · 2 subagents · 340 runs today', desc:'Orchestrates lead qualification, CRM sync and nurture handoffs.', level:'Workspace' },
+    'nurture-ws':  { name:'Nurture Campaigns WS',     meta:'Workspace · 2 agents · 1 subagent · 90 runs today', desc:'Email and WhatsApp nurture flows for unqualified leads.', level:'Workspace' },
+    'support-ws':  { name:'Support Desk WS',          meta:'Workspace · 2 agents · 1 subagent · 210 runs today', desc:'Support ticket routing and resolution.', level:'Workspace' },
+    'ads-ws':      { name:'Ads Workspace',            meta:'Workspace · 3 agents · 2 subagents', desc:'Google and Meta ads management and reporting.', level:'Workspace' },
+    'content-ws':  { name:'Content WS',               meta:'Workspace · 2 agents', desc:'Content creation and scheduling.', level:'Workspace' }
+  },
+  agent: {
+    qualifier:  { name:'Lead Qualifier Agent',  meta:'Agent · GPT-4o · 3 tools · 2 subagents', desc:'Clasifica leads entrantes usando scoring y reglas de negocio.', level:'Agent' },
+    'crm-sync': { name:'CRM Sync Agent',        meta:'Agent · GPT-4o mini · 2 tools', desc:'Sincroniza datos de leads calificados con HubSpot.', level:'Agent' }
+  },
+  subagent: {
+    'fb-scraper':    { name:'FB Scraper Subagent',    meta:'Subagent · Python tool · delegated by Qualifier', desc:'Extrae datos de leads desde Facebook Lead Ads.', level:'Subagent' },
+    'email-validator': { name:'Email Validator',       meta:'Subagent · validation tool', desc:'Valida emails: formato, MX records, spam score.', level:'Subagent' }
+  }
+};
+
+/* ============================================================
+   SELECT AGENCY
+   ============================================================ */
+function selectAgency(agencyId) {
+  state.currentAgency = agencyId;
+  document.querySelectorAll('.agency-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('agency-' + agencyId);
+  if (btn) btn.classList.add('active');
+  const data = (ENTITY_DATA.agency || {})[agencyId];
+  if (data) updatePropsPanel({ type:'agency', id:agencyId, name:data.name });
+  updateCrumb();
+  console.log('[state] agency →', agencyId);
+}
+
+/* ============================================================
+   SELECT NODE (tree click)
+   ============================================================ */
+function selectNode(level, id, name) {
+  state.selectedNode = { type: level, id, name };
+
+  // Update tree active state
+  document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('active'));
+  const match = document.querySelector(`.tree-node[data-level="${level}"][data-id="${id}"]`);
+  if (match) match.classList.add('active');
+
+  // Update props panel
+  updatePropsPanel({ type: level, id, name });
+
+  // Update topbar crumb detail
+  updateCrumb();
+
+  // Refresh contextual tabs
+  renderSubbar();
+
+  console.log('[state] selectedNode →', state.selectedNode);
+}
+
+/* ============================================================
+   SET SURFACE (menu button click)
+   ============================================================ */
+function setSurface(surface) {
+  state.activeSurface = surface;
+
+  // Update surface button active states
+  document.querySelectorAll('.surface-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('btn-' + surface);
+  if (btn) btn.classList.add('active');
+
+  // Switch visible view
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const view = document.getElementById('view-' + surface);
+  if (view) view.classList.add('active');
+
+  // Update crumb surface label
+  const labels = {
+    'agency-builder': 'Agency Builder',
+    'workspace-studio': 'Workspace Studio',
+    'profiles': 'Profiles',
+    'runs': 'Runs',
+    'sessions': 'Sessions',
+    'settings': 'Settings'
+  };
+  document.getElementById('crumbSurface').textContent = labels[surface] || surface;
+
+  // Update topbar CTA
+  const ctas = {
+    'agency-builder': 'Generate',
+    'workspace-studio': 'Publish',
+    'profiles': '+ New Profile',
+    'runs': 'Export',
+    'sessions': 'New Session',
+    'settings': 'Save all'
+  };
+  document.getElementById('topbarCTA').textContent = ctas[surface] || 'Action';
+
+  // Refresh contextual tabs
+  renderSubbar();
+
+  console.log('[state] surface →', surface);
+}
+
+/* ============================================================
+   RENDER SUBBAR — contextual tabs
+   ============================================================ */
+function renderSubbar() {
+  const subbar = document.getElementById('subbar');
+  const surface = state.activeSurface;
+  const level = state.selectedNode ? state.selectedNode.type : 'agency';
+  const config = TAB_CONFIGS[surface];
+  if (!config) { subbar.innerHTML = ''; return; }
+
+  let tabs = config[level] || config['_default'] || [];
+  if (!tabs.length) tabs = Object.values(config)[0] || [];
+
+  subbar.innerHTML = tabs.map(t =>
+    `<button class="subbar-tab${state.activeTab === t.id ? ' active' : ''}" onclick="setActiveTab('${t.id}')">${t.label}</button>`
+  ).join('');
+}
+
+/* ============================================================
+   SET ACTIVE TAB
+   ============================================================ */
+function setActiveTab(tabId) {
+  state.activeTab = tabId;
+
+  // Update subbar active
+  document.querySelectorAll('.subbar-tab').forEach(t => t.classList.remove('active'));
+  const surface = state.activeSurface;
+
+  // Show/hide tab content
+  // Agency builder tabs
+  ['topology','structure','routing','hooks','versions','operations'].forEach(id => {
+    const el = document.getElementById('tc-' + id);
+    if (el) el.style.display = (tabId === id) ? '' : 'none';
+  });
+  // Workspace studio tabs
+  ['ws-overview','ws-canvas','ws-routing','ws-hooks','ws-versions','ws-operations'].forEach(id => {
+    const el = document.getElementById('tc-' + id);
+    if (el) el.style.display = (tabId === id) ? '' : 'none';
+  });
+  // Settings tabs
+  ['settings-general','settings-providers','settings-runtimes','settings-channels','settings-integrations','settings-diagnostics','settings-security'].forEach(id => {
+    const el = document.getElementById('tc-' + id);
+    if (el) el.style.display = (tabId === id) ? '' : 'none';
+  });
+
+  renderSubbar();
+  console.log('[state] activeTab →', tabId);
+}
+
+/* ============================================================
+   UPDATE PROPS PANEL
+   ============================================================ */
+function updatePropsPanel(node) {
+  const data = (ENTITY_DATA[node.type] || {})[node.id];
+  if (!data) return;
+  document.getElementById('propLevel').textContent = data.level;
+  document.getElementById('propName').textContent  = data.name;
+  document.getElementById('propMeta').textContent  = data.meta;
+  const piName = document.getElementById('pi-name');
+  if (piName) piName.textContent = data.name;
+  const piDesc = document.getElementById('pi-description');
+  if (piDesc) piDesc.value = data.desc;
+  const piLevel = document.getElementById('pi-level');
+  if (piLevel) {
+    const levelColors = { Agency:'primary', Department:'', Workspace:'success', Agent:'warning', Subagent:'' };
+    const cls = levelColors[data.level] || '';
+    piLevel.innerHTML = `<span class="badge ${cls}">${data.level}</span>`;
+  }
+  setPropTab('identity');
+}
+
+/* ============================================================
+   PROPS TAB SWITCH
+   ============================================================ */
+function setPropTab(tab) {
+  const tabs = ['identity','routing','hooks','versions','operations'];
+  tabs.forEach(t => {
+    const el = document.getElementById('prop-tab-' + t);
+    if (el) el.style.display = (t === tab) ? '' : 'none';
+  });
+  document.querySelectorAll('.props-tab').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick').includes("'" + tab + "'"));
+  });
+}
+
+/* ============================================================
+   TOGGLE SUBTREE
+   ============================================================ */
+function toggleSubtree(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+/* ============================================================
+   UPDATE CRUMB
+   ============================================================ */
+function updateCrumb() {
+  const crumb = document.getElementById('topCrumb');
+  const node = state.selectedNode;
+  const agencyData = (ENTITY_DATA.agency || {})[state.currentAgency];
+  const agencyName = agencyData ? agencyData.name : state.currentAgency;
+
+  let html = `<span>${agencyName}</span>`;
+  if (node && node.type !== 'agency') {
+    html += `<span class="sep">/</span><strong>${node.name}</strong>`;
+  } else {
+    html += `<span class="sep">/</span><strong id="crumbSurface">${getCrumbSurfaceLabel()}</strong>`;
+    return;
+  }
+  // preserve crumb surface label
+  const surfaceLabel = getCrumbSurfaceLabel();
+  crumb.innerHTML = html;
+  // keep crumbSurface for setSurface to update
+  const surfEl = document.getElementById('crumbSurface');
+  if (!surfEl) {
+    document.getElementById('topCrumb').innerHTML += `<span class="sep">/</span><strong id="crumbSurface">${surfaceLabel}</strong>`;
+  }
+}
+
+function getCrumbSurfaceLabel() {
+  const labels = {
+    'agency-builder': 'Agency Builder',
+    'workspace-studio': 'Workspace Studio',
+    'profiles': 'Profiles',
+    'runs': 'Runs',
+    'sessions': 'Sessions',
+    'settings': 'Settings'
+  };
+  return labels[state.activeSurface] || state.activeSurface;
+}
+
+/* ============================================================
+   THEME TOGGLE
+   ============================================================ */
+function toggleTheme() {
+  const el = document.documentElement;
+  const isDark = el.dataset.theme === 'dark';
+  el.dataset.theme = isDark ? 'light' : 'dark';
+  document.querySelector('.theme-btn').textContent = isDark ? '☀' : '🌙';
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+(function init() {
+  // Set initial surface
+  setSurface('agency-builder');
+  // Activate topology tab as default for agency-builder/agency
+  setActiveTab('topology');
+  // Render initial crumb
+  updateCrumb();
+  console.log('[OpenClaw Studio v2] Initialized. State:', state);
+})();
+</script>
+</body>
+</html>
