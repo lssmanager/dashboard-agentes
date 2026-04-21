@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 
 import type { AgentSpec, DeployPreview, FlowNode, SkillSpec } from '../../../lib/types';
+import { NodeFormRegistry } from './NodeFormRegistry';
 
 interface PropertiesPanelProps {
   diagnostics: string[];
@@ -30,12 +31,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function toStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
-}
 
 function SectionBlock({ title, children, compact = false }: { title: string; children: ReactNode; compact?: boolean }) {
   return (
@@ -62,47 +57,6 @@ function SectionBlock({ title, children, compact = false }: { title: string; chi
       </div>
       <div style={{ padding: compact ? '10px 12px' : '10px 14px' }}>{children}</div>
     </div>
-  );
-}
-
-function Pill({
-  label,
-  onRemove,
-}: {
-  label: string;
-  onRemove: () => void;
-}) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        borderRadius: 999,
-        padding: '4px 10px',
-        background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
-        color: 'var(--color-primary)',
-        fontSize: 11,
-        fontWeight: 600,
-      }}
-    >
-      {label}
-      <button
-        type="button"
-        onClick={onRemove}
-        style={{
-          border: 'none',
-          background: 'transparent',
-          color: 'inherit',
-          cursor: 'pointer',
-          fontSize: 12,
-          lineHeight: 1,
-          padding: 0,
-        }}
-      >
-        ×
-      </button>
-    </span>
   );
 }
 
@@ -133,312 +87,17 @@ export function PropertiesPanel({
 }: PropertiesPanelProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>('properties');
 
-  const config = useMemo(() => asRecord(selectedNode?.config), [selectedNode]);
-  const nodeType = selectedNode?.type === 'subagent' ? 'subagent' : selectedNode?.type === 'agent' ? 'agent' : null;
-  const configuredAgentId = config && typeof config.agentId === 'string' ? config.agentId : null;
-
-  const linkedAgent = useMemo(() => {
-    if (!nodeType) return null;
-    if (configuredAgentId) {
-      return agents.find((agent) => agent.id === configuredAgentId) ?? null;
-    }
-
-    const matchingKind = nodeType === 'subagent' ? 'subagent' : 'agent';
-    return agents.find((agent) => agent.kind === matchingKind) ?? null;
-  }, [agents, configuredAgentId, nodeType]);
-
-  const initialName =
-    (config && typeof config.name === 'string' ? config.name : undefined) ??
-    linkedAgent?.name ??
-    (selectedNode ? selectedNode.id : '');
-
-  const initialPurpose =
-    (config && typeof config.purpose === 'string' ? config.purpose : undefined) ??
-    (config && typeof config.description === 'string' ? config.description : undefined) ??
-    linkedAgent?.description ??
-    '';
-
-  const skillRefsFromConfig = toStringArray(config?.skills).concat(toStringArray(config?.skillRefs));
-  const initialSkills =
-    skillRefsFromConfig.length > 0
-      ? skillRefsFromConfig.filter((value, index, all) => all.indexOf(value) === index)
-      : linkedAgent?.skillRefs ?? [];
-
-  const initialTools =
-    toStringArray(config?.tools).length > 0
-      ? toStringArray(config?.tools)
-      : toStringArray(config?.toolRefs).length > 0
-        ? toStringArray(config?.toolRefs)
-        : linkedAgent?.permissions?.tools ?? [];
-
-  const [name, setName] = useState(initialName);
-  const [purpose, setPurpose] = useState(initialPurpose);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>(initialSkills);
-  const [selectedTools, setSelectedTools] = useState<string[]>(initialTools);
-  const [addingSkill, setAddingSkill] = useState(false);
-  const [addingTool, setAddingTool] = useState(false);
-
-  useEffect(() => {
-    setName(initialName);
-    setPurpose(initialPurpose);
-    setSelectedSkills(initialSkills);
-    setSelectedTools(initialTools);
-    setAddingSkill(false);
-    setAddingTool(false);
-  }, [selectedNodeId, initialName, initialPurpose, initialSkills, initialTools]);
-
-  const skillCatalog = useMemo(() => skills.map((skill) => skill.name).filter(Boolean), [skills]);
-
-  const toolCatalog = useMemo(() => {
-    const fromAgents = agents.flatMap((agent) => agent.permissions?.tools ?? []);
-    const fromNode = toStringArray(config?.tools).concat(toStringArray(config?.toolRefs));
-    const merged = [...fromAgents, ...fromNode, ...selectedTools];
-    return Array.from(new Set(merged.filter((item) => item.trim().length > 0)));
-  }, [agents, config, selectedTools]);
-
-  const availableSkills = skillCatalog.filter((item) => !selectedSkills.includes(item));
-  const availableTools = toolCatalog.filter((item) => !selectedTools.includes(item));
-
-  const builderWhatItDoes =
-    (config && typeof config.whatItDoes === 'string' ? config.whatItDoes : undefined) ??
-    linkedAgent?.description ??
-    'No generated summary available for this node.';
-  const builderInputs = toStringArray(config?.inputs);
-  const builderOutputs = toStringArray(config?.outputs);
-
   function renderPropertiesTab() {
     if (!selectedNodeId || !selectedNode) {
       return <EmptyInspectorState />;
     }
 
-    if (nodeType !== 'agent' && nodeType !== 'subagent') {
-      return (
-        <SectionBlock title="Node Details">
-          <div style={{ display: 'grid', gap: 6 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Node ID</div>
-            <code style={{ fontSize: 11, color: 'var(--text-primary)' }}>{selectedNode.id}</code>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Type</div>
-            <code style={{ fontSize: 11, color: 'var(--text-primary)' }}>{selectedNode.type}</code>
-          </div>
-        </SectionBlock>
-      );
-    }
+    const nodeTypeLabel = selectedNode.type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
     return (
       <div style={{ display: 'grid', gap: 10 }}>
-        <SectionBlock title="Identity">
-          <div style={{ display: 'grid', gap: 8 }}>
-            <label style={{ display: 'grid', gap: 4 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Name</span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                style={{
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--input-border)',
-                  background: 'var(--input-bg)',
-                  color: 'var(--input-text)',
-                  padding: '7px 9px',
-                  fontSize: 12,
-                }}
-              />
-            </label>
-
-            <label style={{ display: 'grid', gap: 4 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Purpose / Description</span>
-              <textarea
-                value={purpose}
-                onChange={(event) => setPurpose(event.target.value)}
-                rows={4}
-                style={{
-                  resize: 'vertical',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--input-border)',
-                  background: 'var(--input-bg)',
-                  color: 'var(--input-text)',
-                  padding: '7px 9px',
-                  fontSize: 12,
-                }}
-              />
-            </label>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Type</span>
-                <span
-                  style={{
-                    borderRadius: 999,
-                    border: '1px solid var(--shell-chip-border)',
-                    fontSize: 11,
-                    padding: '2px 8px',
-                    color: 'var(--text-primary)',
-                    background: 'var(--shell-chip-bg)',
-                    textTransform: 'capitalize',
-                  }}
-              >
-                {nodeType === 'subagent' ? 'Subagent' : 'Agent'}
-              </span>
-            </div>
-          </div>
-        </SectionBlock>
-
-        <SectionBlock title="Skills">
-          <div style={{ display: 'grid', gap: 8 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {selectedSkills.length === 0 ? (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No skills attached</span>
-              ) : (
-                selectedSkills.map((skillName) => (
-                  <Pill
-                    key={skillName}
-                    label={skillName}
-                    onRemove={() => setSelectedSkills((previous) => previous.filter((item) => item !== skillName))}
-                  />
-                ))
-              )}
-            </div>
-            <div style={{ display: 'grid', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => setAddingSkill((previous) => !previous)}
-                style={actionButtonStyle()}
-              >
-                + Add Skill
-              </button>
-              {addingSkill && (
-                <select
-                  value=""
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!value) return;
-                    setSelectedSkills((previous) => (previous.includes(value) ? previous : [...previous, value]));
-                    setAddingSkill(false);
-                  }}
-                  style={selectStyle()}
-                >
-                  <option value="">Select skill...</option>
-                  {availableSkills.map((skillName) => (
-                    <option key={skillName} value={skillName}>
-                      {skillName}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-        </SectionBlock>
-
-        <SectionBlock title="Tools">
-          <div style={{ display: 'grid', gap: 8 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {selectedTools.length === 0 ? (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No tools attached</span>
-              ) : (
-                selectedTools.map((toolName) => (
-                  <Pill
-                    key={toolName}
-                    label={toolName}
-                    onRemove={() => setSelectedTools((previous) => previous.filter((item) => item !== toolName))}
-                  />
-                ))
-              )}
-            </div>
-            <div style={{ display: 'grid', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => setAddingTool((previous) => !previous)}
-                style={actionButtonStyle()}
-              >
-                + Add Tool
-              </button>
-              {addingTool && (
-                <select
-                  value=""
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!value) return;
-                    setSelectedTools((previous) => (previous.includes(value) ? previous : [...previous, value]));
-                    setAddingTool(false);
-                  }}
-                  style={selectStyle()}
-                >
-                  <option value="">Select tool...</option>
-                  {availableTools.map((toolName) => (
-                    <option key={toolName} value={toolName}>
-                      {toolName}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-        </SectionBlock>
-
-        <SectionBlock title="Builder Agent Function" compact>
-          <details open>
-            <summary
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-                cursor: 'pointer',
-                listStyle: 'none',
-              }}
-            >
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Builder Output</span>
-              <span
-                style={{
-                  borderRadius: 999,
-                  padding: '2px 8px',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  background: 'var(--shell-chip-bg)',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                generated
-              </span>
-            </summary>
-
-            <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>whatItDoes</div>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.45 }}>{builderWhatItDoes}</p>
-              </div>
-
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>inputs</div>
-                {builderInputs.length === 0 ? (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No generated inputs</div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    {builderInputs.map((item) => (
-                      <code key={item} style={{ fontSize: 11, color: 'var(--text-primary)' }}>
-                        {item}
-                      </code>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>outputs</div>
-                {builderOutputs.length === 0 ? (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No generated outputs</div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    {builderOutputs.map((item) => (
-                      <code key={item} style={{ fontSize: 11, color: 'var(--text-primary)' }}>
-                        {item}
-                      </code>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </details>
+        <SectionBlock title={nodeTypeLabel} compact>
+          <NodeFormRegistry node={selectedNode} agents={agents} skills={skills} />
         </SectionBlock>
       </div>
     );

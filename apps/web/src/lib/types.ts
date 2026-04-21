@@ -69,7 +69,16 @@ export type FlowNodeType =
   | 'handoff'
   | 'loop'
   | 'end'
-  | 'approval';
+  | 'approval'
+  | 'classify'
+  | 'guardrails'
+  | 'file_search'
+  | 'transform'
+  | 'set_state'
+  | 'user_approval'
+  | 'if_else'
+  | 'note'
+  | 'mcp';
 
 export interface FlowNode {
   id: string;

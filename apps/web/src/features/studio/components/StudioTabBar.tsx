@@ -1,36 +1,50 @@
-import { useState } from 'react';
+export type StudioTab =
+  | 'builder'
+  | 'test'
+  | 'debug'
+  | 'topology'
+  | 'diff'
+  | 'overview'
+  | 'routing'
+  | 'hooks'
+  | 'versions'
+  | 'operations';
 
-const TABS = [
-  { id: 'canvas', label: 'Canvas' },
-  { id: 'agents', label: 'Agents' },
-  { id: 'chat', label: 'Chat' },
-] as const;
-
-export type StudioTab = (typeof TABS)[number]['id'];
+interface TabDef {
+  id: StudioTab;
+  label: string;
+}
 
 interface StudioTabBarProps {
   active: StudioTab;
   onChange: (tab: StudioTab) => void;
+  tabs?: TabDef[];
 }
 
-export function StudioTabBar({ active, onChange }: StudioTabBarProps) {
+const DEFAULT_TABS: TabDef[] = [
+  { id: 'builder', label: 'Builder' },
+  { id: 'test', label: 'Test' },
+  { id: 'debug', label: 'Debug' },
+  { id: 'topology', label: 'Topology' },
+  { id: 'diff', label: 'Diff / Apply' },
+];
+
+export function StudioTabBar({ active, onChange, tabs = DEFAULT_TABS }: StudioTabBarProps) {
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 6,
-        padding: '10px 14px',
-        borderBottom: '1px solid var(--shell-panel-border)',
-        background: 'var(--shell-panel-bg)',
         flexWrap: 'wrap',
       }}
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = active === tab.id;
         return (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onChange(tab.id)}
             style={{
               padding: '8px 12px',
