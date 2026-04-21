@@ -22,6 +22,8 @@ export function StudioPageShell({ children, maxWidth = 1460 }: StudioPageShellPr
   );
 }
 
+export const PageShell = StudioPageShell;
+
 interface StudioHeroSectionProps {
   eyebrow?: string;
   title: string;
@@ -87,6 +89,8 @@ export function StudioHeroSection({ eyebrow, title, description, actions, meta }
   );
 }
 
+export const HeroSection = StudioHeroSection;
+
 interface StudioSectionCardProps {
   title: string;
   description?: string;
@@ -125,6 +129,8 @@ export function StudioSectionCard({ title, description, actions, children }: Stu
     </section>
   );
 }
+
+export const SectionCard = StudioSectionCard;
 
 interface StudioKpiCardProps {
   label: string;
@@ -239,6 +245,8 @@ export function StudioMetricRow({ label, value, hint }: StudioMetricRowProps) {
   );
 }
 
+export const MetricRow = StudioMetricRow;
+
 interface StudioEmptyStateProps {
   title: string;
   description: string;
@@ -287,6 +295,8 @@ export function StudioEmptyState({ title, description, actionLabel, onAction }: 
   );
 }
 
+export const EmptyState = StudioEmptyState;
+
 interface StudioInspectorCardProps {
   title: string;
   children: ReactNode;
@@ -320,6 +330,8 @@ export function StudioInspectorCard({ title, children }: StudioInspectorCardProp
   );
 }
 
+export const InspectorCard = StudioInspectorCard;
+
 interface StudioTimelineBlockProps {
   items: Array<{ title: string; description: string; meta?: string }>;
 }
@@ -342,6 +354,8 @@ export function StudioTimelineBlock({ items }: StudioTimelineBlockProps) {
     </div>
   );
 }
+
+export const TimelineBlock = StudioTimelineBlock;
 
 interface StudioDiffBlockProps {
   status: 'added' | 'updated' | 'deleted' | 'unchanged';
@@ -392,3 +406,151 @@ export function StudioCommandRow({ children }: StudioCommandRowProps) {
     </div>
   );
 }
+
+interface StudioToolbarGroupProps {
+  children: ReactNode;
+  align?: 'start' | 'between';
+}
+
+export function StudioToolbarGroup({ children, align = 'start' }: StudioToolbarGroupProps) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: align === 'between' ? 'space-between' : 'flex-start',
+        flexWrap: 'wrap',
+        gap: 8,
+      }}
+      role="toolbar"
+      aria-label="Studio toolbar"
+    >
+      {children}
+    </div>
+  );
+}
+
+export const ToolbarGroup = StudioToolbarGroup;
+
+interface StudioSplitPaneProps {
+  left: ReactNode;
+  right: ReactNode;
+  leftMin?: string;
+  rightMin?: string;
+}
+
+export function StudioSplitPane({
+  left,
+  right,
+  leftMin = '320px',
+  rightMin = '320px',
+}: StudioSplitPaneProps) {
+  return (
+    <section
+      className="studio-console-master-detail"
+      style={{
+        borderRadius: 'var(--radius-xl)',
+        border: '1px solid var(--shell-panel-border)',
+        background: 'var(--shell-panel-bg)',
+        overflow: 'hidden',
+        display: 'grid',
+        gridTemplateColumns: `minmax(${leftMin}, 1fr) minmax(${rightMin}, 420px)`,
+        minHeight: 620,
+      }}
+    >
+      <div style={{ minWidth: 0, minHeight: 0 }}>{left}</div>
+      <aside
+        style={{
+          minWidth: 0,
+          minHeight: 0,
+          borderLeft: '1px solid var(--shell-panel-border)',
+          background: 'color-mix(in srgb, var(--shell-chip-bg) 70%, transparent)',
+        }}
+      >
+        {right}
+      </aside>
+    </section>
+  );
+}
+
+export const SplitPane = StudioSplitPane;
+
+interface StudioTabsProps<T extends string> {
+  tabs: Array<{ id: T; label: string }>;
+  active: T;
+  onChange: (tab: T) => void;
+  ariaLabel?: string;
+}
+
+export function StudioTabs<T extends string>({
+  tabs,
+  active,
+  onChange,
+  ariaLabel = 'Studio tabs',
+}: StudioTabsProps<T>) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        flexWrap: 'wrap',
+      }}
+      role="tablist"
+      aria-label={ariaLabel}
+    >
+      {tabs.map((tab) => {
+        const isActive = tab.id === active;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(tab.id)}
+            style={{
+              padding: '8px 12px',
+              fontSize: 12,
+              fontWeight: 700,
+              color: isActive ? 'var(--color-primary)' : 'var(--text-muted)',
+              background: isActive ? 'var(--color-primary-soft)' : 'var(--shell-chip-bg)',
+              border: `1px solid ${isActive ? 'color-mix(in srgb, var(--color-primary) 32%, var(--shell-chip-border))' : 'var(--shell-chip-border)'}`,
+              borderRadius: 'var(--radius-full)',
+              cursor: 'pointer',
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface StudioCanvasGraphContainerProps {
+  children: ReactNode;
+  minHeight?: number;
+}
+
+export function StudioCanvasGraphContainer({
+  children,
+  minHeight = 520,
+}: StudioCanvasGraphContainerProps) {
+  return (
+    <div
+      style={{
+        borderRadius: 'var(--radius-xl)',
+        border: '1px solid var(--shell-panel-border)',
+        background:
+          `radial-gradient(circle, var(--canvas-grid-color) 1px, transparent 1px) 0 0 / 18px 18px, var(--canvas-surface-bg)`,
+        minHeight,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export const CanvasGraphContainer = StudioCanvasGraphContainer;

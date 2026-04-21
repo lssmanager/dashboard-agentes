@@ -11,6 +11,7 @@ import {
 
 import { useStudioState } from '../lib/StudioStateContext';
 import { useHierarchy } from '../lib/HierarchyContext';
+import { buildStudioHref } from '../lib/studioRouting';
 
 const NAV = [
   { label: 'Agency Builder', path: '/agency-builder', Icon: Building2 },
@@ -25,7 +26,7 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { state } = useStudioState();
-  const { setSurface } = useHierarchy();
+  const { setSurface, selectedKey, selectedBuilderTab, selectedSurface } = useHierarchy();
   const runtimeOk = state.runtime?.health?.ok ?? false;
 
   function go(path: string) {
@@ -56,7 +57,15 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
       }}
     >
       <button
-        onClick={() => go('/agency-builder?tab=overview')}
+        onClick={() =>
+          go(
+            buildStudioHref({
+              surface: 'agency-builder',
+              tab: selectedBuilderTab ?? 'overview',
+              nodeKey: selectedKey,
+            }),
+          )
+        }
         style={{
           width: 40,
           height: 40,
@@ -75,18 +84,52 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
           letterSpacing: '0.04em',
         }}
         title="OpenClaw Studio"
+        aria-label="Open Agency Builder"
       >
         OC
       </button>
 
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: '100%' }}>
         {NAV.map(({ label, path, Icon }) => {
-          const isActive = location.pathname.startsWith(path);
+          const isActive = selectedSurface
+            ? selectedSurface ===
+              (path.startsWith('/agency-builder')
+                ? 'agency-builder'
+                : path.startsWith('/workspace-studio')
+                  ? 'workspace-studio'
+                  : path.startsWith('/entity-editor')
+                    ? 'entity-editor'
+                    : path.startsWith('/profiles')
+                      ? 'profiles'
+                      : path.startsWith('/runs')
+                        ? 'runs'
+                        : 'sessions')
+            : location.pathname.startsWith(path);
           return (
             <button
               key={path}
-              onClick={() => go(path)}
+              onClick={() =>
+                go(
+                  buildStudioHref({
+                    surface:
+                      path.startsWith('/agency-builder')
+                        ? 'agency-builder'
+                        : path.startsWith('/workspace-studio')
+                          ? 'workspace-studio'
+                          : path.startsWith('/entity-editor')
+                            ? 'entity-editor'
+                            : path.startsWith('/profiles')
+                              ? 'profiles'
+                              : path.startsWith('/runs')
+                                ? 'runs'
+                                : 'sessions',
+                    tab: path.startsWith('/agency-builder') ? selectedBuilderTab : undefined,
+                    nodeKey: selectedKey,
+                  }),
+                )
+              }
               data-tip={label}
+              aria-label={label}
               style={{
                 width: 44,
                 height: 44,
@@ -134,8 +177,16 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
           }}
         />
         <button
-          onClick={() => go('/settings')}
+          onClick={() =>
+            go(
+              buildStudioHref({
+                surface: 'settings',
+                nodeKey: selectedKey,
+              }),
+            )
+          }
           data-tip="Settings"
+          aria-label="Settings"
           style={{
             width: 44,
             height: 44,

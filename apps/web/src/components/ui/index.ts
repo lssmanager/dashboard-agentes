@@ -9,16 +9,29 @@ export { FlowCard } from './FlowCard';
 export { EmptySection } from './EmptySection';
 export {
   StudioPageShell,
+  PageShell,
   StudioHeroSection,
+  HeroSection,
   StudioSectionCard,
   StudioKpiCard,
   StudioMetricRow,
+  MetricRow,
   StudioEmptyState,
+  EmptyState,
   StudioInspectorCard,
+  InspectorCard,
   StudioTimelineBlock,
+  TimelineBlock,
   RuntimeStatusBadge,
   StudioDiffBlock,
   StudioCommandRow,
+  StudioToolbarGroup,
+  ToolbarGroup,
+  StudioSplitPane,
+  SplitPane,
+  StudioTabs,
+  StudioCanvasGraphContainer,
+  CanvasGraphContainer,
 } from './StudioPrimitives';
 export { SurfaceCard } from './SurfaceCard';
 export { MetricStrip } from './MetricStrip';

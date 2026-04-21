@@ -7,6 +7,7 @@ import {
   getVersions,
   previewCoreFiles,
   rollbackCoreFiles,
+  triggerTopologyAction,
 } from '../../../lib/api';
 import { useHierarchy } from '../../../lib/HierarchyContext';
 import type {
@@ -15,9 +16,20 @@ import type {
   CanonicalNodeLevel,
   CanonicalStudioStateResponse,
   CoreFilesPreviewResponse,
+  TopologyRuntimeAction,
+  TopologyActionResult,
   VersionSnapshot,
 } from '../../../lib/types';
 import { AlertTriangle, Building2, GitBranch, Network, RefreshCw, RotateCcw, Wand2 } from 'lucide-react';
+import {
+  RuntimeStatusBadge,
+  StudioEmptyState,
+  StudioInspectorCard,
+  StudioMetricRow,
+  StudioSplitPane,
+  StudioTimelineBlock,
+  StudioToolbarGroup,
+} from '../../../components/ui';
 
 const TAB_LABEL: Record<AgencyBuilderTab, string> = {
   overview: 'Overview',
@@ -36,6 +48,15 @@ const TAB_VISIBILITY: Record<CanonicalNodeLevel, AgencyBuilderTab[]> = {
   agent: ['overview', 'structure', 'routing', 'hooks', 'versions', 'operations'],
   subagent: ['overview', 'structure', 'hooks', 'versions', 'operations'],
 };
+
+const TOPOLOGY_ACTIONS: TopologyRuntimeAction[] = [
+  'connect',
+  'disconnect',
+  'pause',
+  'reactivate',
+  'redirect',
+  'continue',
+];
 
 function parseTab(value: string | null): AgencyBuilderTab | null {
   if (
@@ -64,6 +85,9 @@ export default function AgencyBuilderPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+  const [topologyActionBusy, setTopologyActionBusy] = useState<TopologyRuntimeAction | null>(null);
+  const [topologyResult, setTopologyResult] = useState<TopologyActionResult | null>(null);
 
   const contextLabel = selectedLineage.map((node) => node.label).join(' / ');
 
@@ -87,7 +111,11 @@ export default function AgencyBuilderPage() {
 
   useEffect(() => {
     if (activeTab !== queryTab) {
-      setSearchParams({ tab: activeTab }, { replace: true });
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.set('tab', activeTab);
+        return next;
+      }, { replace: true });
     }
     setBuilderTab(activeTab);
   }, [activeTab, queryTab, setBuilderTab, setSearchParams]);
@@ -134,6 +162,39 @@ export default function AgencyBuilderPage() {
       tools: canonical.catalog.tools.length,
     };
   }, [canonical, scope.agentId, scope.departmentId, scope.subagentId, scope.workspaceId]);
+
+  const scopedConnections = useMemo(() => {
+    if (!canonical) return [];
+    return canonical.topology.connections.filter((connection) => {
+      if (scope.workspaceId) {
+        return connection.from.id === scope.workspaceId || connection.to.id === scope.workspaceId;
+      }
+      if (scope.departmentId) {
+        return connection.from.id === scope.departmentId || connection.to.id === scope.departmentId;
+      }
+      if (scope.agencyId) {
+        return connection.from.id === scope.agencyId || connection.to.id === scope.agencyId;
+      }
+      return true;
+    });
+  }, [canonical, scope.agencyId, scope.departmentId, scope.workspaceId]);
+
+  const selectedConnection = useMemo(
+    () => scopedConnections.find((entry) => entry.id === selectedConnectionId) ?? scopedConnections[0] ?? null,
+    [scopedConnections, selectedConnectionId],
+  );
+
+  const topologyTimeline = useMemo(
+    () =>
+      (canonical?.runtimeControl.sessions ?? [])
+        .slice(0, 6)
+        .map((session) => ({
+          title: `${session.ref.id} - ${session.status}`,
+          description: `${session.ref.channel ?? 'internal'} / ${session.ref.workspaceId ?? 'workspace n/a'}`,
+          meta: session.lastEventAt ? new Date(session.lastEventAt).toLocaleString() : 'No recent event',
+        })),
+    [canonical?.runtimeControl.sessions],
+  );
 
   const builderTarget = useMemo(() => {
     if (!selectedNode) return null;
@@ -213,9 +274,40 @@ export default function AgencyBuilderPage() {
     }
   }
 
+  async function handleTopologyAction(action: TopologyRuntimeAction) {
+    if (!selectedConnection) {
+      setError('Select a topology connection first');
+      return;
+    }
+
+    setError(null);
+    setTopologyResult(null);
+    setTopologyActionBusy(action);
+
+    try {
+      const response = await triggerTopologyAction(action, {
+        from: selectedConnection.from,
+        to: selectedConnection.to,
+      });
+      setTopologyResult(response);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to execute topology action');
+    } finally {
+      setTopologyActionBusy(null);
+    }
+  }
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (selectedConnectionId && scopedConnections.some((entry) => entry.id === selectedConnectionId)) {
+      return;
+    }
+    setSelectedConnectionId(scopedConnections[0]?.id ?? null);
+  }, [scopedConnections, selectedConnectionId]);
 
   if (!scope.agencyId) {
     return (
@@ -278,7 +370,13 @@ export default function AgencyBuilderPage() {
             <button
               key={tab}
               type="button"
-              onClick={() => setSearchParams({ tab }, { replace: true })}
+              onClick={() =>
+                setSearchParams((current) => {
+                  const next = new URLSearchParams(current);
+                  next.set('tab', tab);
+                  return next;
+                }, { replace: true })
+              }
               style={{
                 borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--border-primary)',
@@ -346,33 +444,126 @@ export default function AgencyBuilderPage() {
             <h2 style={{ margin: 0, fontSize: 'var(--text-lg)' }}>Topology</h2>
           </div>
           <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
-            Runtime links and connection controls are managed from this macro surface.
+            Graph-first runtime surface with fail-closed control actions and connection inspection.
           </p>
-          {canonical?.topology.connections.length ? (
-            <div style={{ marginTop: 12, border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
-                <thead style={{ background: 'var(--bg-secondary)' }}>
-                  <tr>
-                    <th style={thStyle}>From</th>
-                    <th style={thStyle}>To</th>
-                    <th style={thStyle}>State</th>
-                    <th style={thStyle}>Direction</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {canonical.topology.connections.map((connection) => (
-                    <tr key={connection.id} style={{ borderTop: '1px solid var(--border-primary)' }}>
-                      <td style={tdStyle}>{connection.from.level}:{connection.from.id}</td>
-                      <td style={tdStyle}>{connection.to.level}:{connection.to.id}</td>
-                      <td style={tdStyle}>{connection.state}</td>
-                      <td style={tdStyle}>{connection.direction}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {!canonical ? (
+            <StudioEmptyState title="Loading topology..." description="Fetching canonical topology state." />
+          ) : scopedConnections.length === 0 ? (
+            <StudioEmptyState
+              title="No topology links in this context"
+              description="Create a connection between Agency, Department or Workspace nodes to operate runtime topology."
+            />
           ) : (
-            <p style={{ margin: '10px 0 0', color: 'var(--text-muted)', fontSize: 13 }}>No topology links in current context.</p>
+            <StudioSplitPane
+              left={
+                <div style={{ display: 'grid', gap: 10, padding: 14 }}>
+                  <div
+                    style={{
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--shell-panel-border)',
+                      background: 'var(--shell-chip-bg)',
+                      padding: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: 'var(--text-muted)',
+                        marginBottom: 8,
+                      }}
+                    >
+                      Macro graph
+                    </div>
+
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      {scopedConnections.map((connection) => {
+                        const active = connection.id === selectedConnection?.id;
+                        return (
+                          <button
+                            key={connection.id}
+                            type="button"
+                            onClick={() => setSelectedConnectionId(connection.id)}
+                            style={{
+                              textAlign: 'left',
+                              borderRadius: 'var(--radius-md)',
+                              border: `1px solid ${active ? 'color-mix(in srgb, var(--color-primary) 45%, var(--shell-chip-border))' : 'var(--shell-chip-border)'}`,
+                              background: active ? 'var(--color-primary-soft)' : 'var(--shell-chip-bg)',
+                              padding: '10px 11px',
+                              cursor: 'pointer',
+                              display: 'grid',
+                              gap: 4,
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                              <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                                {connection.from.level}:{connection.from.id} -> {connection.to.level}:{connection.to.id}
+                              </strong>
+                              <RuntimeStatusBadge
+                                status={connection.state === 'connected' ? 'online' : connection.state === 'paused' ? 'degraded' : 'idle'}
+                                label={connection.state}
+                              />
+                            </div>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                              Direction: {connection.direction}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              }
+              right={
+                <div style={{ padding: 14, display: 'grid', gap: 12, alignContent: 'start' }}>
+                  <StudioInspectorCard title="Connection Inspector">
+                    {selectedConnection ? (
+                      <>
+                        <StudioMetricRow label="From" value={`${selectedConnection.from.level}:${selectedConnection.from.id}`} />
+                        <StudioMetricRow label="To" value={`${selectedConnection.to.level}:${selectedConnection.to.id}`} />
+                        <StudioMetricRow label="Direction" value={selectedConnection.direction} />
+                        <StudioMetricRow label="State" value={selectedConnection.state} />
+                      </>
+                    ) : (
+                      <StudioEmptyState title="No selection" description="Select one connection on the graph list." />
+                    )}
+                  </StudioInspectorCard>
+
+                  <StudioInspectorCard title="Runtime Actions">
+                    <StudioToolbarGroup>
+                      {TOPOLOGY_ACTIONS.map((action) => {
+                        const supported = canonical.topology.supportedActions.includes(action);
+                        return (
+                          <button
+                            key={action}
+                            type="button"
+                            onClick={() => void handleTopologyAction(action)}
+                            disabled={!supported || topologyActionBusy !== null || !selectedConnection}
+                            title={supported ? `Execute ${action}` : 'Unsupported by runtime'}
+                            style={actionBtnStyle(
+                              supported ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                              supported ? 'var(--text-primary)' : 'var(--text-muted)',
+                            )}
+                          >
+                            {action}
+                          </button>
+                        );
+                      })}
+                    </StudioToolbarGroup>
+                  </StudioInspectorCard>
+
+                  <StudioInspectorCard title="Current Activity">
+                    {topologyTimeline.length === 0 ? (
+                      <StudioEmptyState title="No session activity" description="Run agents to populate topology activity stream." />
+                    ) : (
+                      <StudioTimelineBlock items={topologyTimeline} />
+                    )}
+                  </StudioInspectorCard>
+                </div>
+              }
+            />
           )}
         </section>
       )}
@@ -478,6 +669,36 @@ export default function AgencyBuilderPage() {
             <p style={{ marginTop: 12, color: 'var(--text-muted)' }}>No diff preview available.</p>
           )}
         </section>
+      )}
+
+      {topologyResult && (
+        <div
+          style={{
+            borderRadius: 'var(--radius-md)',
+            background:
+              topologyResult.status === 'applied'
+                ? 'var(--tone-success-bg)'
+                : topologyResult.status === 'unsupported_by_runtime'
+                  ? 'var(--tone-warning-bg)'
+                  : 'var(--tone-danger-bg)',
+            border: `1px solid ${
+              topologyResult.status === 'applied'
+                ? 'var(--tone-success-border)'
+                : topologyResult.status === 'unsupported_by_runtime'
+                  ? 'var(--tone-warning-border)'
+                  : 'var(--tone-danger-border)'
+            }`,
+            color:
+              topologyResult.status === 'applied'
+                ? 'var(--tone-success-text)'
+                : topologyResult.status === 'unsupported_by_runtime'
+                  ? 'var(--tone-warning-text)'
+                  : 'var(--tone-danger-text)',
+            padding: 12,
+          }}
+        >
+          Topology {topologyResult.action}: {topologyResult.message}
+        </div>
       )}
 
       {notice && (
