@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+﻿import { useEffect, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { NavRail } from '../components/NavRail';
 import { ContextPanel } from '../components/ContextPanel';
 import { Header } from '../components/Header';
 import { useHierarchy } from '../lib/HierarchyContext';
-import { parseBuilderTab, parseNodeQuery, surfaceFromPath } from '../lib/studioRouting';
+import { SCOPE_VIEW_REGISTRY } from '../lib/ScopeViewRegistry';
+import { buildStudioHref, parseBuilderTab, parseNodeQuery, surfaceFromPath } from '../lib/studioRouting';
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
@@ -23,14 +24,18 @@ function useMediaQuery(query: string): boolean {
 }
 
 export function MainLayout() {
+  const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { setSurface, setBuilderTab, selectByKey, tree } = useHierarchy();
+  const { setSurface, setBuilderTab, selectByKey, tree, selectedKey, selectedBuilderTab, selectedLevel } = useHierarchy();
 
   const isDesktop = useMediaQuery('(min-width: 1120px)');
   const isMobile = !useMediaQuery('(min-width: 769px)');
-  const showContext = isDesktop;
-  const isStudioSurface = ['/workspace-studio', '/agency-builder', '/entity-editor', '/runs', '/sessions', '/settings'].some((route) =>
+  const isAdministration = ['/administration', '/agency-builder'].some((route) => location.pathname.startsWith(route));
+  const isStudioEnvironment = location.pathname.startsWith('/workspace-studio');
+  const canOpenStudio = SCOPE_VIEW_REGISTRY[selectedLevel].canEnterStudio;
+  const showContext = isDesktop && (isAdministration || isStudioEnvironment || location.pathname.startsWith('/entity-editor'));
+  const isStudioSurface = ['/workspace-studio', '/administration', '/agency-builder', '/entity-editor', '/runs', '/sessions', '/settings', '/profiles'].some((route) =>
     location.pathname.startsWith(route),
   );
 
@@ -42,7 +47,7 @@ export function MainLayout() {
   }, [location.pathname, setSurface]);
 
   useEffect(() => {
-    if (!location.pathname.startsWith('/agency-builder')) return;
+    if (!location.pathname.startsWith('/agency-builder') && !location.pathname.startsWith('/administration')) return;
     const tab = parseBuilderTab(location.search);
     if (tab) setBuilderTab(tab);
   }, [location.pathname, location.search, setBuilderTab]);
@@ -58,7 +63,7 @@ export function MainLayout() {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : showContext ? '64px 280px 1fr' : '64px 1fr',
+        gridTemplateColumns: isMobile ? '1fr' : showContext ? '88px 280px 1fr' : '88px 1fr',
         gridTemplateRows: '72px 1fr',
         minHeight: '100vh',
         background: 'var(--bg-secondary)',
@@ -106,6 +111,61 @@ export function MainLayout() {
           minWidth: 0,
         }}
       >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+          <div style={{ display: 'inline-flex', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  buildStudioHref({
+                    surface: 'agency-builder',
+                    tab: selectedBuilderTab,
+                    nodeKey: selectedKey,
+                  }),
+                )
+              }
+              style={{
+                border: 'none',
+                padding: '8px 12px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: isAdministration ? 'var(--color-primary-soft)' : 'var(--bg-secondary)',
+                color: isAdministration ? 'var(--color-primary)' : 'var(--text-muted)',
+              }}
+            >
+              Administration
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  buildStudioHref({
+                    surface: 'workspace-studio',
+                    nodeKey: selectedKey,
+                  }),
+                )
+              }
+              disabled={!canOpenStudio}
+              style={{
+                border: 'none',
+                borderLeft: '1px solid var(--border-primary)',
+                padding: '8px 12px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: canOpenStudio ? 'pointer' : 'not-allowed',
+                background: isStudioEnvironment ? 'var(--color-primary-soft)' : 'var(--bg-secondary)',
+                color: isStudioEnvironment ? 'var(--color-primary)' : 'var(--text-muted)',
+                opacity: canOpenStudio ? 1 : 0.65,
+              }}
+            >
+              Studio
+            </button>
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Active scope level: {selectedLevel}
+          </span>
+        </div>
         <Outlet />
       </main>
 
@@ -123,3 +183,4 @@ export function MainLayout() {
     </div>
   );
 }
+

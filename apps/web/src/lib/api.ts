@@ -5,7 +5,12 @@ import {
   CanonicalStudioStateResponse,
   CoreFilesDiffResponse,
   CoreFilesPreviewResponse,
+  DashboardConnectionsDto,
+  DashboardInspectorDto,
+  DashboardOperationsDto,
+  DashboardOverviewDto,
   DeployPreview,
+  EffectiveProfileDto,
   EffectiveConfig,
   FlowSpec,
   HookSpec,
@@ -111,6 +116,85 @@ export async function getBuilderAgentFunction(level: CanonicalNodeLevel, id: str
   const params = new URLSearchParams({ level, id });
   const response = await fetch(`${API_BASE}/builder-agent/function?${params.toString()}`);
   return parseJson<BuilderAgentFunctionOutput>(response);
+}
+
+function toScopeQuery(level: CanonicalNodeLevel, id: string) {
+  const params = new URLSearchParams({ level, id });
+  return params.toString();
+}
+
+export async function getDashboardOverview(level: CanonicalNodeLevel, id: string) {
+  const response = await fetch(`${API_BASE}/dashboard/overview?${toScopeQuery(level, id)}`);
+  return parseJson<DashboardOverviewDto>(response);
+}
+
+export async function getDashboardConnections(level: CanonicalNodeLevel, id: string) {
+  const response = await fetch(`${API_BASE}/dashboard/connections?${toScopeQuery(level, id)}`);
+  return parseJson<DashboardConnectionsDto>(response);
+}
+
+export async function getDashboardInspector(level: CanonicalNodeLevel, id: string) {
+  const response = await fetch(`${API_BASE}/dashboard/inspector?${toScopeQuery(level, id)}`);
+  return parseJson<DashboardInspectorDto>(response);
+}
+
+export async function getDashboardOperations(level: CanonicalNodeLevel, id: string) {
+  const response = await fetch(`${API_BASE}/dashboard/operations?${toScopeQuery(level, id)}`);
+  return parseJson<DashboardOperationsDto>(response);
+}
+
+export async function getEffectiveProfile(level: CanonicalNodeLevel, id: string) {
+  const response = await fetch(`${API_BASE}/dashboard/effective-profile?${toScopeQuery(level, id)}`);
+  return parseJson<EffectiveProfileDto>(response);
+}
+
+export async function bindProfile(level: CanonicalNodeLevel, id: string, profileId: string) {
+  const response = await fetch(`${API_BASE}/dashboard/profile/bind`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ level, id, profileId }),
+  });
+  return parseJson<{ ok: boolean }>(response);
+}
+
+export async function unbindProfile(level: CanonicalNodeLevel, id: string) {
+  const response = await fetch(`${API_BASE}/dashboard/profile/unbind`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ level, id }),
+  });
+  return parseJson<{ ok: boolean }>(response);
+}
+
+export async function saveProfileOverride(
+  level: CanonicalNodeLevel,
+  id: string,
+  overrides: { model?: string; skills?: string[]; routines?: string[]; tags?: string[] },
+) {
+  const response = await fetch(`${API_BASE}/dashboard/profile/override`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ level, id, overrides }),
+  });
+  return parseJson<{ ok: boolean }>(response);
+}
+
+export async function sendRuntimeCommand(
+  level: CanonicalNodeLevel,
+  id: string,
+  action: TopologyRuntimeAction,
+  target?: TopologyNodeRef,
+) {
+  const response = await fetch(`${API_BASE}/dashboard/runtime/command`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ level, id, action, target }),
+  });
+  return parseJson<{
+    command: TopologyRuntimeAction;
+    scope: { level: CanonicalNodeLevel; id: string };
+    result: TopologyActionResult;
+  }>(response);
 }
 
 export async function getRuntimeCapabilities() {

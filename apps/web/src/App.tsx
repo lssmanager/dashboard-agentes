@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import { getStudioState } from './lib/api';
 import { StudioStateResponse } from './lib/types';
@@ -12,7 +12,7 @@ import { MainLayout } from './layouts/MainLayout';
 import { LoadingState } from './components/ui/LoadingState';
 import { OnboardingDrawer } from './features/onboarding/components/OnboardingDrawer';
 import NotFoundPage from './features/overview/pages/NotFoundPage';
-import AgencyBuilderPage from './features/studio/pages/AgencyBuilderPage';
+import AdministrationPage from './features/admin/pages/AdministrationPage';
 import WorkspaceStudioPage from './features/studio/pages/WorkspaceStudioPage';
 import EntityEditorPage from './features/agents/pages/EntityEditorPage';
 import ProfilesPage from './features/profiles/pages/ProfilesPage';
@@ -20,6 +20,11 @@ import SessionsPage from './features/sessions/pages/SessionsPage';
 import RunsPage from './features/runs/pages/RunsPage';
 import SettingsPage from './features/settings/pages/SettingsPage';
 import { AlertTriangle } from 'lucide-react';
+
+function LegacyAgencyBuilderRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/administration${location.search}`} replace />;
+}
 
 export function App() {
   const { theme, setTheme } = usePreferences();
@@ -46,7 +51,7 @@ export function App() {
       const result = await getStudioState();
       setState(result);
     } catch {
-      // silently fail — existing state remains visible
+      // silently fail - existing state remains visible
     }
   }
 
@@ -163,8 +168,9 @@ export function App() {
 
               <Routes>
                 <Route element={<MainLayout />}>
-                  <Route path="/"            element={<Navigate to="/agency-builder?tab=overview" replace />} />
-                  <Route path="/agency-builder" element={<AgencyBuilderPage />} />
+                  <Route path="/"            element={<Navigate to="/administration?tab=overview" replace />} />
+                  <Route path="/administration" element={<AdministrationPage />} />
+                  <Route path="/agency-builder" element={<LegacyAgencyBuilderRedirect />} />
                   <Route path="/workspace-studio" element={<WorkspaceStudioPage />} />
                   <Route path="/entity-editor" element={<EntityEditorPage />} />
                   <Route path="/profiles"    element={<ProfilesPage />} />
@@ -172,16 +178,16 @@ export function App() {
                   <Route path="/runs"        element={<RunsPage />} />
                   <Route path="/settings"    element={<SettingsPage />} />
 
-                  <Route path="/agency-topology" element={<Navigate to="/agency-builder?tab=topology" replace />} />
-                  <Route path="/workspaces" element={<Navigate to="/agency-builder?tab=structure" replace />} />
+                  <Route path="/agency-topology" element={<Navigate to="/administration?tab=connections" replace />} />
+                  <Route path="/workspaces" element={<Navigate to="/administration?tab=overview" replace />} />
                   <Route path="/studio" element={<Navigate to="/workspace-studio" replace />} />
                   <Route path="/agents" element={<Navigate to="/entity-editor" replace />} />
                   <Route path="/agents/new" element={<Navigate to="/entity-editor" replace />} />
                   <Route path="/agents/:id" element={<Navigate to="/entity-editor" replace />} />
-                  <Route path="/routing" element={<Navigate to="/agency-builder?tab=routing" replace />} />
-                  <Route path="/hooks" element={<Navigate to="/agency-builder?tab=hooks" replace />} />
-                  <Route path="/versions" element={<Navigate to="/agency-builder?tab=versions" replace />} />
-                  <Route path="/operations" element={<Navigate to="/agency-builder?tab=operations" replace />} />
+                  <Route path="/routing" element={<Navigate to="/administration?tab=connections" replace />} />
+                  <Route path="/hooks" element={<Navigate to="/administration?tab=connections" replace />} />
+                  <Route path="/versions" element={<Navigate to="/administration?tab=operations" replace />} />
+                  <Route path="/operations" element={<Navigate to="/administration?tab=operations" replace />} />
                   <Route path="/diagnostics" element={<Navigate to="/settings?tab=diagnostics" replace />} />
                   <Route path="/commands" element={<Navigate to="/settings?tab=automations" replace />} />
 

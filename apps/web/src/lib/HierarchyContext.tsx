@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { getCanonicalStudioState } from './api';
+import { resolveScopeCapabilities } from './ScopeCapabilityResolver';
+import { SCOPE_VIEW_REGISTRY, type ScopeViewDefinition } from './ScopeViewRegistry';
 import { useStudioState } from './StudioStateContext';
 import type { AgencyBuilderTab, CanonicalStudioStateResponse, StudioStateResponse, SurfaceId } from './types';
 
@@ -40,6 +42,9 @@ interface HierarchyContextValue {
   scope: HierarchyScope;
   selectedSurface: SurfaceId;
   selectedBuilderTab: AgencyBuilderTab;
+  selectedLevel: HierarchyLevel;
+  selectedScopeView: ScopeViewDefinition;
+  selectedScopeCapabilities: ReturnType<typeof resolveScopeCapabilities>;
   setSurface: (surface: SurfaceId) => void;
   setBuilderTab: (tab: AgencyBuilderTab) => void;
   expandedKeys: string[];
@@ -342,6 +347,10 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
     const value = readStorageString(SELECTED_BUILDER_TAB_KEY);
     if (
       value === 'overview' ||
+      value === 'connections' ||
+      value === 'sessions' ||
+      value === 'profile' ||
+      value === 'settings' ||
       value === 'topology' ||
       value === 'structure' ||
       value === 'routing' ||
@@ -403,6 +412,9 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
   }, [selectedBuilderTab]);
 
   const selectedNode = selectedKey ? tree.nodes[selectedKey] ?? null : null;
+  const selectedLevel: HierarchyLevel = selectedNode?.level ?? 'agency';
+  const selectedScopeView = SCOPE_VIEW_REGISTRY[selectedLevel];
+  const selectedScopeCapabilities = resolveScopeCapabilities(selectedLevel);
   const selectedLineage = useMemo(() => resolveLineage(selectedKey, tree.nodes), [selectedKey, tree.nodes]);
   const scope = useMemo(() => resolveScope(selectedKey, tree.nodes), [selectedKey, tree.nodes]);
   const agencies = useMemo(() => {
@@ -452,6 +464,9 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
     scope,
     selectedSurface,
     selectedBuilderTab,
+    selectedLevel,
+    selectedScopeView,
+    selectedScopeCapabilities,
     setSurface: (surface: SurfaceId) => setSelectedSurface(surface),
     setBuilderTab: (tab: AgencyBuilderTab) => setSelectedBuilderTab(tab),
     expandedKeys,

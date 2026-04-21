@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dashboard Agentes · Fusion V2 + V5</title>
+<style>
+    :root {
+      --bg:#f4f7fb;
+      --bg-2:#eef4fb;
+      --surface:#ffffff;
+      --surface-2:#f8fafc;
+      --surface-3:#edf2f8;
+      --surface-soft:#f4f7fb;
+      --text:#102136;
+      --muted:#55657c;
+      --faint:#73839a;
+      --line:#dbe4ef;
+      --line-2:#e7edf5;
+      --primary:#2563eb;
+      --primary-2:#4c8dff;
+      --primary-soft:rgba(37,99,235,.12);
+      --success:#16a34a;
+      --warning:#d97706;
+      --danger:#dc2626;
+      --success-soft:rgba(22,163,74,.12);
+      --warning-soft:rgba(217,119,6,.12);
+      --danger-soft:rgba(220,38,38,.12);
+      --navy:#0f1b38;
+      --navy-2:#13254a;
+      --navy-soft:#dce8ff;
+      --shadow:0 1px 2px rgba(16,24,40,.06),0 16px 40px rgba(16,24,40,.08);
+      --shadow-lg:0 20px 48px rgba(16,24,40,.12);
+      --r-sm:10px;
+      --r-md:14px;
+      --r-lg:18px;
+      --r-xl:24px;
+      --studio-bg:#f5f7fb;
+      --studio-bg-2:#eef3f9;
+      --studio-panel:#ffffff;
+      --studio-panel-2:#fbfcff;
+      --studio-panel-3:#f4f7fb;
+      --studio-line:#dbe4ef;
+      --studio-line-soft:#e7edf5;
+      --studio-text:#102136;
+      --studio-muted:#5d6e84;
+      --studio-faint:#7a8da5;
+      --studio-accent:#4c8dff;
+      --studio-accent-2:#2563eb;
+      --studio-green:#16a34a;
+      --studio-yellow:#d97706;
+      --studio-orange:#f59e0b;
+      --studio-purple:#7c3aed;
+      --studio-pink:#db2777;
+      --studio-teal:#0f766e;
+      --studio-red:#dc2626;
+      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    }
+
+    html[data-theme="dark"] {
+      --bg:#07111f;
+      --bg-2:#0b1627;
+      --surface:#0d1a2b;
+      --surface-2:#101e31;
+      --surface-3:#13243a;
+      --surface-soft:#0b1626;
+      --text:#edf3fb;
+      --muted:#bfd0e1;
+      --faint:#8fa3bc;
+      --line:#1f3049;
+      --line-2:#253753;
+      --primary:#4c8dff;
+      --primary-2:#72a4ff;
+      --primary-soft:rgba(76,141,255,.16);
+      --success:#34d399;
+      --warning:#fbbf24;
+      --danger:#f87171;
+      --success-soft:rgba(52,211,153,.14);
+      --warning-soft:rgba(251,191,36,.14);
+      --danger-soft:rgba(248,113,113,.14);
+      --navy:#07101f;
+      --navy-2:#0a1730;
+      --navy-soft:#d9e5fb;
+      --shadow:0 0 0 1px rgba(255,255,255,.04),0 18px 40px rgba(0,0,0,.28);
+      --shadow-lg:0 0 0 1px rgba(255,255,255,.04),0 24px 54px rgba(0,0,0,.32);
+      --studio-bg:#0b1320;
+      --studio-bg-2:#101b2c;
+      --studio-panel:#0f1a2b;
+      --studio-panel-2:#132235;
+      --studio-panel-3:#16283f;
+      --studio-line:#24364d;
+      --studio-line-soft:#1d2e45;
+      --studio-text:#edf3fb;
+      --studio-muted:#b7c7d9;
+      --studio-faint:#90a4bf;
+      --studio-accent:#72a4ff;
+      --studio-accent-2:#4c8dff;
+      --studio-green:#34d399;
+      --studio-yellow:#fbbf24;
+      --studio-orange:#fb923c;
+      --studio-purple:#c084fc;
+      --studio-pink:#f472b6;
+      --studio-teal:#5eead4;
+      --studio-red:#f87171;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{background:var(--bg);color:var(--text);overflow:hidden}
+    button,input,textarea,select{font:inherit;color:inherit}
+    button{cursor:pointer}
+    a{text-decoration:none;color:inherit}
+
+    .shell {
+      height:100vh;
+      display:grid;
+      grid-template-rows:64px 1fr;
+      background:linear-gradient(180deg,var(--bg),var(--bg-2));
+    }
+
+    .global-topbar {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      padding:12px 18px;
+      background:color-mix(in srgb,var(--surface) 88%, transparent);
+      backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--line);
+      box-shadow:0 1px 0 rgba(255,255,255,.04) inset;
+      position:relative;
+      z-index:30;
+    }
+    .brand {
+      display:flex;
+      align-items:center;
+      gap:14px;
+      min-width:0;
+    }
+    .brand-mark {
+      width:40px;height:40px;border-radius:14px;
+      background:linear-gradient(135deg,var(--primary),var(--primary-2));
+      color:#fff;display:grid;place-items:center;
+      font-weight:900;font-size:16px;box-shadow:var(--shadow);
+      flex-shrink:0;
+    }
+    .brand-copy h1 {
+      margin:0;font-size:18px;font-weight:900;letter-spacing:-.02em;
+    }
+    .brand-copy p {
+      margin:4px 0 0;font-size:12px;color:var(--muted);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .topbar-center {
+      display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;
+    }
+    .mode-switch {
+      display:flex;gap:6px;padding:4px;border-radius:16px;
+      border:1px solid var(--line);background:var(--surface);
+      box-shadow:var(--shadow);
+    }
+    .mode-btn {
+      height:36px;padding:0 14px;border:none;border-radius:12px;
+      background:transparent;color:var(--muted);font-size:13px;font-weight:800;
+    }
+    .mode-btn.active {background:var(--primary-soft);color:var(--primary)}
+    .pill {
+      display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:999px;
+      border:1px solid var(--line);background:var(--surface);font-size:11px;font-weight:800;color:var(--muted);
+    }
+    .pill.blue{color:var(--primary)}
+    .pill.green{color:var(--success)}
+    .pill.yellow{color:var(--warning)}
+    .topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .layout-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .layout-chip{
+      height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--line);
+      background:var(--surface-2);font-size:11px;font-weight:800;color:var(--muted);
+    }
+    .layout-chip.active{background:var(--surface);color:var(--text);border-color:color-mix(in srgb,var(--primary) 18%, var(--line))}
+    .btn,.ghost-btn,.surface-btn,.subbar-tab,.pane-btn,.control-btn,.bottom-tab,.switcher-action,.tree-toggle,.mini-tab,.seg-btn,.layout-chip,.accordion-toggle,.agency-dropdown-trigger {
+      transition:.16s ease;
+    }
+
+    .dashboard-tools.compact{gap:6px}
+    .icon-btn{
+      width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+      color:var(--muted);display:grid;place-items:center;font-size:14px;font-weight:900;box-shadow:none;
+    }
+    .icon-btn:hover{background:var(--surface-2);color:var(--text)}
+    .icon-btn.active{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 20%, var(--line));color:var(--primary)}
+    .icon-btn.primary{background:var(--primary);border-color:transparent;color:#fff}
+    .icon-btn.live{position:relative}
+    .live-dot{width:10px;height:10px;border-radius:999px;background:var(--success);box-shadow:0 0 0 4px var(--success-soft)}
+    .overview-hero{display:grid;grid-template-columns:1.45fr .95fr;gap:18px;padding:20px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,var(--surface) 0%,var(--surface-2) 100%);box-shadow:var(--shadow)}
+    .overview-hero h2{margin:0 0 8px;font-size:28px;line-height:1.06;letter-spacing:-.03em}
+    .overview-hero p{margin:0;color:var(--muted);font-size:14px;line-height:1.6;max-width:72ch}
+    .overview-pills,.metric-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+    .overview-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:11px;font-weight:800;color:var(--muted)}
+    .overview-side{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start}
+    .overview-mini{padding:14px;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+    .overview-mini .label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--faint)}
+    .overview-mini .value{margin-top:8px;font-size:24px;font-weight:900;letter-spacing:-.03em}
+    .overview-mini .delta{margin-top:6px;font-size:12px;font-weight:800}
+    .metric-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+    .metric-card{padding:16px;border-radius:18px;border:1px solid var(--line);background:var(--surface);min-height:116px;box-shadow:var(--shadow)}
+    .metric-card .label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--faint)}
+    .metric-card .value{margin-top:12px;font-size:28px;font-weight:900;letter-spacing:-.03em}
+    .metric-card .sub{margin-top:10px;font-size:13px;line-height:1.45;color:var(--muted)}
+
+    .btn,.ghost-btn {
+      height:36px;padding:0 14px;border-radius:12px;border:1px solid var(--line);
+      background:var(--surface);font-size:12px;font-weight:800;
+    }
+    .btn.primary{background:var(--primary);border-color:transparent;color:#fff}
+    .btn.warn{color:var(--warning)}
+    .ghost-btn{width:36px;padding:0;display:grid;place-items:center}
+
+    .workspace {min-height:0;position:relative}
+    .environment {display:none;height:100%}
+    .environment.active{display:block}
+
+    /* ===== DASHBOARD ENVIRONMENT ===== */
+    .dashboard-app {
+      height:100%;display:grid;grid-template-columns:272px 1fr 320px;overflow:hidden;
+    }
+    .left {
+      background:linear-gradient(180deg,var(--navy),var(--navy-2));
+      border-right:1px solid rgba(255,255,255,.08);
+      color:var(--navy-soft);display:flex;flex-direction:column;overflow:hidden;
+    }
+    .left *{color:inherit}
+    .left-top{padding:16px 14px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .switcher-label,.tree-label,.surface-group-label,.props-title,.section-title,.group-label,.studio-small-label {
+      font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+    }
+    .switcher-label,.tree-label,.surface-group-label{color:#7f98bf}
+    .agency-dropdown{position:relative;margin-top:10px}
+    .agency-dropdown-trigger{
+      width:100%;display:flex;align-items:center;gap:8px;padding:0;border:none;border-radius:14px;
+      background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);overflow:hidden;
+    }
+    .agency-dropdown-trigger:hover{background:rgba(255,255,255,.06)}
+    .agency-dropdown.open .agency-dropdown-trigger{border-color:rgba(76,141,255,.28);background:rgba(76,141,255,.08)}
+    .agency-caret{width:34px;display:grid;place-items:center;color:#a9bfe0;flex-shrink:0}
+    .agency-dropdown.open .agency-caret{transform:rotate(180deg)}
+    .agency-menu{
+      position:absolute;left:0;right:0;top:calc(100% + 8px);padding:8px;border-radius:16px;
+      background:#11213f;border:1px solid rgba(255,255,255,.09);box-shadow:var(--shadow-lg);display:none;z-index:20;
+    }
+    .agency-dropdown.open .agency-menu{display:grid;gap:6px}
+    .agency-btn {
+      width:100%;display:flex;align-items:center;gap:10px;padding:11px 10px;
+      border-radius:14px;border:1px solid transparent;background:transparent;text-align:left;
+    }
+    .agency-btn:hover{background:rgba(255,255,255,.04)}
+    .agency-btn.active{background:rgba(76,141,255,.15);border-color:rgba(76,141,255,.24)}
+    .agency-menu-item{
+      width:100%;display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;border:1px solid transparent;
+      background:transparent;text-align:left;
+    }
+    .agency-menu-item:hover{background:rgba(255,255,255,.05)}
+    .agency-menu-item.active{background:rgba(76,141,255,.14);border-color:rgba(76,141,255,.22)}
+    .agency-icon{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:12px;font-weight:900;flex-shrink:0}
+    .agency-meta{min-width:0;display:flex;flex-direction:column}
+    .agency-name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .agency-sub{font-size:11px;color:#8aa4cb;margin-top:2px}
+    .switcher-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+    .switcher-action{
+      height:28px;padding:0 9px;border-radius:9px;border:1px solid rgba(255,255,255,.09);
+      background:transparent;font-size:11px;font-weight:800;color:#9db4d7;
+    }
+    .switcher-action:hover{background:rgba(255,255,255,.06);color:#d8e8ff}
+
+    .left-tree{flex:1;overflow:auto;padding:14px 10px}
+    .left-tree::-webkit-scrollbar{width:6px}
+    .left-tree::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px}
+    .tree-node {
+      display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:10px;
+      font-size:13px;color:#c1d1ea;cursor:pointer;position:relative;margin-top:3px;
+    }
+    .tree-node:hover{background:rgba(255,255,255,.05)}
+    .tree-node.active{background:rgba(76,141,255,.16);color:#fff;font-weight:800}
+    .tree-node.active::before{content:"";position:absolute;left:0;top:18%;height:64%;width:3px;border-radius:3px;background:#72a4ff}
+    .tree-toggle{
+      width:16px;height:16px;border:none;border-radius:4px;background:transparent;
+      display:grid;place-items:center;color:#8fa7cc;font-size:10px;padding:0;flex-shrink:0;
+    }
+    .tree-icon{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:11px;flex-shrink:0}
+    .icon-agency{background:rgba(76,141,255,.18);color:#8db7ff}
+    .icon-dept{background:rgba(99,102,241,.18);color:#adb2ff}
+    .icon-ws{background:rgba(16,185,129,.18);color:#7fe3bf}
+    .icon-agent{background:rgba(245,158,11,.18);color:#ffd27f}
+    .icon-sub{background:rgba(236,72,153,.15);color:#ffb6da}
+    .node-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .node-badge{padding:2px 6px;border-radius:999px;background:rgba(255,255,255,.07);font-size:10px;font-weight:800;color:#8ea6ca;flex-shrink:0}
+    .tree-children{padding-left:18px;position:relative}
+    .tree-children::before{content:"";position:absolute;left:13px;top:0;bottom:6px;width:1px;background:rgba(255,255,255,.06)}
+
+    .left-footer{border-top:1px solid rgba(255,255,255,.08);padding:12px 10px;display:flex;flex-direction:column;gap:10px}
+    .surface-btn {
+      width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+      height:38px;padding:0 10px;border-radius:10px;border:1px solid transparent;
+      background:transparent;color:#a5bbda;font-size:13px;font-weight:700;
+    }
+    .surface-btn:hover{background:rgba(255,255,255,.05);color:#dde9ff}
+    .surface-btn.active{background:rgba(76,141,255,.14);border-color:rgba(76,141,255,.22);color:#fff}
+    .s-icon{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;flex-shrink:0}
+    .s-build{background:rgba(76,141,255,.16);color:#8db7ff}
+    .s-operate{background:rgba(16,185,129,.16);color:#7fe3bf}
+    .s-config{background:rgba(148,163,184,.14);color:#c7d1df}
+
+    .dashboard-center{display:flex;flex-direction:column;overflow:hidden}
+    .dashboard-bar {
+      height:58px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:0 20px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 82%, transparent);
+      backdrop-filter:blur(12px);flex-shrink:0;
+    }
+    .crumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--faint);min-width:0}
+    .crumb strong{color:var(--text);font-size:14px;font-weight:800}
+    .crumb span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .crumb .sep{opacity:.5}
+    .dashboard-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    #dashboardEnv.dashboard-collapsed-left .dashboard-app{grid-template-columns:0 1fr 320px}
+    #dashboardEnv.dashboard-collapsed-left .left{display:none}
+    #dashboardEnv.dashboard-collapsed-right .dashboard-app{grid-template-columns:272px 1fr 0}
+    #dashboardEnv.dashboard-collapsed-right .dashboard-props{display:none}
+    #dashboardEnv.dashboard-collapsed-left.dashboard-collapsed-right .dashboard-app{grid-template-columns:0 1fr 0}
+
+    .subbar {
+      height:46px;padding:0 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;
+      overflow-x:auto;background:var(--surface-2);flex-shrink:0;
+    }
+    .subbar::-webkit-scrollbar{height:0}
+    .subbar-tab {
+      height:34px;padding:0 13px;border-radius:10px;border:1px solid transparent;
+      background:transparent;font-size:13px;font-weight:700;color:var(--faint);white-space:nowrap;
+    }
+    .subbar-tab:hover{background:var(--surface-3);color:var(--text)}
+    .subbar-tab.active{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 20%, var(--line));color:var(--primary)}
+
+    .content-area {flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+    .content-area::-webkit-scrollbar{width:8px}
+    .content-area::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px}
+    .view{display:none}
+    .view.active{display:flex;flex-direction:column;gap:16px}
+    .tab-pane{display:none}
+    .tab-pane.active{display:block}
+
+    .card {
+      background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:0 1px 2px rgba(16,24,40,.05),0 10px 28px rgba(16,24,40,.05);overflow:hidden;
+    }
+    .card-head{padding:18px 18px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .card-head h2,.card-head h3{margin:0;font-size:17px;font-weight:900;letter-spacing:-.02em}
+    .card-head p{margin:7px 0 0;font-size:13px;line-height:1.55;color:var(--muted)}
+    .card-body{padding:18px}
+    .badge {
+      display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;
+      border:1px solid var(--line);background:var(--surface-2);font-size:11px;font-weight:900;color:var(--muted);
+    }
+    .badge.primary{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 18%, var(--line));color:var(--primary)}
+    .badge.success{background:var(--success-soft);border-color:color-mix(in srgb,var(--success) 18%, var(--line));color:var(--success)}
+    .badge.warning{background:var(--warning-soft);border-color:color-mix(in srgb,var(--warning) 18%, var(--line));color:var(--warning)}
+    .badge.danger{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 18%, var(--line));color:var(--danger)}
+
+    .grid-2,.grid-3,.grid-4{display:grid;gap:14px}
+    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .kpi{padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--surface-2)}
+    .kpi span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:900;color:var(--faint)}
+    .kpi strong{display:block;margin-top:8px;font-size:28px;font-weight:900;letter-spacing:-.04em}
+    .kpi small{display:block;margin-top:7px;font-size:12px;color:var(--muted)}
+
+    .topology-wrap {
+      min-height:420px;border:1px solid var(--line);border-radius:18px;background:
+        radial-gradient(circle at 8% 8%, color-mix(in srgb,var(--primary) 6%, transparent), transparent 22%),
+        radial-gradient(circle at 92% 92%, color-mix(in srgb,var(--success) 6%, transparent), transparent 22%),
+        linear-gradient(180deg,var(--surface-2),var(--surface));
+      overflow:hidden;position:relative;
+    }
+    .topology-wrap::before{
+      content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(0,0,0,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.04) 1px,transparent 1px);
+      background-size:32px 32px;opacity:.35;pointer-events:none;
+    }
+    html[data-theme="dark"] .topology-wrap::before{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px)}
+    .topology-grid{position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;padding:22px;height:100%}
+    .lane{flex:1;display:flex;flex-direction:column;gap:12px;align-items:center}
+    .lane-label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:900;color:var(--faint)}
+    .mini-node{width:100%;max-width:190px;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+    .mini-node strong{display:block;font-size:13px}
+    .mini-node span{display:block;margin-top:4px;font-size:12px;color:var(--muted);line-height:1.45}
+
+    .list{display:grid;gap:10px}
+    .row,.run-row,.session-row,.config-row {
+      padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);
+    }
+    .row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .row strong,.run-name,.session-name,.config-row strong{display:block;font-size:13px;font-weight:800}
+    .row span,.run-meta,.session-meta,.config-row span{display:block;margin-top:4px;font-size:12px;color:var(--muted);line-height:1.45}
+    .run-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center}
+    .session-row{display:flex;gap:12px;align-items:flex-start}
+    .session-ava{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary);font-weight:900;flex-shrink:0}
+    .delta-good{color:var(--success)} .delta-warn{color:var(--warning)} .delta-bad{color:var(--danger)}
+
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--faint)}
+    .input,.textarea,.select-input {
+      width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);
+      background:var(--surface-2);color:var(--text);outline:none;
+    }
+    .textarea{min-height:92px;resize:vertical}
+    .chip-row{display:flex;flex-wrap:wrap;gap:8px}
+    .chip {
+      display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);
+      font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;
+    }
+    .chip.active,.chip:hover{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 22%, var(--line));color:var(--primary)}
+    .empty {
+      min-height:180px;border:1.5px dashed var(--line);border-radius:18px;background:var(--surface-2);
+      display:grid;place-items:center;text-align:center;padding:20px;color:var(--faint)
+    }
+    .empty strong{display:block;color:var(--text);font-size:14px;margin-bottom:6px}
+    .empty p{margin:0;max-width:42ch;font-size:13px;line-height:1.5}
+
+    .profile-section{display:flex;flex-direction:column;gap:10px}
+    .profile-heading{display:flex;align-items:center;gap:10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--faint)}
+    .profile-heading::after{content:"";flex:1;height:1px;background:var(--line)}
+    .profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .profile-card {
+      padding:14px;border-radius:16px;border:1px solid var(--line);background:var(--surface-2);
+      box-shadow:0 1px 0 rgba(255,255,255,.18) inset;
+    }
+    .profile-card strong{display:block;font-size:13px;font-weight:900}
+    .profile-card small{display:block;margin-top:5px;font-size:12px;color:var(--muted);line-height:1.45}
+    .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .tag{padding:4px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:10px;font-weight:900}
+
+    .chat-wrap{border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden;display:flex;flex-direction:column;min-height:350px}
+    .chat-messages{flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:auto;background:linear-gradient(180deg,var(--surface),var(--surface-2))}
+    .chat-msg{display:flex;gap:10px;align-items:flex-start}
+    .chat-msg.user{flex-direction:row-reverse}
+    .bubble{
+      padding:10px 12px;border-radius:14px;max-width:64ch;font-size:13px;line-height:1.55;
+      border:1px solid var(--line);background:var(--surface-2)
+    }
+    .chat-msg.user .bubble{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 20%, var(--line))}
+    .chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+
+    .dashboard-props {
+      border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;
+    }
+    .props-head{padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+    .props-head .props-title{color:var(--faint);margin-bottom:7px}
+    .props-name{font-size:19px;font-weight:900;line-height:1.15}
+    .props-meta{font-size:12px;color:var(--muted);margin-top:5px}
+    .props-body{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg,var(--surface),var(--surface-soft))}
+    .props-body::-webkit-scrollbar{width:6px}
+    .props-body::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px}
+    .accordion-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden}
+    .accordion-toggle{
+      width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:14px 14px;border:none;background:var(--surface);font-size:13px;font-weight:900;color:var(--text);text-align:left;
+    }
+    .accordion-toggle:hover{background:var(--surface-2)}
+    .accordion-toggle.active{background:var(--primary-soft);color:var(--primary)}
+    .accordion-caret{font-size:11px}
+    .accordion-card.collapsed .accordion-toggle{background:var(--surface)}
+    .accordion-card.collapsed .accordion-caret{transform:rotate(-90deg)}
+    .accordion-content{padding:0 14px 14px;display:grid;gap:10px;background:var(--surface)}
+    .accordion-card.collapsed .accordion-content{display:none}
+    .section-title{color:var(--faint);padding-bottom:6px;border-bottom:1px solid var(--line)}
+    .props-card{padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2)}
+    .props-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:13px}
+    .props-row:last-child{border-bottom:none}
+    .props-row b{color:var(--muted)}
+    .mini-diff{padding:9px 10px;border-radius:10px;font-size:12px;line-height:1.5}
+    .mini-diff.add{background:var(--success-soft);border-left:3px solid var(--success)}
+    .mini-diff.change{background:var(--warning-soft);border-left:3px solid var(--warning)}
+    .mini-diff.remove{background:var(--danger-soft);border-left:3px solid var(--danger)}
+    .props-footer{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+
+    /* ===== EDITOR ENVIRONMENT ===== */
+    .editor-wrap {
+      height:100%;display:grid;grid-template-rows:44px 1fr;background:var(--studio-bg);
+    }
+    .editor-context {
+      display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;
+      border-bottom:1px solid var(--studio-line-soft);background:color-mix(in srgb,var(--studio-panel) 92%, transparent);color:var(--studio-muted)
+    }
+    .editor-context .crumbs{display:flex;gap:8px;flex-wrap:wrap;font-size:12px}
+    .editor-context .crumbs b{color:var(--studio-text)}
+    .editor-context-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .editor-context .pills{display:flex;gap:8px;flex-wrap:wrap}
+    .studio-layout-controls .layout-chip{
+      background:var(--studio-panel);border-color:var(--studio-line);color:var(--studio-muted);
+    }
+    .studio-layout-controls .layout-chip.active{background:var(--studio-panel-2);color:var(--studio-text);border-color:color-mix(in srgb,var(--studio-accent) 20%, var(--studio-line))}
+    .editor-pill{padding:6px 10px;border-radius:999px;border:1px solid var(--studio-line);background:var(--studio-panel);font-size:11px;font-weight:900;color:var(--studio-muted)}
+    .editor-pill.blue{color:var(--studio-accent)} .editor-pill.green{color:var(--studio-green)} .editor-pill.yellow{color:var(--studio-yellow)}
+
+    .studio-layout {
+      min-height:0;display:grid;grid-template-columns:300px 6px 1fr 6px 390px;grid-template-rows:1fr 6px 180px;
+    }
+    .pane{min-width:0;min-height:0;overflow:hidden;background:var(--studio-panel);color:var(--studio-text)}
+    .left-pane{border-right:1px solid var(--studio-line-soft)}
+    .right-pane{border-left:1px solid var(--studio-line-soft)}
+    .bottom-pane{grid-column:1 / 6;border-top:1px solid var(--studio-line-soft)}
+    .resizer{position:relative;z-index:5;background:transparent}
+    .resizer.vertical{cursor:col-resize}
+    .resizer.horizontal{cursor:row-resize}
+    .resizer:hover::before{content:"";position:absolute;inset:0;background:rgba(122,178,255,.12)}
+    .pane-head {
+      height:52px;padding:0 14px;border-bottom:1px solid var(--studio-line-soft);
+      display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--studio-panel-2)
+    }
+    .pane-head strong{font-size:13px;font-weight:900}
+    .pane-actions{display:flex;gap:6px}
+    .pane-btn{width:28px;height:28px;border-radius:9px;border:1px solid var(--studio-line);background:var(--studio-panel);color:var(--studio-muted)}
+    .pane-btn:hover{background:var(--studio-panel-2);color:var(--studio-text)}
+    .pane-body{height:calc(100% - 52px);overflow:auto;padding:14px}
+    .pane-body::-webkit-scrollbar{width:8px;height:8px}
+    .pane-body::-webkit-scrollbar-thumb{background:var(--studio-line);border-radius:999px}
+    .node-search{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--studio-line);background:var(--studio-panel);color:var(--studio-text);margin-bottom:12px;outline:none}
+    .group{display:grid;gap:8px;margin-bottom:14px}
+    .group-label{color:var(--studio-faint)}
+    .palette-item{padding:12px;border-radius:14px;border:1px solid var(--studio-line);background:linear-gradient(180deg,var(--studio-panel-2),var(--studio-panel));cursor:grab}
+    .palette-item strong{display:block;font-size:13px;font-weight:900}
+    .palette-item span{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--studio-muted)}
+
+    .canvas-pane{position:relative}
+    .canvas-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px),radial-gradient(circle at center, rgba(122,178,255,.08), transparent 36%);background-size:26px 26px,26px 26px,100% 100%}
+    .canvas-toolbar{position:absolute;left:16px;right:16px;top:14px;z-index:4;display:flex;justify-content:space-between;gap:10px;align-items:center;pointer-events:none}
+    .canvas-tools{display:flex;gap:8px;flex-wrap:wrap;pointer-events:auto}
+    .tool-pill{padding:7px 10px;border-radius:999px;border:1px solid var(--studio-line);background:color-mix(in srgb,var(--studio-panel) 94%, transparent);color:var(--studio-muted);font-size:12px;font-weight:800;backdrop-filter:blur(10px)}
+    .canvas-scroll{position:absolute;inset:0;overflow:auto;padding:80px 60px 60px}
+    .canvas-scroll::-webkit-scrollbar{width:8px;height:8px}
+    .canvas-scroll::-webkit-scrollbar-thumb{background:var(--studio-line);border-radius:999px}
+    .flow{position:relative;width:2200px;height:1280px;transform-origin:top left}
+    svg.edges{position:absolute;inset:0;overflow:visible;pointer-events:none}
+    .edge{fill:none;stroke:color-mix(in srgb,var(--studio-text) 28%, var(--studio-line));stroke-width:2.4}
+    .edge.active{stroke:var(--studio-accent)} .edge.warn{stroke:var(--studio-yellow)} .edge.success{stroke:var(--studio-green)}
+    .edge-label{fill:var(--studio-muted);font-size:12px;font-weight:900}
+    .workflow-node{
+      position:absolute;width:248px;border-radius:22px;overflow:hidden;border:1px solid var(--studio-line);background:var(--studio-panel);box-shadow:var(--shadow);cursor:grab;user-select:none
+    }
+    .workflow-node.selected{border-color:var(--studio-accent);box-shadow:0 0 0 4px rgba(122,178,255,.12),var(--shadow)}
+    .workflow-node.multi{box-shadow:0 0 0 3px rgba(243,193,93,.12),var(--shadow)}
+    .workflow-node.dragging{cursor:grabbing}
+    .node-bar{height:6px}
+    .b-start{background:linear-gradient(90deg,var(--studio-green),#b0f0c9)}
+    .b-agent{background:linear-gradient(90deg,var(--studio-accent-2),var(--studio-accent))}
+    .b-logic{background:linear-gradient(90deg,var(--studio-yellow),#ffd57d)}
+    .b-data{background:linear-gradient(90deg,var(--studio-purple),#d4bbff)}
+    .b-tool{background:linear-gradient(90deg,var(--studio-teal),#bbf1eb)}
+    .b-end{background:linear-gradient(90deg,#9babc0,#d8e3ee)}
+    .node-body{padding:14px}
+    .node-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .node-title strong{display:block;font-size:15px;line-height:1.2;font-weight:900}
+    .node-title span{display:block;margin-top:4px;font-size:12px;color:var(--studio-muted)}
+    .node-icon{width:32px;height:32px;border-radius:11px;border:1px solid var(--studio-line);background:var(--studio-panel-3);display:grid;place-items:center;font-size:15px;font-weight:900}
+    .node-code{margin-top:12px;padding:10px 11px;border-radius:12px;border:1px solid var(--studio-line-soft);background:var(--studio-panel-3);color:var(--studio-muted);font-size:12px;line-height:1.45;white-space:pre-line}
+    .node-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+    .node-tag{padding:4px 8px;border-radius:999px;border:1px solid var(--studio-line);background:var(--studio-panel-3);font-size:11px;color:var(--studio-muted)}
+    .port{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--studio-panel);border:2px solid color-mix(in srgb,var(--studio-accent) 45%, var(--studio-line))}
+    .port.in{left:-6px;top:50%;transform:translateY(-50%)}
+    .port.out{right:-6px;top:50%;transform:translateY(-50%)}
+    .port.top{left:50%;top:-6px;transform:translateX(-50%)}
+    .port.bottom{left:50%;bottom:-6px;transform:translateX(-50%)}
+    .sticky-note{position:absolute;width:230px;padding:15px 16px;border-radius:20px;background:#f6e08d;color:#5b4200;font-weight:800;line-height:1.45;box-shadow:0 16px 44px rgba(0,0,0,.38)}
+
+    .mini-map{position:absolute;right:18px;bottom:18px;width:220px;height:144px;border-radius:16px;border:1px solid var(--studio-line);background:color-mix(in srgb,var(--studio-panel) 94%, transparent);backdrop-filter:blur(10px);z-index:4;box-shadow:0 16px 44px rgba(0,0,0,.38);overflow:hidden}
+    .mini-map h4{margin:0;padding:10px 12px 8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--studio-faint)}
+    .mini-map-inner{position:relative;height:calc(100% - 34px);margin:0 10px 10px;border-radius:12px;background:var(--studio-panel-3);border:1px solid var(--studio-line-soft)}
+    .map-dot{position:absolute;width:10px;height:10px;border-radius:4px;background:var(--studio-accent);opacity:.85}
+    .map-dot.logic{background:var(--studio-yellow)} .map-dot.tool{background:var(--studio-teal)} .map-dot.data{background:var(--studio-purple)} .map-dot.end{background:#d0dbe6}
+    .map-viewport{position:absolute;left:22px;top:34px;width:120px;height:74px;border:1px solid rgba(122,178,255,.5);border-radius:10px;background:rgba(122,178,255,.08)}
+    .floating-controls{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:4;display:flex;gap:8px;padding:8px;border-radius:999px;border:1px solid var(--studio-line);background:color-mix(in srgb,var(--studio-panel) 95%, transparent);backdrop-filter:blur(12px);box-shadow:0 16px 44px rgba(0,0,0,.38)}
+    .control-btn{width:38px;height:38px;border:none;border-radius:12px;background:transparent;color:var(--studio-muted);font-size:16px}
+    .control-btn:hover{background:var(--studio-panel-2);color:var(--studio-text)}
+
+    .inspect-card{border:1px solid var(--studio-line);background:linear-gradient(180deg,var(--studio-panel-2),var(--studio-panel));border-radius:16px;padding:14px;margin-bottom:12px}
+    .inspect-card h4{margin:0 0 10px;font-size:14px;font-weight:900}
+    .inspect-card .field{margin-bottom:12px}
+    .inspect-card .field:last-child{margin-bottom:0}
+    .inspect-card .field label{color:var(--studio-faint)}
+    .inspect-card input,.inspect-card textarea,.inspect-card select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--studio-line);background:var(--studio-panel-3);color:var(--studio-text);outline:none}
+    .kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--studio-line-soft);font-size:13px}
+    .kv:last-child{border-bottom:none}
+    .kv span{color:var(--studio-muted)}
+    .switch{width:38px;height:22px;border-radius:999px;background:color-mix(in srgb,var(--studio-line) 75%, white);border:1px solid var(--studio-line);position:relative}
+    .switch::after{content:"";position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px}
+    .switch.on{background:#276efe}
+    .switch.on::after{left:18px}
+    .segment{display:flex;gap:6px;padding:4px;border:1px solid var(--studio-line);border-radius:12px;background:var(--studio-panel-3)}
+    .seg-btn{flex:1;border:none;background:transparent;border-radius:10px;color:var(--studio-muted);padding:8px 10px;font-weight:800}
+    .seg-btn.active{background:var(--studio-panel);color:var(--studio-text)}
+    .schema-chip{display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(187,139,255,.12);color:var(--studio-purple);border:1px solid rgba(187,139,255,.16);font-size:11px;font-weight:900}
+
+    .bottom-tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .bottom-tab{padding:8px 10px;border:none;border-radius:10px;background:transparent;color:var(--studio-muted);font-size:12px;font-weight:900}
+    .bottom-tab.active{background:rgba(122,178,255,.1);border:1px solid rgba(122,178,255,.18);color:var(--studio-accent)}
+    .bottom-panel{display:none;margin-top:12px}
+    .bottom-panel.active{display:block}
+    .log-list{display:grid;gap:10px}
+    .log-item{padding:12px;border-radius:14px;border:1px solid var(--studio-line);background:var(--studio-panel-2);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .log-item strong{display:block;font-size:13px;font-weight:900}
+    .log-item span{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--studio-muted)}
+
+    .studio-collapsed-left .left-pane,.studio-collapsed-left .left-resizer{display:none}
+    .studio-collapsed-right .right-pane,.studio-collapsed-right .right-resizer{display:none}
+    .studio-collapsed-bottom .bottom-pane,.studio-collapsed-bottom .bottom-resizer{display:none}
+    .studio-collapsed-left .studio-layout{grid-template-columns:1fr 6px 390px;grid-template-rows:1fr 6px 180px}
+    .studio-collapsed-right .studio-layout{grid-template-columns:300px 6px 1fr;grid-template-rows:1fr 6px 180px}
+    .studio-collapsed-left.studio-collapsed-right .studio-layout{grid-template-columns:1fr;grid-template-rows:1fr 6px 180px}
+    .studio-collapsed-left.studio-collapsed-right .canvas-pane{grid-column:1}
+    .studio-collapsed-bottom .studio-layout{grid-template-rows:1fr}
+
+    @media (max-width:1440px){
+      .dashboard-app{grid-template-columns:252px 1fr}
+      .dashboard-props{display:none}
+      .grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width:1180px){
+      .dashboard-app{grid-template-columns:1fr}
+      .left{display:none}
+      .studio-layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+      .left-pane,.left-resizer,.right-pane,.right-resizer{display:none!important}
+      .bottom-pane{grid-column:1}
+    }
+    @media (max-width:1200px){
+      .overview-hero,.metric-strip{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width:900px){
+      .overview-hero,.overview-side,.metric-strip{grid-template-columns:1fr}
+
+      .global-topbar{grid-template-columns:1fr;display:grid;gap:12px;height:auto}
+      .brand-copy p{white-space:normal}
+      .grid-2,.grid-3,.grid-4,.profile-grid{grid-template-columns:1fr}
+      .topbar-actions,.dashboard-tools,.topbar-center{justify-content:flex-start}
+    }
+  
+
+.scope-note{font-size:12px;color:var(--muted)}
+    /* ===== EXTRA V5 ===== */
+    .viz-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .soft-panel{padding:16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,var(--surface) 0%,var(--surface-2) 100%)}
+    .soft-panel h3,.soft-panel h4{margin:0 0 6px}
+    .soft-panel p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+    .network-card{min-height:300px;position:relative;overflow:hidden;background:linear-gradient(180deg,var(--surface) 0%,var(--surface-2) 100%)}
+    .network-card svg{width:100%;height:100%}
+    .node-dot{filter:drop-shadow(0 10px 18px rgba(16,24,40,.12))}
+    .meter-stack{display:grid;gap:12px}
+    .meter-row{display:grid;grid-template-columns:150px 1fr 58px;gap:12px;align-items:center}
+    .meter-row span,.meter-row b{font-size:12px;font-weight:800}
+    .meter-row span{color:var(--muted)}
+    .meter-row b{text-align:right}
+    .meter-track{height:12px;border-radius:999px;background:var(--surface-3);border:1px solid var(--line);overflow:hidden}
+    .meter-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--primary),var(--primary-2))}
+    .meter-fill.green{background:linear-gradient(90deg,#0ea5a4,#34d399)}
+    .meter-fill.purple{background:linear-gradient(90deg,#8b5cf6,#ec4899)}
+    .meter-fill.orange{background:linear-gradient(90deg,#fb923c,#f59e0b)}
+    .radial-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .radial-card{padding:14px;border-radius:18px;border:1px solid var(--line);background:var(--surface)}
+    .radial-title{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+    .radial{width:120px;height:120px;margin:0 auto 10px;border-radius:50%;position:relative;background:conic-gradient(var(--ring-color,var(--primary)) calc(var(--value,70) * 1%), var(--surface-3) 0)}
+    .radial::after{content:'';position:absolute;inset:16px;border-radius:50%;background:var(--surface)}
+    .radial strong{position:absolute;inset:0;display:grid;place-items:center;font-size:24px;font-weight:900;color:var(--text);z-index:1}
+    .radial small{display:block;text-align:center;color:var(--muted);font-size:12px;line-height:1.4}
+    .readiness-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .readiness-card{padding:14px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,var(--surface) 0%,var(--surface-2) 100%);box-shadow:var(--shadow)}
+    .readiness-card .cap{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+    .readiness-card strong{display:block;font-size:14px;line-height:1.25;margin-bottom:6px}
+    .readiness-card small{display:block;color:var(--muted);font-size:12px;line-height:1.5}
+    .readiness-card .mini-badge{display:inline-flex;margin-top:10px;padding:5px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:10px;font-weight:900}
+    .flow-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .flow-legend .chip{font-size:11px}
+    .ops-grid-3{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:14px}
+    .config-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .mini-list{display:grid;gap:10px}
+    .mini-item{padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--surface)}
+    .mini-item strong{display:block;font-size:13px;margin-bottom:4px}
+    .mini-item small{display:block;color:var(--muted);font-size:12px;line-height:1.45}
+    .ops-model-bars{display:grid;gap:10px;margin-top:12px}
+    .ops-model-row{display:grid;grid-template-columns:110px 1fr 54px;gap:10px;align-items:center}
+    .ops-model-row span,.ops-model-row b{font-size:12px;font-weight:800}
+    .ops-model-row span{color:var(--muted)}
+    .ops-model-row b{text-align:right}
+    .ops-note{padding:14px;border-radius:16px;border:1px dashed var(--line);background:var(--surface-2);color:var(--muted);font-size:13px;line-height:1.55}
+    .editor-scope-pill{font-weight:900}
+    .global-menu-note{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:11px;line-height:1.5;color:#b8cae7}
+    @media(max-width:1200px){.viz-grid,.readiness-grid,.ops-grid-3,.config-columns,.radial-row{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<div class="shell" id="appRoot">
+<header class="global-topbar">
+<div class="brand">
+<div class="brand-mark">DA</div>
+<div class="brand-copy">
+<h1>Dashboard Agentes · Fusion V2 + V5</h1>
+<p>La V2 conserva la administración completa del sistema y la V5 se aísla como editor inmersivo de canvas, sin perder contexto operativo.</p>
+</div>
+</div>
+<div class="topbar-center">
+<div class="mode-switch">
+<button class="mode-btn active" data-env="dashboard">Dashboard Environment</button>
+<button class="mode-btn" data-env="editor">Editor Environment</button>
+</div>
+<span class="pill blue">V2 shell preserved</span>
+<span class="pill yellow">V5 canvas integrated</span>
+<span class="pill green" id="globalContextPill">Workspace: Lead Intake Orchestrator</span>
+</div>
+<div class="topbar-actions">
+<button class="btn" id="debugBtn">Debug state</button>
+<button class="btn warn">Validate</button>
+<button class="btn primary" id="primaryActionBtn">Generate</button>
+<button class="ghost-btn" id="themeBtn" title="Cambiar tema">☀</button>
+</div>
+</header>
+<main class="workspace">
+<!-- DASHBOARD ENV -->
+<section class="environment active" id="dashboardEnv">
+<div class="dashboard-app">
+<aside class="left">
+<div class="left-top">
+<div class="switcher-label">Agency Switcher</div>
+<div class="agency-dropdown" id="agencyDropdown">
+<button class="agency-dropdown-trigger" id="agencyDropdownTrigger" onclick="toggleAgencyMenu(event)">
+<div class="agency-btn active" id="agency-current">
+<div class="agency-icon" id="agencyCurrentIcon" style="background:rgba(76,141,255,.22);color:#80aaff">LS</div>
+<div class="agency-meta">
+<span class="agency-name" id="agencyCurrentName">LSS Manager Network</span>
+<span class="agency-sub" id="agencyCurrentMeta">6 depts · 14 workspaces · 42 agents</span>
+</div>
+</div>
+<span class="agency-caret" id="agencyCaret">▾</span>
+</button>
+<div class="agency-menu" id="agencyMenu">
+<button class="agency-menu-item active" id="agency-item-lss" onclick="selectAgency('lss')">
+<div class="agency-icon" style="background:rgba(76,141,255,.22);color:#80aaff">LS</div>
+<div class="agency-meta">
+<span class="agency-name">LSS Manager Network</span>
+<span class="agency-sub">6 depts · 14 workspaces · 42 agents</span>
+</div>
+</button>
+<button class="agency-menu-item" id="agency-item-nova" onclick="selectAgency('nova')">
+<div class="agency-icon" style="background:rgba(99,102,241,.22);color:#a5a8ff">NV</div>
+<div class="agency-meta">
+<span class="agency-name">Nova Agency</span>
+<span class="agency-sub">4 depts · 8 workspaces · 21 agents</span>
+</div>
+</button>
+</div>
+</div>
+<div class="switcher-actions">
+<button class="switcher-action">+ New Agency</button>
+<button class="switcher-action">Manage</button>
+</div>
+</div>
+<div class="left-tree">
+<div class="tree-label">Hierarchy</div>
+<div class="tree-node active" data-id="lss" data-level="agency" onclick="selectNode('agency','lss')">
+<span class="tree-icon icon-agency">🏢</span>
+<span class="node-name">LSS Manager Network</span>
+<span class="node-badge">Agency</span>
+</div>
+<div class="tree-children">
+<div class="tree-node" data-id="growth" data-level="dept" onclick="selectNode('dept','growth')">
+<button class="tree-toggle" onclick="event.stopPropagation();toggleTree('growth-tree', this)">▾</button>
+<span class="tree-icon icon-dept">🧩</span>
+<span class="node-name">Growth &amp; Admissions</span>
+<span class="node-badge">Dept</span>
+</div>
+<div class="tree-children" id="growth-tree">
+<div class="tree-node" data-id="lead-intake" data-level="workspace" onclick="selectNode('workspace','lead-intake')">
+<button class="tree-toggle" onclick="event.stopPropagation();toggleTree('lead-agents', this)">▾</button>
+<span class="tree-icon icon-ws">🗂</span>
+<span class="node-name">Lead Intake Orchestrator</span>
+<span class="node-badge">WS</span>
+</div>
+<div class="tree-children" id="lead-agents">
+<div class="tree-node" data-id="qualifier" data-level="agent" onclick="selectNode('agent','qualifier')">
+<button class="tree-toggle" onclick="event.stopPropagation();toggleTree('qualifier-subs', this)">▸</button>
+<span class="tree-icon icon-agent">🤖</span>
+<span class="node-name">Lead Qualifier Agent</span>
+<span class="node-badge">Agent</span>
+</div>
+<div class="tree-children" id="qualifier-subs" style="display:none">
+<div class="tree-node" data-id="fb-scraper" data-level="subagent" onclick="selectNode('subagent','fb-scraper')">
+<span class="tree-icon icon-sub">⚡</span>
+<span class="node-name">FB Scraper Subagent</span>
+</div>
+<div class="tree-node" data-id="email-validator" data-level="subagent" onclick="selectNode('subagent','email-validator')">
+<span class="tree-icon icon-sub">⚡</span>
+<span class="node-name">Email Validator</span>
+</div>
+</div>
+<div class="tree-node" data-id="crm-sync" data-level="agent" onclick="selectNode('agent','crm-sync')">
+<span class="tree-icon icon-agent">🤖</span>
+<span class="node-name">CRM Sync Agent</span>
+<span class="node-badge">Agent</span>
+</div>
+</div>
+<div class="tree-node" data-id="nurture-ws" data-level="workspace" onclick="selectNode('workspace','nurture-ws')">
+<span class="tree-icon icon-ws">🗂</span>
+<span class="node-name">Nurture Campaigns WS</span>
+<span class="node-badge">WS</span>
+</div>
+</div>
+<div class="tree-node" data-id="ops" data-level="dept" onclick="selectNode('dept','ops')">
+<button class="tree-toggle" onclick="event.stopPropagation();toggleTree('ops-tree', this)">▸</button>
+<span class="tree-icon icon-dept">🧩</span>
+<span class="node-name">Operations</span>
+<span class="node-badge">Dept</span>
+</div>
+<div class="tree-children" id="ops-tree" style="display:none">
+<div class="tree-node" data-id="support-ws" data-level="workspace" onclick="selectNode('workspace','support-ws')">
+<span class="tree-icon icon-ws">🗂</span>
+<span class="node-name">Support Desk WS</span>
+<span class="node-badge">WS</span>
+</div>
+</div>
+<div class="tree-node" data-id="mkt" data-level="dept" onclick="selectNode('dept','mkt')">
+<button class="tree-toggle" onclick="event.stopPropagation();toggleTree('mkt-tree', this)">▸</button>
+<span class="tree-icon icon-dept">🧩</span>
+<span class="node-name">Marketing</span>
+<span class="node-badge">Dept</span>
+</div>
+<div class="tree-children" id="mkt-tree" style="display:none">
+<div class="tree-node" data-id="ads-ws" data-level="workspace" onclick="selectNode('workspace','ads-ws')">
+<span class="tree-icon icon-ws">🗂</span>
+<span class="node-name">Ads Workspace</span>
+<span class="node-badge">WS</span>
+</div>
+<div class="tree-node" data-id="content-ws" data-level="workspace" onclick="selectNode('workspace','content-ws')">
+<span class="tree-icon icon-ws">🗂</span>
+<span class="node-name">Content WS</span>
+<span class="node-badge">WS</span>
+</div>
+</div>
+</div>
+</div>
+<div class="left-footer">
+<div>
+<div class="surface-group-label">Global</div>
+<button class="surface-btn" id="surface-profiles" onclick="setSurface('profiles')"><span class="s-icon s-build">✦</span>Profiles Hub</button>
+<button class="surface-btn" id="surface-settings" onclick="setSurface('settings')"><span class="s-icon s-config">⚙</span>Settings</button>
+<div class="global-menu-note">Dashboard ya no vive como menú. El hierarchy gobierna el filtro del scope y las tabs del centro.</div>
+</div>
+</div>
+</aside>
+<section class="dashboard-center">
+<div class="dashboard-bar">
+<div class="crumb" id="dashboardCrumb"></div>
+<div class="dashboard-tools compact">
+<button class="icon-btn active" id="dashboard-toggle-left" onclick="toggleDashboardPane('left')" title="Toggle hierarchy">☷</button>
+<button class="icon-btn active" id="dashboard-toggle-right" onclick="toggleDashboardPane('right')" title="Toggle inspector">◫</button>
+<button class="icon-btn live" title="Runtime live"><span class="live-dot"></span></button>
+<button class="icon-btn" onclick="switchEnv('editor')" title="Open editor">✎</button>
+<button class="icon-btn primary" id="dashboardActionBtn" title="Generate">✦</button>
+</div>
+</div>
+<div class="subbar" id="dashboardSubbar"></div>
+<div class="content-area">
+<div class="view active" id="view-agency-builder">
+<div class="tab-pane" id="pane-overview">
+<section class="overview-hero">
+<div>
+<h2>Dashboard filtrado por <span id="overviewEntityName">LSS Manager Network</span></h2>
+<p>
+        El hierarchy ahora actúa como filtro del nivel activo. El overview resume runtime, modelos, costos,
+        tokens, presupuesto, runs y sesiones del scope seleccionado, sin duplicar menús ni repetir las mismas vistas.
+      </p>
+<div class="overview-pills">
+<span class="overview-pill">Hierarchy-driven filter</span>
+<span class="overview-pill">Models + spend visible</span>
+<span class="overview-pill">Sessions and runtime at selected scope</span>
+<span class="overview-pill">Editor kept separate</span>
+</div>
+</div>
+<div class="overview-side">
+<div class="overview-mini"><div class="label">Selected scope</div><div class="value" id="overviewScopeValue">Agency</div><div class="delta delta-good">Filtered by hierarchy</div></div>
+<div class="overview-mini"><div class="label">Runtime</div><div class="value" id="ovRuntime">Live</div><div class="delta delta-good">Healthy gateway</div></div>
+<div class="overview-mini"><div class="label">Primary model mix</div><div class="value" id="ovModel">GPT-5.4</div><div class="delta">Current default / fallback</div></div>
+<div class="overview-mini"><div class="label">Spend 24h</div><div class="value" id="ovSpend">$1,842</div><div class="delta" id="ovBudget">72% budget used</div></div>
+</div>
+</section>
+<div class="metric-strip" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+<div class="metric-card"><div class="label">Connections</div><div class="value" id="ovConnections">24</div><div class="sub">Channels, handoffs, webhooks and supported edges at this level.</div></div>
+<div class="metric-card"><div class="label">Runs 24h</div><div class="value" id="ovRuns">814</div><div class="sub">All executions aggregated for the selected scope.</div></div>
+<div class="metric-card"><div class="label">Sessions</div><div class="value" id="ovSessions">126</div><div class="sub">Live and tracked conversations under this hierarchy node.</div></div>
+<div class="metric-card"><div class="label">Tokens 24h</div><div class="value" id="ovTokens">48.2M</div><div class="sub">Prompt + completion volume with room for cost review.</div></div>
+<div class="metric-card"><div class="label">Budget usage</div><div class="value" id="ovBudgetValue">72%</div><div class="sub">Soft / hard caps and escalation thresholds visible in Operations.</div></div>
+<div class="metric-card"><div class="label">Reusable presets</div><div class="value" id="ovPresetReuse">14</div><div class="sub">Shared model, tool and identity presets reusable below this node.</div></div>
+</div>
+<div class="grid-2">
+<article class="card">
+<div class="card-head"><div><h2>Model mix and cost profile</h2><p>Overview now shows which models dominate the selected scope and how that impacts spend.</p></div><span class="badge primary">Models</span></div>
+<div class="card-body list">
+<div class="row"><div><strong id="ovModelMix1Name">GPT-5.4</strong><span id="ovModelMix1Meta">Primary reasoning model · 41% of spend</span></div><span class="badge primary" id="ovModelMix1Share">41%</span></div>
+<div class="row"><div><strong id="ovModelMix2Name">Claude Sonnet</strong><span id="ovModelMix2Meta">Fallback / long context · 27% of spend</span></div><span class="badge" id="ovModelMix2Share">27%</span></div>
+<div class="row"><div><strong id="ovModelMix3Name">GPT-5.4 mini</strong><span id="ovModelMix3Meta">Fast classification and routing · 18% of spend</span></div><span class="badge success" id="ovModelMix3Share">18%</span></div>
+<div class="row"><div><strong>Tool / webhook overhead</strong><span>Retries, third-party calls and replay checkpoints.</span></div><span class="badge warning" id="ovToolOverhead">14%</span></div>
+</div>
+</article>
+<article class="card">
+<div class="card-head"><div><h2>Scope snapshot</h2><p>A compact executive summary tied to the active hierarchy selection.</p></div><span class="badge success">Filtered</span></div>
+<div class="card-body grid-2">
+<div class="props-card"><div class="section-title">Ownership</div><div class="props-row"><b>Scope owner</b><span id="ovOwner">Sebastian</span></div><div class="props-row"><b>Applies to</b><span id="ovApplies">Departments · Workspaces · Agents</span></div><div class="props-row"><b>Runtime mode</b><span id="ovRuntimeMode">OpenClaw live</span></div></div>
+<div class="props-card"><div class="section-title">Budgeting</div><div class="props-row"><b>Soft cap</b><span id="ovSoftCap">$2,000 / day</span></div><div class="props-row"><b>Hard cap</b><span id="ovHardCap">$2,400 / day</span></div><div class="props-row"><b>Escalation</b><span id="ovEscalation">Ops review above 85%</span></div></div>
+</div>
+</article>
+</div>
+</div>
+<div class="tab-pane" id="pane-connections">
+<div class="grid-2">
+<article class="card">
+<div class="card-head"><div><h2>Connections · hierarchy + flows</h2><p>Topology, structure, routing &amp; channels y hooks se leen como una sola capa visual filtrada por el nodo activo del hierarchy.</p></div><span class="badge success">Filtered</span></div>
+<div class="card-body">
+<div class="topology-wrap">
+<div class="topology-grid">
+<div class="lane"><div class="lane-label">Scope</div><div class="mini-node"><strong id="connectionScopeName">LSS Manager Network</strong><span id="connectionScopeMeta">Selected hierarchy node</span></div></div>
+<div class="lane"><div class="lane-label">Structure</div><div class="mini-node"><strong>Children</strong><span id="connectionChildren">6 departments · 14 workspaces</span></div><div class="mini-node"><strong>Reusable presets</strong><span id="connectionReusable">14 reusable configs</span></div></div>
+<div class="lane"><div class="lane-label">Routing &amp; Channels</div><div class="mini-node"><strong>Routing</strong><span id="connChannels">WhatsApp · Email · Discord</span></div><div class="mini-node"><strong>Handoffs</strong><span id="connHandoffs">21 handoffs / 24h</span></div></div>
+<div class="lane"><div class="lane-label">Hooks</div><div class="mini-node"><strong>Lifecycle hooks</strong><span id="connHooks">6 active · 1 partial</span></div><div class="mini-node"><strong>Webhook health</strong><span id="connWebhook">3 endpoints monitored</span></div></div>
+</div>
+</div>
+<div class="flow-legend"><span class="chip active">Hierarchy filter</span><span class="chip">Visual topology</span><span class="chip">Flow graph</span><span class="chip">Meters</span></div>
+</div>
+</article>
+<article class="card network-card">
+<div class="card-head"><div><h2>Dependency graph</h2><p>Lectura más neuronal: qué está ligado a qué, qué depende de qué y sobre qué capa corre cada relación.</p></div><span class="badge primary">Graph</span></div>
+<div class="card-body" style="min-height:320px">
+<svg viewBox="0 0 640 320" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="edgeBlue" x1="0" x2="1"><stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#4cc9f0"/></linearGradient>
+<linearGradient id="edgePink" x1="0" x2="1"><stop offset="0%" stop-color="#db2777"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient>
+<linearGradient id="edgeGreen" x1="0" x2="1"><stop offset="0%" stop-color="#0ea5a4"/><stop offset="100%" stop-color="#34d399"/></linearGradient>
+</defs>
+<path d="M115 90 C180 90, 210 70, 274 90" fill="none" stroke="url(#edgeBlue)" stroke-width="6" opacity=".8"/>
+<path d="M115 90 C188 90, 196 150, 274 170" fill="none" stroke="url(#edgePink)" stroke-width="6" opacity=".75"/>
+<path d="M318 90 C382 90, 416 74, 480 96" fill="none" stroke="url(#edgeBlue)" stroke-width="6" opacity=".85"/>
+<path d="M318 170 C382 170, 420 176, 488 208" fill="none" stroke="url(#edgeGreen)" stroke-width="6" opacity=".85"/>
+<path d="M488 96 C544 96, 558 122, 584 156" fill="none" stroke="url(#edgePink)" stroke-width="6" opacity=".65"/>
+<path d="M488 208 C540 208, 550 194, 584 156" fill="none" stroke="url(#edgeGreen)" stroke-width="6" opacity=".7"/>
+<circle class="node-dot" cx="90" cy="90" r="34" fill="#fff" stroke="#f59e0b" stroke-width="10"/>
+<circle class="node-dot" cx="296" cy="90" r="34" fill="#fff" stroke="#ec4899" stroke-width="10"/>
+<circle class="node-dot" cx="296" cy="170" r="34" fill="#fff" stroke="#8b5cf6" stroke-width="10"/>
+<circle class="node-dot" cx="506" cy="96" r="34" fill="#fff" stroke="#3b82f6" stroke-width="10"/>
+<circle class="node-dot" cx="506" cy="208" r="34" fill="#fff" stroke="#14b8a6" stroke-width="10"/>
+<circle class="node-dot" cx="584" cy="156" r="34" fill="#fff" stroke="#22c55e" stroke-width="10"/>
+<text x="90" y="95" text-anchor="middle" font-size="12" font-weight="800" fill="#9a3412">scope</text>
+<text x="296" y="95" text-anchor="middle" font-size="12" font-weight="800" fill="#9d174d">routing</text>
+<text x="296" y="175" text-anchor="middle" font-size="12" font-weight="800" fill="#6d28d9">hooks</text>
+<text x="506" y="101" text-anchor="middle" font-size="12" font-weight="800" fill="#1d4ed8">channels</text>
+<text x="506" y="213" text-anchor="middle" font-size="12" font-weight="800" fill="#0f766e">flows</text>
+<text x="584" y="161" text-anchor="middle" font-size="12" font-weight="800" fill="#166534">ops</text>
+</svg>
+</div>
+</article>
+</div>
+<div class="viz-grid" style="margin-top:14px">
+<article class="card">
+<div class="card-head"><div><h2>Meters</h2><p>Barras para estabilidad de routing, cobertura de hooks, presión de handoffs y densidad de canales.</p></div><span class="badge warning">Measured</span></div>
+<div class="card-body meter-stack">
+<div class="meter-row"><span>Supported edges</span><div class="meter-track"><div class="meter-fill" id="connBarSupported" style="width:82%"></div></div><b id="connBarSupportedLabel">82%</b></div>
+<div class="meter-row"><span>Hook coverage</span><div class="meter-track"><div class="meter-fill green" id="connBarCoverage" style="width:91%"></div></div><b id="connBarCoverageLabel">91%</b></div>
+<div class="meter-row"><span>Routing stability</span><div class="meter-track"><div class="meter-fill purple" id="connBarRouting" style="width:78%"></div></div><b id="connBarRoutingLabel">78%</b></div>
+<div class="meter-row"><span>Handoff pressure</span><div class="meter-track"><div class="meter-fill orange" id="connBarHandoffs" style="width:84%"></div></div><b id="connBarHandoffsLabel">84%</b></div>
+</div>
+</article>
+<article class="card">
+<div class="card-head"><div><h2>Radial summaries</h2><p>Lectura rápida tipo infographic para conexión soportada, cobertura de hooks y conectividad activa.</p></div><span class="badge primary">Radial</span></div>
+<div class="card-body radial-row">
+<div class="radial-card"><div class="radial-title">Edges</div><div class="radial" id="connRadialEdges" style="--value:82;--ring-color:#2563eb"><strong id="connSupported">82%</strong></div><small>Runtime-supported topology actions</small></div>
+<div class="radial-card"><div class="radial-title">Hooks</div><div class="radial" id="connRadialHooks" style="--value:91;--ring-color:#14b8a6"><strong id="connCoverage">91%</strong></div><small>before/after lifecycle coverage</small></div>
+<div class="radial-card"><div class="radial-title">Channels</div><div class="radial" id="connRadialChannels" style="--value:64;--ring-color:#8b5cf6"><strong id="connChannelCount">4</strong></div><small>Active channels at selected scope</small></div>
+</div>
+</article>
+</div>
+<div style="margin-top:14px" class="grid-2">
+<article class="card">
+<div class="card-head"><div><h2>Readiness · connection layer</h2><p>Las piezas que alimentan Connections siguen presentes y listas para configuración.</p></div><span class="badge success">Ready</span></div>
+<div class="card-body readiness-grid">
+<div class="readiness-card"><div class="cap">Structure</div><strong>Structure</strong><small>Ready for workspace configuration.</small><span class="mini-badge">hierarchy</span></div>
+<div class="readiness-card"><div class="cap">Routing</div><strong>Routing &amp; Channels</strong><small>Ready for workspace configuration.</small><span class="mini-badge">channels</span></div>
+<div class="readiness-card"><div class="cap">Hooks</div><strong>Hooks</strong><small>Ready for workspace configuration.</small><span class="mini-badge">lifecycle</span></div>
+</div>
+</article>
+<article class="card">
+<div class="card-head"><div><h2>Connection notes</h2><p>Relación entre estructura, canales, hooks y flows del scope activo.</p></div><span class="badge">Scope</span></div>
+<div class="card-body mini-list">
+<div class="mini-item"><strong>Structure map</strong><small id="connStructureText">Agency → Departments → Workspaces → Agents → Subagents.</small></div>
+<div class="mini-item"><strong>Routing map</strong><small id="connRoutingText">Primary channel routing, fallback channel, and manual replay are visible together.</small></div>
+<div class="mini-item"><strong>Hook chain</strong><small id="connHookText">before_route, before_agent_call, after_route and after_tool_call states summarized.</small></div>
+</div>
+</article>
+</div>
+</div>
+<div class="tab-pane" id="pane-operations">
+<div class="ops-grid-3">
+<article class="card">
+<div class="card-head"><div><h2>Configuration readiness</h2><p>Restaurado: estas superficies no se pierden; ahora viven agrupadas en Operations.</p></div><span class="badge danger">Ready</span></div>
+<div class="card-body readiness-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+<div class="readiness-card"><div class="cap">Identity</div><strong>Identity</strong><small>Ready for workspace configuration.</small><span class="mini-badge">scope</span></div>
+<div class="readiness-card"><div class="cap">Behavior</div><strong>Prompts / Behavior</strong><small>Ready for workspace configuration.</small><span class="mini-badge">prompting</span></div>
+<div class="readiness-card"><div class="cap">Assignment</div><strong>Skills / Tools Assignment</strong><small>Ready for workspace configuration.</small><span class="mini-badge">capabilities</span></div>
+<div class="readiness-card"><div class="cap">Versions</div><strong>Versions</strong><small>Ready for workspace configuration.</small><span class="mini-badge">release</span></div>
+<div class="readiness-card"><div class="cap">Catalog</div><strong>Catalog (Skills/Tools)</strong><small>Ready for agency configuration.</small><span class="mini-badge">global</span></div>
+<div class="readiness-card"><div class="cap">Operations</div><strong>Operations</strong><small>Ready for workspace configuration.</small><span class="mini-badge">runtime</span></div>
+</div>
+</article>
+<article class="card">
+<div class="card-head"><div><h2>Identity + versions</h2><p>Resumen operativo del scope activo con herencia, sharing y releases.</p></div><span class="badge primary">Scope</span></div>
+<div class="card-body grid-2">
+<div class="props-card">
+<div class="section-title">Identity</div>
+<div class="props-row"><b>Name</b><span id="opsIdentityName">LSS Manager Network</span></div>
+<div class="props-row"><b>Owner</b><span id="opsOwner">Sebastian</span></div>
+<div class="props-row"><b>Inheritance</b><span id="opsInheritance">Inherited downward</span></div>
+<div class="props-row"><b>Share mode</b><span id="opsShare">Reusable across children</span></div>
+</div>
+<div class="props-card">
+<div class="section-title">Versions</div>
+<div class="props-row"><b>Current</b><span id="opsVersionCurrent">v2.7 stable</span></div>
+<div class="props-row"><b>Draft</b><span id="opsVersionDraft">1 pending publish</span></div>
+<div class="props-row"><b>Rollback</b><span>Last 3 retained</span></div>
+<div class="props-row"><b>Policy</b><span id="opsVersionState">12 defaults / 3 drafts</span></div>
+</div>
+</div>
+<div class="ops-note" style="margin:0 18px 18px">Identity, prompts, tools, versions y operación quedan juntos porque pertenecen al mismo plano de configuración y control del scope.</div>
+</article>
+<article class="card">
+<div class="card-head"><div><h2>Recent runs</h2><p>Runs quedan visibles dentro de Operations, unidos a policy y budget.</p></div><span class="badge success">Runs</span></div>
+<div class="card-body list">
+<div class="row"><div><strong id="opsRun1">run_8141</strong><span id="opsRun1Meta">Primary routing flow completed successfully.</span></div><span class="badge success">success</span></div>
+<div class="row"><div><strong id="opsRun2">run_8138</strong><span id="opsRun2Meta">Fallback model used after cost-aware escalation.</span></div><span class="badge warning">partial</span></div>
+<div class="row"><div><strong id="opsRun3">run_8127</strong><span id="opsRun3Meta">Replay candidate with retry budget consumed.</span></div><span class="badge danger">review</span></div>
+</div>
+</article>
+</div>
+<div class="grid-2" style="margin-top:14px">
+<article class="card">
+<div class="card-head"><div><h2>Cost Budgets</h2><p>Model selection, token policy, cost type, shareability y reuse policy, ahora dentro del mismo plano operativo.</p></div><span class="badge primary">FinOps</span></div>
+<div class="card-body grid-2">
+<div class="kpi"><span>Daily budget</span><strong id="opsDailyBudget">$2,400</strong><small>Hard cap</small></div>
+<div class="kpi"><span>Budget used</span><strong id="opsBudgetUsed">72%</strong><small>Soft cap reached at 85%</small></div>
+</div>
+<div class="card-body" style="padding-top:0">
+<div class="chip-row" style="margin-bottom:12px">
+<span class="chip active">GPT-5.4</span>
+<span class="chip">GPT-5.4 mini</span>
+<span class="chip">Claude Sonnet</span>
+<span class="chip">Gemini 2.5</span>
+</div>
+<div class="ops-model-bars">
+<div class="ops-model-row"><span>Primary</span><div class="meter-track"><div class="meter-fill" id="opsModelBar1" style="width:46%"></div></div><b id="opsModelBar1Label">46%</b></div>
+<div class="ops-model-row"><span>Fallback</span><div class="meter-track"><div class="meter-fill green" id="opsModelBar2" style="width:32%"></div></div><b id="opsModelBar2Label">32%</b></div>
+<div class="ops-model-row"><span>Long context</span><div class="meter-track"><div class="meter-fill purple" id="opsModelBar3" style="width:14%"></div></div><b id="opsModelBar3Label">14%</b></div>
+<div class="ops-model-row"><span>Tool overhead</span><div class="meter-track"><div class="meter-fill orange" id="opsModelBar4" style="width:8%"></div></div><b id="opsModelBar4Label">8%</b></div>
+</div>
+<div class="mini-list" style="margin-top:12px">
+<div class="mini-item"><strong>Token policy</strong><small id="opsTokenPolicy">50k soft cap · 100k hard cap · long context by exception.</small></div>
+<div class="mini-item"><strong>Shareability</strong><small id="opsShareability">Model presets can be shared downward and reused by child workspaces.</small></div>
+<div class="mini-item"><strong>Reuse strategy</strong><small id="opsReuse">Reuse approved prompt/model bundles before creating a new local override.</small></div>
+</div>
+</div>
+</article>
+<article class="card">
+<div class="card-head"><div><h2>Operational actions</h2><p>Decisiones de operación y gobierno conectadas a budgets, modelos y releases.</p></div><span class="badge warning">Actions</span></div>
+<div class="card-body">
+<div class="chip-row">
+<span class="chip active">Set default model</span>
+<span class="chip">Share preset</span>
+<span class="chip">Create reusable bundle</span>
+<span class="chip">Raise hard cap</span>
+<span class="chip">Require approval</span>
+</div>
+<div class="config-columns" style="margin-top:14px">
+<div class="mini-item"><strong>Cost type</strong><small>Prompt, completion, long-context, tool-call and replay cost layers visible in one place.</small></div>
+<div class="mini-item"><strong>Reuse governance</strong><small>Shared downward where possible; local overrides require review when they increase cost or capability surface.</small></div>
+<div class="mini-item"><strong>Budget guardrails</strong><small>Soft cap escalation, hard cap enforcement, manual approval lanes and replay budget reservation.</small></div>
+<div class="mini-item"><strong>Catalog link</strong><small>Profiles Hub keeps global catalog; Operations binds catalog entries to the current scope.</small></div>
+</div>
+</div>
+</article>
+</div>
+</div>
+<div class="tab-pane" id="pane-sessions">
+<article class="card"><div class="card-head"><div><h2>Sessions for <span id="sessionsTitleName">LSS Manager Network</span></h2><p>Sessions remain separate because they are conversational runtime objects, not configuration.</p></div><span class="badge">Sessions</span></div><div class="card-body list"><div class="row"><div><strong>wa_session_4481</strong><span>WhatsApp lead intake · active 12 min · human fallback not needed.</span></div><span class="badge success">Active</span></div><div class="row"><div><strong>discord_session_1192</strong><span>Support escalation thread with audit trail and routing trace.</span></div><span class="badge">Tracked</span></div><div class="row"><div><strong>email_session_802</strong><span>Nurture follow-up sequence completed and archived.</span></div><span class="badge warning">History</span></div></div></article>
+</div>
+</div>
+<div class="view" id="view-workspace-studio">
+<div class="tab-pane active" id="pane-ws-overview">
+<article class="card">
+<div class="card-head">
+<div>
+<h2>Workspace Overview</h2>
+<p>La V2 mantiene overview, routing, hooks, versions y operations como capas de workspace. El canvas completo se desplaza al Editor Environment.</p>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="badge primary">Editor Environment</span><button class="btn primary" onclick="switchEnv('editor')">Open editor</button></div>
+</div>
+<div class="card-body grid-3">
+<div class="kpi"><span>Workspace</span><strong id="wsOverviewName">Lead Intake</strong><small>Selected context</small></div>
+<div class="kpi"><span>Agents</span><strong>3</strong><small>Qualifier + CRM + helpers</small></div>
+<div class="kpi"><span>Version</span><strong>2.7</strong><small>Draft integrated editor</small></div>
+</div>
+</article>
+<article class="card">
+<div class="card-body">
+<div class="empty"><div><strong>Canvas moved to dedicated editor environment</strong><p>La funcionalidad visual de la V5 no reemplaza el shell operativo. Se separa en un ambiente inmersivo para construir, mientras este dashboard sigue administrando contexto, runtime y configuración.</p></div></div>
+</div>
+</article>
+</div>
+<div class="tab-pane" id="pane-ws-routing">
+<article class="card"><div class="card-head"><div><h2>Workspace Routing</h2><p>Reglas específicas del workspace seleccionado.</p></div><span class="badge success">Channels</span></div><div class="card-body list"><div class="row"><div><strong>Inbound WhatsApp</strong><span>Primary entry into Triage agent.</span></div><span class="badge success">Live</span></div><div class="row"><div><strong>CRM webhook</strong><span>Secondary trigger for enrichment and sync.</span></div><span class="badge">Async</span></div><div class="row"><div><strong>Manual replay</strong><span>Enabled for QA and debugging.</span></div><span class="badge warning">Ops only</span></div></div></article>
+</div>
+<div class="tab-pane" id="pane-ws-hooks">
+<article class="card"><div class="card-head"><div><h2>Workspace Hooks</h2><p>Lifecycle hooks applied only to this workspace.</p></div><span class="badge warning">Hooks</span></div><div class="card-body"><div class="mini-diff add"><strong>before_agent_call</strong><br/>Inject workspace schema and required fields.</div><div class="mini-diff change"><strong>after_route</strong><br/>Persist branch telemetry and trace metadata.</div></div></article>
+</div>
+<div class="tab-pane" id="pane-ws-versions">
+<article class="card"><div class="card-head"><div><h2>Workspace Versions</h2><p>Drafts and releases for this workspace only.</p></div><span class="badge">Versions</span></div><div class="card-body list"><div class="row"><div><strong>lead-intake@2.7.0-draft</strong><span>Includes visual editor mapping and new inspector.</span></div><span class="badge warning">Draft</span></div><div class="row"><div><strong>lead-intake@2.6.4</strong><span>Current stable release.</span></div><span class="badge success">Current</span></div></div></article>
+</div>
+<div class="tab-pane" id="pane-ws-operations">
+<article class="card"><div class="card-head"><div><h2>Workspace Operations</h2><p>Operational controls stay here; editor remains builder-focused.</p></div><span class="badge danger">Operate</span></div><div class="card-body grid-2"><div class="props-card"><div class="section-title">Health</div><div class="props-row"><b>Run success</b><span>98.6%</span></div><div class="props-row"><b>P95 latency</b><span>3.4s</span></div></div><div class="props-card"><div class="section-title">Actions</div><div class="chip-row"><span class="chip active">Replay trace</span><span class="chip">Pause</span><span class="chip">Rollback</span><span class="chip">Export diff</span></div></div></div></article>
+</div>
+</div>
+<div class="view" id="view-profiles">
+<div class="tab-pane" id="pane-profiles">
+<article class="card">
+<div class="card-head"><div><h2>Global Profiles Hub</h2><p>Global reusable profiles from OpenClaw: identities, policies, model presets and inherited bundles.</p></div><span class="badge primary">Profiles</span></div>
+<div class="card-body">
+<div class="profile-grid">
+<div class="profile-card"><strong>Default Runtime Policy</strong><small>Provider, model tiers, fallback ladder and budget defaults reusable across the hierarchy.</small><div class="tag-row"><span class="tag">global</span><span class="tag">runtime</span></div></div>
+<div class="profile-card"><strong>Identity / Compliance Bundle</strong><small>Brand, tone, compliance and data handling rules shared downward.</small><div class="tag-row"><span class="tag">identity</span><span class="tag">policy</span></div></div>
+<div class="profile-card"><strong>Workspace Prompt Pack</strong><small>Reusable prompt skeletons and structured output contracts.</small><div class="tag-row"><span class="tag">workspace</span><span class="tag">prompt</span></div></div>
+<div class="profile-card"><strong>Agent Preset</strong><small>Reasoning level, model, retry and tool allowlist for new agents.</small><div class="tag-row"><span class="tag">agent</span><span class="tag">preset</span></div></div>
+</div>
+</div>
+</article>
+</div>
+<div class="tab-pane" id="pane-skills">
+<article class="card">
+<div class="card-head"><div><h2>Skills</h2><p>Create, upload and version global skills that can later be attached in workspaces or agents.</p></div><span class="badge success">Skills</span></div>
+<div class="card-body list">
+<div class="row"><div><strong>Lead qualification skill</strong><span>Schema normalization, scoring and CRM handoff helpers.</span></div><span class="badge primary">shared</span></div>
+<div class="row"><div><strong>Policy audit skill</strong><span>Compliance checks and runtime diagnostics.</span></div><span class="badge">v4</span></div>
+<div class="row"><div><strong>Upload new skill package</strong><span>OpenClaw skill root / bundle ready.</span></div><span class="badge warning">create</span></div>
+</div>
+</article>
+</div>
+<div class="tab-pane" id="pane-tools">
+<article class="card">
+<div class="card-head"><div><h2>Tools</h2><p>Global tool registry for reusable integrations, permissions and runtime readiness.</p></div><span class="badge warning">Tools</span></div>
+<div class="card-body list">
+<div class="row"><div><strong>HubSpot sync</strong><span>Shared tool with auth and retry policy.</span></div><span class="badge success">ready</span></div>
+<div class="row"><div><strong>Discord bridge</strong><span>Channel tool reusable across workspaces.</span></div><span class="badge">shared</span></div>
+<div class="row"><div><strong>Add new tool</strong><span>Register capability, schema and permission policy.</span></div><span class="badge primary">create</span></div>
+</div>
+</article>
+</div>
+<div class="tab-pane" id="pane-policies">
+<article class="card">
+<div class="card-head"><div><h2>Providers &amp; Policies</h2><p>This absorbs the useful global parts of Settings into the Profiles Hub.</p></div><span class="badge danger">Global</span></div>
+<div class="card-body grid-2">
+<div class="props-card"><div class="section-title">Providers</div><div class="props-row"><b>Primary</b><span>OpenAI</span></div><div class="props-row"><b>Fallback</b><span>Anthropic / Gemini</span></div><div class="props-row"><b>OSS lane</b><span>Tool-first / cost-sensitive flows</span></div></div>
+<div class="props-card"><div class="section-title">Policies</div><div class="props-row"><b>Budget policy</b><span>Soft 85% · Hard 100%</span></div><div class="props-row"><b>Sharing</b><span>Reusable downward by default</span></div><div class="props-row"><b>Approval</b><span>Required for new expensive overrides</span></div></div>
+</div>
+</article>
+</div>
+</div>
+<div class="view" id="view-runs">
+<article class="card">
+<div class="card-head"><div><h2>Runs</h2><p>Observabilidad y filtros por nivel operativo se mantienen como pantalla dedicada del dashboard.</p></div><span class="badge success">Live</span></div>
+<div class="card-body">
+<div class="chip-row" style="margin-bottom:14px"><span class="chip active">All Runs</span><span class="chip">Agency Runs</span><span class="chip">Department Runs</span><span class="chip">Workspace Runs</span><span class="chip">Agent Runs</span></div>
+<div class="list">
+<div class="run-row"><div><div class="run-name">run_8141 · Lead Intake Orchestrator</div><div class="run-meta">WhatsApp → Triage → Condition → Launch helper</div></div><span class="badge success">success</span><div class="run-meta">2.8s · $0.014</div></div>
+<div class="run-row"><div><div class="run-name">run_8138 · Nurture Campaigns WS</div><div class="run-meta">Email follow-up with fallback to CRM note</div></div><span class="badge warning">partial</span><div class="run-meta">4.3s · $0.008</div></div>
+<div class="run-row"><div><div class="run-name">run_8127 · Support Desk WS</div><div class="run-meta">Discord escalation with human approval request</div></div><span class="badge danger">failed</span><div class="run-meta">5.1s · retry queued</div></div>
+</div>
+</div>
+</article>
+</div>
+<div class="view" id="view-sessions">
+<article class="card">
+<div class="card-head"><div><h2>Sessions</h2><p>Mensajes activos, historia y cadena de delegación quedan en el dashboard.</p></div><span class="badge">Sessions</span></div>
+<div class="card-body grid-2">
+<div class="list">
+<div class="session-row"><div class="session-ava">WA</div><div><div class="session-name">Lead intake · WhatsApp</div><div class="session-meta">Active · delegated to Lead Qualifier Agent · 3 turns ago</div></div></div>
+<div class="session-row"><div class="session-ava">EM</div><div><div class="session-name">Nurture follow-up · Email</div><div class="session-meta">History · waiting for human review · 2h ago</div></div></div>
+<div class="session-row"><div class="session-ava">DC</div><div><div class="session-name">Support escalation · Discord</div><div class="session-meta">Active · routed to Support Desk WS · 10m ago</div></div></div>
+</div>
+<div class="chat-wrap">
+<div class="chat-messages">
+<div class="chat-msg agent"><div class="bubble">Hola, puedo ayudarte con la matrícula. ¿Qué grado y programa te interesa?</div></div>
+<div class="chat-msg user"><div class="bubble">Necesito información para IB History y también saber si hay tutoría.</div></div>
+<div class="chat-msg agent"><div class="bubble">Perfecto. Ya entendí el intent y voy a calificar el lead antes de sugerir el siguiente flujo.</div></div>
+</div>
+<div class="chat-input-row"><input class="input" placeholder="Reply as supervisor..."/><button class="btn primary">Send</button></div>
+</div>
+</div>
+</article>
+</div>
+<div class="view" id="view-settings">
+<div class="tab-pane active" id="pane-settings-general">
+<article class="card"><div class="card-head"><div><h2>General</h2><p>Configuración global del sistema.</p></div><span class="badge">Settings</span></div><div class="card-body grid-2"><div class="field"><label>Agency display name</label><input class="input" value="LSS Manager Network"/></div><div class="field"><label>Default locale</label><select class="select-input"><option>es-CO</option><option>en-US</option></select></div><div class="field"><label>Primary domain</label><input class="input" value="dashboard.learnsocialstudies.com"/></div><div class="field"><label>Storage policy</label><select class="select-input"><option>Persistent + audit trail</option></select></div></div></article>
+</div>
+<div class="tab-pane" id="pane-settings-providers">
+<article class="card"><div class="card-head"><div><h2>Providers</h2><p>Proveedor de modelos, prioridad y fallback.</p></div><span class="badge primary">Providers</span></div><div class="card-body list"><div class="config-row"><strong>OpenAI</strong><span>Primary provider for routing and builder agent presets.</span></div><div class="config-row"><strong>Anthropic</strong><span>Fallback for selected long-context tasks.</span></div><div class="config-row"><strong>Local runtime</strong><span>Reserved for internal ops or private workloads.</span></div></div></article>
+</div>
+<div class="tab-pane" id="pane-settings-runtimes">
+<article class="card"><div class="card-head"><div><h2>Runtimes</h2><p>Execution backends and isolated runtime environments.</p></div><span class="badge success">Runtimes</span></div><div class="card-body list"><div class="config-row"><strong>Primary runtime</strong><span>OpenClaw gateway cluster</span></div><div class="config-row"><strong>Workspace runtime</strong><span>Dedicated per workspace where needed</span></div><div class="config-row"><strong>Builder sandbox</strong><span>Preview-only environment for canvas testing</span></div></div></article>
+</div>
+<div class="tab-pane" id="pane-settings-channels">
+<article class="card"><div class="card-head"><div><h2>Channels</h2><p>Connected chat channels and routing policies.</p></div><span class="badge warning">Channels</span></div><div class="card-body list"><div class="config-row"><strong>WhatsApp</strong><span>Enabled · primary intake</span></div><div class="config-row"><strong>Discord</strong><span>Enabled · internal ops and orchestrator panels</span></div><div class="config-row"><strong>Email</strong><span>Enabled · nurture and escalations</span></div></div></article>
+</div>
+<div class="tab-pane" id="pane-settings-integrations">
+<article class="card"><div class="card-head"><div><h2>Integrations</h2><p>CRM, analytics, webhooks and external actions.</p></div><span class="badge">Integrations</span></div><div class="card-body list"><div class="config-row"><strong>HubSpot</strong><span>Active sync for qualified leads</span></div><div class="config-row"><strong>Meta Lead Ads</strong><span>Inbound source for FB scraper</span></div><div class="config-row"><strong>Webhook relay</strong><span>Custom actions and outbound events</span></div></div></article>
+</div>
+<div class="tab-pane" id="pane-settings-diagnostics">
+<article class="card"><div class="card-head"><div><h2>Diagnostics</h2><p>Tracing, logs and observability defaults.</p></div><span class="badge success">Diagnostics</span></div><div class="card-body list"><div class="config-row"><strong>Trace retention</strong><span>30 days</span></div><div class="config-row"><strong>Error alerting</strong><span>Slack + email</span></div><div class="config-row"><strong>Sampling</strong><span>100% for staging, 20% for production</span></div></div></article>
+</div>
+<div class="tab-pane" id="pane-settings-security">
+<article class="card"><div class="card-head"><div><h2>Security / Policies</h2><p>Access, moderation and policy enforcement.</p></div><span class="badge danger">Policies</span></div><div class="card-body grid-2"><div class="props-card"><div class="section-title">Moderation</div><div class="props-row"><b>Jailbreak checks</b><span>Enabled</span></div><div class="props-row"><b>PII masking</b><span>Enabled</span></div></div><div class="props-card"><div class="section-title">Access</div><div class="props-row"><b>RBAC</b><span>Admin / Builder / Ops</span></div><div class="props-row"><b>Audit trail</b><span>Immutable release log</span></div></div></div></article>
+</div>
+</div>
+</div>
+</section>
+<aside class="dashboard-props">
+<div class="props-head">
+<div class="props-title" id="propLevel">Agency</div>
+<div class="props-name" id="propName">LSS Manager Network</div>
+<div class="props-meta" id="propMeta">6 departments · 14 workspaces · 42 agents · 79 subagents</div>
+</div>
+<div class="props-body">
+<div class="accordion-card" data-prop-tab="identity" id="props-identity">
+<button class="accordion-toggle active" data-prop-tab="identity" onclick="togglePropCard('identity')">
+<span>Identity</span>
+<span class="accordion-caret">▾</span>
+</button>
+<div class="accordion-content">
+<div class="props-card">
+<div class="field"><label>Name</label><input class="input" id="identityName" value="LSS Manager Network"/></div>
+<div class="field"><label>Description</label><textarea class="textarea" id="identityDesc">Agencia principal que coordina Growth, Operations y Marketing.</textarea></div>
+<div class="field"><label>Level</label><div id="identityLevelBadge"><span class="badge primary">Agency</span></div></div>
+</div>
+<div class="props-card">
+<div class="section-title">Metadata</div>
+<div class="props-row"><b>Owner</b><span>Sebastian</span></div>
+<div class="props-row"><b>Status</b><span>Active</span></div>
+<div class="props-row"><b>Last release</b><span>v2.6.0</span></div>
+</div>
+</div>
+</div>
+<div class="accordion-card collapsed" data-prop-tab="routing" id="props-routing">
+<button class="accordion-toggle" data-prop-tab="routing" onclick="togglePropCard('routing')">
+<span>Connections</span>
+<span class="accordion-caret">▾</span>
+</button>
+<div class="accordion-content">
+<div class="props-card">
+<div class="section-title">Routing snapshot</div>
+<div class="props-row"><b>Default strategy</b><span>Hierarchical orchestrator</span></div>
+<div class="props-row"><b>Primary channel</b><span>WhatsApp</span></div>
+<div class="props-row"><b>Fallback</b><span>Email + CRM</span></div>
+</div>
+<div class="mini-diff change">Recent change: threshold for human escalation moved from 0.45 to 0.55.</div>
+</div>
+</div>
+<div class="accordion-card collapsed" data-prop-tab="hooks" id="props-hooks">
+<button class="accordion-toggle" data-prop-tab="hooks" onclick="togglePropCard('hooks')">
+<span>Hooks</span>
+<span class="accordion-caret">▾</span>
+</button>
+<div class="accordion-content">
+<div class="props-card">
+<div class="section-title">Hook stack</div>
+<div class="props-row"><b>before_session_start</b><span>Enabled</span></div>
+<div class="props-row"><b>before_route</b><span>Enabled</span></div>
+<div class="props-row"><b>after_tool_result</b><span>Enabled</span></div>
+</div>
+<div class="mini-diff add">Added after_tool_result telemetry persistence.</div>
+</div>
+</div>
+<div class="accordion-card collapsed" data-prop-tab="versions" id="props-versions">
+<button class="accordion-toggle" data-prop-tab="versions" onclick="togglePropCard('versions')">
+<span>Versions</span>
+<span class="accordion-caret">▾</span>
+</button>
+<div class="accordion-content">
+<div class="props-card">
+<div class="section-title">Version control</div>
+<div class="props-row"><b>Current</b><span>2.6.0</span></div>
+<div class="props-row"><b>Draft</b><span>2.7.0-draft</span></div>
+<div class="props-row"><b>Rollback</b><span>2.5.2</span></div>
+</div>
+</div>
+</div>
+<div class="accordion-card collapsed" data-prop-tab="operations" id="props-operations">
+<button class="accordion-toggle" data-prop-tab="operations" onclick="togglePropCard('operations')">
+<span>Operations</span>
+<span class="accordion-caret">▾</span>
+</button>
+<div class="accordion-content">
+<div class="props-card">
+<div class="section-title">Operations</div>
+<div class="props-row"><b>Health</b><span>97.8%</span></div>
+<div class="props-row"><b>Latency</b><span>2.8s</span></div>
+<div class="props-row"><b>Error budget</b><span>0.8% left</span></div>
+</div>
+<div class="mini-diff remove">Deprecated peer-to-peer routing remains disabled.</div>
+</div>
+</div>
+</div>
+<div class="props-footer">
+<button class="btn">Duplicate</button>
+<button class="btn">Export JSON</button>
+<button class="btn primary">Save</button>
+</div>
+</aside>
+</div>
+</section>
+<!-- EDITOR ENV -->
+<section class="environment" id="editorEnv">
+<div class="editor-wrap" id="editorRoot">
+<div class="editor-context">
+<div class="crumbs"><span>Agency</span><span>›</span><b id="editorAgencyName">LSS Manager Network</b><span>›</span><span id="editorScopeLevel">Workspace</span><span>›</span><b id="editorScopeName">Lead Intake Orchestrator</b></div>
+<div class="editor-context-right">
+<div class="layout-controls studio-layout-controls">
+<button class="layout-chip active" data-toggle="left" id="editor-toggle-left">Library</button>
+<button class="layout-chip active" data-toggle="right" id="editor-toggle-right">Inspector</button>
+<button class="layout-chip active" data-toggle="bottom" id="editor-toggle-bottom">Console</button>
+</div>
+<div class="pills"><span class="editor-pill blue">Studio / Creator</span><span class="editor-pill yellow">Draft v2.7.0</span><span class="editor-pill green editor-scope-pill" id="editorScopePill">Scope · Workspace</span></div>
+</div>
+</div>
+<div class="studio-layout" id="studioLayout">
+<aside class="pane left-pane" id="leftPane" style="grid-column:1;grid-row:1 / span 3">
+<div class="pane-head"><strong>Explorer / Library</strong><div class="pane-actions"><button class="pane-btn" data-toggle="left">—</button></div></div>
+<div class="pane-body">
+<input class="node-search" placeholder="Buscar nodos, templates o snippets..."/>
+<div class="group"><div class="group-label">Core</div><div class="palette-item"><strong>Start</strong><span>Inputs del workflow.</span></div><div class="palette-item"><strong>Agent</strong><span>Modelo, instrucciones y tools.</span></div><div class="palette-item"><strong>Subagent</strong><span>Delegación especializada.</span></div><div class="palette-item"><strong>End</strong><span>Output final.</span></div></div>
+<div class="group"><div class="group-label">Logic</div><div class="palette-item"><strong>If / Else</strong><span>Branch por condición o score.</span></div><div class="palette-item"><strong>User Approval</strong><span>Pausa y aprobación humana.</span></div><div class="palette-item"><strong>Guardrails</strong><span>PII, moderation, jailbreak checks.</span></div></div>
+<div class="group"><div class="group-label">Data</div><div class="palette-item"><strong>Transform</strong><span>Expressions y object mapping.</span></div><div class="palette-item"><strong>Set State</strong><span>Variables globales o locales.</span></div><div class="palette-item"><strong>Classify</strong><span>Clasificación de input.</span></div></div>
+<div class="group"><div class="group-label">Tools</div><div class="palette-item"><strong>File Search</strong><span>Knowledge base y vector search.</span></div><div class="palette-item"><strong>CRM Action</strong><span>Lookup y update de leads.</span></div><div class="palette-item"><strong>Webhook</strong><span>Integración externa.</span></div></div>
+</div>
+</aside>
+<div class="resizer vertical left-resizer" style="grid-column:2;grid-row:1 / span 3"></div>
+<main class="pane canvas-pane" style="grid-column:3;grid-row:1">
+<div class="canvas-bg"></div>
+<div class="canvas-toolbar">
+<div class="canvas-tools"><span class="tool-pill">Mode: Build</span><span class="tool-pill">Scope: <span id="editorContextScope">Workspace · Lead Intake Orchestrator</span></span><span class="tool-pill">Zoom: <span id="zoomLabel">100%</span></span></div>
+<div class="canvas-tools"><span class="tool-pill">Selected: <span id="selectionLabel">Triage</span></span><span class="tool-pill">Multi-select: shift+click</span><span class="tool-pill">Dynamic inspector</span></div>
+</div>
+<div class="canvas-scroll" id="canvasScroll">
+<div class="flow" id="flow">
+<svg class="edges" id="edgeLayer"></svg>
+<div class="sticky-note" style="left:680px;top:340px">Check if required business details are present before delegating.</div>
+<div class="sticky-note" style="left:1370px;top:260px">If complete, produce plan or hand off to a helper.</div>
+<div class="sticky-note" style="left:1380px;top:850px">If incomplete, search data, transform and retry.</div>
+<div class="workflow-node" data-node="Start" data-type="Start" style="left:130px;top:560px">
+<i class="port out"></i>
+<div class="node-bar b-start"></div>
+<div class="node-body"><div class="node-head"><div class="node-title"><strong>Start</strong><span>Workflow inputs</span></div><div class="node-icon">▶</div></div><div class="node-tags"><span class="node-tag">input_as_text</span><span class="node-tag">state vars</span></div></div>
+</div>
+<div class="workflow-node selected" data-node="Triage" data-type="Agent" style="left:460px;top:540px">
+<i class="port in"></i><i class="port out"></i>
+<div class="node-bar b-agent"></div>
+<div class="node-body"><div class="node-head"><div class="node-title"><strong>Triage</strong><span>Agent · gather key details</span></div><div class="node-icon">A</div></div><div class="node-code">model: gpt-5.4
+reasoning: medium
+output: JSON</div><div class="node-tags"><span class="node-tag">chat history</span><span class="node-tag">response_schema</span></div></div>
+</div>
+<div class="workflow-node" data-node="Guardrails" data-type="Guardrails" style="left:940px;top:210px;width:240px">
+<i class="port bottom"></i>
+<div class="node-bar b-logic"></div>
+<div class="node-body"><div class="node-head"><div class="node-title"><strong>Guardrails</strong><span>Moderation · PII · jailbreak</span></div><div class="node-icon">🛡</div></div><div class="node-tags"><span class="node-tag">policy</span><span class="node-tag">safe</span></div></div>
+</div>
+<div class="workflow-node" data-node="Condition" data-type="IfElse" style="left:940px;top:540px;width:252px">
+<i class="port in"></i><i class="port out"></i>
+<div class="node-bar b-logic"></div>
+<div class="node-body"><div class="node-head"><div class="node-title"><strong>Condition</strong><span>If all details exist</span></div><div class="node-icon">?</div></div><div class="node-code">input.output_parsed.has_all_details == true</div><div class="node-tags"><span class="node-tag">true / else</span><span class="node-tag">branch</span></div></div>
+</div>
+<div class="workflow-node" data-node="Launch helper" data-type="Agent" style="left:1400px;top:360px">
+<i class="port in"></i><i class="port out"></i>
+<div class="node-bar b-agent"></div>
+<div class="node-body"><div class="node-head"><div class="node-title"><strong>Launch helper</strong><span>Specialist agent</span></div><div class="node-icon">↗</div></div><div class="node-tags"><span class="node-tag">handoff</span><span class="node-tag">agent</span></div></div>
+</div>
+<div class="workflow-node" data-node="Get data" data-type="FileSearch" style="left:1400px;top:760px">
+<i class="port in"></i><i class="port out"></i>
+<div class="node-bar b-tool"></div>
+<div class="node-body"><div class="node-head"><div class="node-title"><strong>Get data</strong><span>File search / CRM lookup</span></div><div class="node-icon">⌕</div></div><div class="node-tags"><span class="node-tag">vector store</span><span class="node-tag">crm</span></div></div>
+</div>
+<div class="workflow-node" data-node="Transform" data-type="Transform" style="left:1730px;top:760px;width:230px">
+<i class="port in"></i><i class="port out"></i>
+<div class="node-bar b-data"></div>
+<div class="node-body"><div class="node-head"><div class="node-title"><strong>Transform</strong><span>Expressions and mapping</span></div><div class="node-icon">⇄</div></div><div class="node-tags"><span class="node-tag">schema</span><span class="node-tag">normalize</span></div></div>
+</div>
+<div class="workflow-node" data-node="End" data-type="End" style="left:2035px;top:760px;width:150px">
+<i class="port in"></i>
+<div class="node-bar b-end"></div>
+<div class="node-body"><div class="node-head"><div class="node-title"><strong>End</strong><span>Final output</span></div><div class="node-icon">■</div></div></div>
+</div>
+</div>
+</div>
+<div class="mini-map">
+<h4>Minimap</h4>
+<div class="mini-map-inner">
+<span class="map-dot" style="left:12px;top:62px"></span>
+<span class="map-dot" style="left:50px;top:60px"></span>
+<span class="map-dot logic" style="left:102px;top:24px"></span>
+<span class="map-dot logic" style="left:102px;top:60px"></span>
+<span class="map-dot" style="left:152px;top:42px"></span>
+<span class="map-dot tool" style="left:152px;top:92px"></span>
+<span class="map-dot data" style="left:186px;top:92px"></span>
+<span class="map-dot end" style="left:208px;top:92px"></span>
+<div class="map-viewport"></div>
+</div>
+</div>
+<div class="floating-controls">
+<button class="control-btn" id="zoomOut">−</button>
+<button class="control-btn" id="zoomReset">⟳</button>
+<button class="control-btn" id="zoomIn">＋</button>
+<button class="control-btn" id="fitBtn">⌖</button>
+<button class="control-btn" id="clearSelection">✕</button>
+</div>
+</main>
+<div class="resizer vertical right-resizer" style="grid-column:4;grid-row:1 / span 3"></div>
+<aside class="pane right-pane" id="rightPane" style="grid-column:5;grid-row:1 / span 3">
+<div class="pane-head"><strong>Inspector / Properties</strong><div class="pane-actions"><button class="pane-btn" data-toggle="right">—</button></div></div>
+<div class="pane-body" id="inspectorRoot"></div>
+</aside>
+<div class="resizer horizontal bottom-resizer" style="grid-column:1 / 6;grid-row:2"></div>
+<section class="pane bottom-pane" id="bottomPane" style="grid-column:1 / 6;grid-row:3">
+<div class="pane-head"><strong>Logs / Validation / Execution Trace</strong><div class="pane-actions"><button class="pane-btn" data-toggle="bottom">—</button></div></div>
+<div class="pane-body">
+<div class="bottom-tabs">
+<button class="bottom-tab active" data-bottom="logs">Logs</button>
+<button class="bottom-tab" data-bottom="validation">Validation</button>
+<button class="bottom-tab" data-bottom="trace">Execution Trace</button>
+<button class="bottom-tab" data-bottom="diff">Diff</button>
+</div>
+<div class="bottom-panel active" id="bottom-logs">
+<div class="log-list">
+<div class="log-item"><div><strong>Triage parsed input</strong><span>Schema valid, 3 required fields present, 1 follow-up field missing.</span></div><span class="badge warning">warning</span></div>
+<div class="log-item"><div><strong>Condition executed</strong><span>Branch = else because <code>has_all_details</code> is false.</span></div><span class="badge primary">branch</span></div>
+<div class="log-item"><div><strong>Get data tool prepared</strong><span>CRM lookup + KB search queued as fallback action.</span></div><span class="badge success">ready</span></div>
+</div>
+</div>
+<div class="bottom-panel" id="bottom-validation">
+<div class="log-list">
+<div class="log-item"><div><strong>Graph validation</strong><span>No orphan nodes detected. One advisory: helper agent has no explicit timeout override.</span></div><span class="badge warning">advisory</span></div>
+<div class="log-item"><div><strong>Schema validation</strong><span>Lead Intake response schema is compatible with current transform node.</span></div><span class="badge success">pass</span></div>
+</div>
+</div>
+<div class="bottom-panel" id="bottom-trace">
+<div class="log-list">
+<div class="log-item"><div><strong>Trace #8184</strong><span>Start → Triage → Condition → Get data → Transform → End</span></div><span class="badge primary">3.1s</span></div>
+<div class="log-item"><div><strong>Trace #8182</strong><span>Start → Triage → Condition → Launch helper</span></div><span class="badge success">2.2s</span></div>
+</div>
+</div>
+<div class="bottom-panel" id="bottom-diff">
+<div class="log-list">
+<div class="log-item"><div><strong>Draft changes</strong><span>Inspector expanded, workspace overview kept in dashboard, canvas isolated in editor environment.</span></div><span class="badge primary">fusion</span></div>
+<div class="log-item"><div><strong>Preserved from V2</strong><span>Agency Builder, Profiles, Runs, Sessions, Settings and right-side entity inspector.</span></div><span class="badge success">kept</span></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</section>
+</main>
+</div>
+<script>
+    const state = {
+      env: 'dashboard',
+      theme: 'light',
+      currentAgency: 'lss',
+      selectedNode: { type: 'agency', id: 'lss' },
+      activeSurface: 'agency-builder',
+      activeTab: 'overview',
+      propTab: 'identity'
+    };
+
+    const ENTITY_DATA = {
+      agency: {
+        lss: { name:'LSS Manager Network', meta:'6 departments · 14 workspaces · 42 agents · 79 subagents', desc:'Agencia principal que coordina Growth, Operations y Marketing.', level:'Agency', owner:'Sebastian' },
+        nova:{ name:'Nova Agency', meta:'4 departments · 8 workspaces · 21 agents · 30 subagents', desc:'Agencia secundaria para iniciativas especiales y pilotos.', level:'Agency', owner:'Ops team' }
+      },
+      dept: {
+        growth:{ name:'Growth & Admissions', meta:'Department · 3 workspaces · 8 agents', desc:'Responsable de lead intake, calificación y admisiones.', level:'Department', owner:'Growth lead' },
+        ops:{ name:'Operations', meta:'Department · 2 workspaces · 5 agents', desc:'Soporte y automatización de operaciones internas.', level:'Department', owner:'Operations lead' },
+        mkt:{ name:'Marketing', meta:'Department · 4 workspaces · 12 agents', desc:'Campañas, contenido y canales digitales.', level:'Department', owner:'Marketing lead' }
+      },
+      workspace: {
+        'lead-intake':{ name:'Lead Intake Orchestrator', meta:'Workspace · 3 agents · 2 subagents · 340 runs today', desc:'Orchestrates lead qualification, CRM sync and nurture handoffs.', level:'Workspace', owner:'Admissions ops' },
+        'nurture-ws':{ name:'Nurture Campaigns WS', meta:'Workspace · 2 agents · 1 subagent · 90 runs today', desc:'Email and WhatsApp nurture flows for unqualified leads.', level:'Workspace', owner:'Lifecycle team' },
+        'support-ws':{ name:'Support Desk WS', meta:'Workspace · 2 agents · 1 subagent · 210 runs today', desc:'Support ticket routing and resolution.', level:'Workspace', owner:'Support ops' },
+        'ads-ws':{ name:'Ads Workspace', meta:'Workspace · 3 agents · 2 subagents', desc:'Google and Meta ads management and reporting.', level:'Workspace', owner:'Performance team' },
+        'content-ws':{ name:'Content WS', meta:'Workspace · 2 agents', desc:'Content creation and scheduling.', level:'Workspace', owner:'Content team' }
+      },
+      agent: {
+        qualifier:{ name:'Lead Qualifier Agent', meta:'Agent · GPT-5.4 · 3 tools · 2 subagents', desc:'Clasifica leads entrantes usando scoring y reglas de negocio.', level:'Agent', owner:'Admissions ops' },
+        'crm-sync':{ name:'CRM Sync Agent', meta:'Agent · tool-first · 2 tools', desc:'Sincroniza datos de leads calificados con HubSpot.', level:'Agent', owner:'CRM ops' }
+      },
+      subagent: {
+        'fb-scraper':{ name:'FB Scraper Subagent', meta:'Subagent · Python tool · delegated by Qualifier', desc:'Extrae datos de leads desde Facebook Lead Ads.', level:'Subagent', owner:'Growth automation' },
+        'email-validator':{ name:'Email Validator', meta:'Subagent · validation tool', desc:'Valida emails, registros MX y señales de calidad.', level:'Subagent', owner:'Growth automation' }
+      }
+    };
+
+    const TAB_CONFIGS = {
+      'agency-builder': {
+        _default:[
+          {id:'overview',label:'Overview'},{id:'connections',label:'Connections'},{id:'operations',label:'Operations'},{id:'sessions',label:'Sessions'}
+        ]
+      },
+      profiles:{_default:[
+        {id:'profiles',label:'Profiles'},{id:'skills',label:'Skills'},{id:'tools',label:'Tools'},{id:'policies',label:'Providers & Policies'}
+      ]},
+      settings:{_default:[
+        {id:'settings-general',label:'General'},{id:'settings-providers',label:'Providers'},{id:'settings-runtimes',label:'Runtimes'},{id:'settings-channels',label:'Channels'},{id:'settings-integrations',label:'Integrations'},{id:'settings-diagnostics',label:'Diagnostics'},{id:'settings-security',label:'Security / Policies'}
+      ]}
+    };
+
+    const levelColorClass = { Agency:'primary', Department:'', Workspace:'success', Agent:'warning', Subagent:'' };
+
+    const SCOPE_METRICS = {
+      Agency: {
+        connections:'24', runs:'814', sessions:'126', model:'GPT-5.4 / Claude Sonnet', spend:'$1,842', budget:'72% budget used', budgetValue:'72%', tokens:'48.2M', presets:'14',
+        modelMix:[['GPT-5.4','Primary reasoning model · 41% of spend','41%'],['Claude Sonnet','Fallback / long context · 27% of spend','27%'],['GPT-5.4 mini','Fast classification and routing · 18% of spend','18%']],
+        owner:'Sebastian', applies:'Departments · Workspaces · Agents', runtimeMode:'OpenClaw live', softCap:'$2,000 / day', hardCap:'$2,400 / day', escalation:'Ops review above 85%',
+        scopeMeta:'Agency root governance and rollups', children:'6 departments · 14 workspaces', reusable:'14 reusable configs', channels:'WhatsApp · Email · Discord', handoffs:'21 handoffs / 24h', hooks:'6 active · 1 partial', webhook:'3 endpoints monitored', supported:'82%', partial:'6', coverage:'91%', channelCount:'4', structureText:'Agency → Departments → Workspaces → Agents → Subagents.', routingText:'Primary channel routing, fallback channel, and manual replay are visible together.', hookText:'before_route, before_agent_call, after_route and after_tool_call states summarized.',
+        inheritance:'Inherited downward', share:'Reusable across children', currentVersion:'v2.7 stable', draftVersion:'3 pending publish', versionState:'12 defaults / 3 drafts', dailyBudget:'$2,400', budgetUsed:'72%', tokenPolicy:'50k soft cap · 100k hard cap · long context by exception.', shareability:'Model presets can be shared downward and reused by child workspaces.', reuse:'Reuse approved prompt/model bundles before creating a new local override.'
+      },
+      Department: {
+        connections:'11', runs:'286', sessions:'44', model:'GPT-5.4 mini / Claude Sonnet', spend:'$428', budget:'51% budget used', budgetValue:'51%', tokens:'9.6M', presets:'6',
+        modelMix:[['GPT-5.4 mini','Primary routing model · 34% of spend','34%'],['Claude Sonnet','Escalation / review lane · 29% of spend','29%'],['GPT-5.4','Complex reasoning only · 22% of spend','22%']],
+        owner:'Department lead', applies:'Selected department and child workspaces', runtimeMode:'OpenClaw live', softCap:'$600 / day', hardCap:'$840 / day', escalation:'Dept lead above 80%',
+        scopeMeta:'Department-level operational slice', children:'3 workspaces · 8 agents', reusable:'6 reusable configs', channels:'WhatsApp · Email', handoffs:'8 handoffs / 24h', hooks:'4 active · 1 warning', webhook:'2 endpoints monitored', supported:'87%', partial:'2', coverage:'89%', channelCount:'2', structureText:'Department → Workspaces → Agents below current node.', routingText:'Department routing and fallback connections condensed into one view.', hookText:'Pre-route and post-agent hooks inherited from agency plus local overrides.',
+        inheritance:'Inherited from agency + local override', share:'Reusable to child workspaces', currentVersion:'v1.9 stable', draftVersion:'1 pending publish', versionState:'4 defaults / 1 draft', dailyBudget:'$840', budgetUsed:'51%', tokenPolicy:'25k soft cap · 60k hard cap for department defaults.', shareability:'Shared presets apply to all child workspaces unless locally overridden.', reuse:'Reuse shared department bundles before opening a workspace-specific override.'
+      },
+      Workspace: {
+        connections:'7', runs:'340', sessions:'18', model:'GPT-5.4 / GPT-5.4 mini', spend:'$96', budget:'64% budget used', budgetValue:'64%', tokens:'2.1M', presets:'4',
+        modelMix:[['GPT-5.4','Main workspace reasoning · 46% of spend','46%'],['GPT-5.4 mini','Fast steps and routing · 32% of spend','32%'],['Claude Sonnet','Long-context exception lane · 14% of spend','14%']],
+        owner:'Workspace owner', applies:'Selected workspace', runtimeMode:'Workspace runtime live', softCap:'$120 / day', hardCap:'$150 / day', escalation:'Ops review above 90%',
+        scopeMeta:'Workspace build + operate slice', children:'3 agents · 2 subagents', reusable:'4 reusable presets', channels:'WhatsApp · CRM webhook', handoffs:'5 handoffs / 24h', hooks:'3 active · 0 warning', webhook:'1 endpoint monitored', supported:'93%', partial:'1', coverage:'96%', channelCount:'2', structureText:'Workspace → Agents → Subagents only.', routingText:'Inbound channels, handoffs and replay edges for the selected workspace.', hookText:'Lifecycle hooks bound to the selected workspace and its agents.',
+        inheritance:'Agency + department + workspace overrides', share:'Reusable to child agents', currentVersion:'v2.7 stable', draftVersion:'1 draft open', versionState:'1 current / 1 draft', dailyBudget:'$150', budgetUsed:'64%', tokenPolicy:'15k soft cap · 40k hard cap unless escalated.', shareability:'Workspace model bundles can be shared to child agents.', reuse:'Prefer shared workspace bundles before creating agent-local changes.'
+      },
+      Agent: {
+        connections:'4', runs:'122', sessions:'9', model:'GPT-5.4', spend:'$28', budget:'43% budget used', budgetValue:'43%', tokens:'740k', presets:'2',
+        modelMix:[['GPT-5.4','Primary agent model · 58% of spend','58%'],['GPT-5.4 mini','Fast fallback path · 24% of spend','24%'],['Claude Sonnet','Rare escalation lane · 11% of spend','11%']],
+        owner:'Agent owner', applies:'Selected agent only', runtimeMode:'Agent runtime live', softCap:'$40 / day', hardCap:'$60 / day', escalation:'Workspace approval above 80%',
+        scopeMeta:'Single agent execution slice', children:'2 subagents', reusable:'2 reusable presets', channels:'Inherited channel mapping', handoffs:'3 handoffs / 24h', hooks:'2 active', webhook:'0 direct endpoint', supported:'95%', partial:'0', coverage:'98%', channelCount:'1', structureText:'Agent → Subagents bound to this worker.', routingText:'Input, branch and handoff behavior for the selected agent.', hookText:'before_agent_call and after_tool_call coverage summarized.',
+        inheritance:'Inherited + local agent override', share:'Reusable to subagents', currentVersion:'v1.4 stable', draftVersion:'1 draft open', versionState:'1 current / 1 draft', dailyBudget:'$60', budgetUsed:'43%', tokenPolicy:'8k soft cap · 20k hard cap for agent calls.', shareability:'Agent presets can be shared to subagents when approved.', reuse:'Reuse shared workspace and department presets before creating local ones.'
+      },
+      Subagent: {
+        connections:'2', runs:'57', sessions:'4', model:'GPT-5.4 mini', spend:'$7', budget:'29% budget used', budgetValue:'29%', tokens:'210k', presets:'1',
+        modelMix:[['GPT-5.4 mini','Primary worker model · 62% of spend','62%'],['Tool-only','Execution overhead · 23% of spend','23%'],['GPT-5.4','Escalation only · 9% of spend','9%']],
+        owner:'Delegated owner', applies:'Selected subagent only', runtimeMode:'Subagent runtime live', softCap:'$12 / day', hardCap:'$20 / day', escalation:'Agent owner above 80%',
+        scopeMeta:'Delegated worker slice', children:'No children', reusable:'1 reusable preset', channels:'Delegated via parent agent', handoffs:'1 handoff / 24h', hooks:'1 active', webhook:'0 direct endpoint', supported:'98%', partial:'0', coverage:'99%', channelCount:'1', structureText:'Leaf node in hierarchy.', routingText:'Delegated execution path from parent agent.', hookText:'Minimal hook surface, mostly inherited.',
+        inheritance:'Inherited from parent agent', share:'Local only', currentVersion:'v1.1 stable', draftVersion:'0 drafts', versionState:'1 current', dailyBudget:'$20', budgetUsed:'29%', tokenPolicy:'4k soft cap · 10k hard cap.', shareability:'Usually not shared beyond parent chain.', reuse:'Prefer parent presets and local tool-first execution.'
+      }
+    };
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el && value !== undefined) el.textContent = value;
+    }
+
+    function getSelectedEntity() {
+      const group = ENTITY_DATA[state.selectedNode.type] || {};
+      return group[state.selectedNode.id] || ENTITY_DATA.agency.lss;
+    }
+
+    function switchEnv(env) {
+      state.env = env;
+      document.querySelectorAll('.environment').forEach(el => el.classList.remove('active'));
+      document.getElementById(env === 'dashboard' ? 'dashboardEnv' : 'editorEnv').classList.add('active');
+      document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.env === env));
+      document.getElementById('primaryActionBtn').textContent = env === 'dashboard' ? 'Generate' : 'Publish';
+      if (env === 'editor') syncEditorWorkspace();
+    }
+
+    function toggleTheme() {
+      state.theme = state.theme === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', state.theme);
+      document.getElementById('themeBtn').textContent = state.theme === 'light' ? '☀' : '☾';
+    }
+
+    function toggleAgencyMenu(event) {
+      if (event) event.stopPropagation();
+      document.getElementById('agencyDropdown').classList.toggle('open');
+    }
+
+    function closeAgencyMenu() {
+      document.getElementById('agencyDropdown').classList.remove('open');
+    }
+
+    function updateAgencyDropdown() {
+      const agency = ENTITY_DATA.agency[state.currentAgency];
+      document.getElementById('agencyCurrentName').textContent = agency.name;
+      document.getElementById('agencyCurrentMeta').textContent = agency.meta.replace(' · 79 subagents','');
+      document.getElementById('agencyCurrentIcon').textContent = state.currentAgency === 'lss' ? 'LS' : 'NV';
+      document.getElementById('agencyCurrentIcon').style.background = state.currentAgency === 'lss' ? 'rgba(76,141,255,.22)' : 'rgba(99,102,241,.22)';
+      document.getElementById('agencyCurrentIcon').style.color = state.currentAgency === 'lss' ? '#80aaff' : '#a5a8ff';
+      document.querySelectorAll('.agency-menu-item').forEach(el => el.classList.remove('active'));
+      const item = document.getElementById('agency-item-' + state.currentAgency);
+      if (item) item.classList.add('active');
+    }
+
+    function selectAgency(id) {
+      state.currentAgency = id;
+      updateAgencyDropdown();
+      closeAgencyMenu();
+      state.selectedNode = { type:'agency', id };
+      document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('active'));
+      const treeAgency = document.querySelector(`.tree-node[data-level="agency"][data-id="${id}"]`);
+      if (treeAgency) treeAgency.classList.add('active');
+      state.activeSurface = 'agency-builder';
+      document.querySelectorAll('.surface-btn').forEach(btn => btn.classList.remove('active'));
+      updateDashboard();
+      syncEditorWorkspace();
+    }
+
+    function selectNode(type, id) {
+      state.selectedNode = { type, id };
+      document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('active'));
+      const node = document.querySelector(`.tree-node[data-level="${type}"][data-id="${id}"]`);
+      if (node) node.classList.add('active');
+      state.activeSurface = 'agency-builder';
+      document.querySelectorAll('.surface-btn').forEach(btn => btn.classList.remove('active'));
+      if (type === 'workspace' && state.activeSurface === 'agency-builder') {
+        state.activeTab = 'overview';
+      }
+      updateDashboard();
+      syncEditorWorkspace();
+    }
+
+    function setSurface(surface) {
+      state.activeSurface = surface;
+      document.querySelectorAll('.surface-btn').forEach(btn => btn.classList.remove('active'));
+      const el = document.getElementById('surface-' + surface);
+      if (el) el.classList.add('active');
+      const firstTab = resolveTabs()[0];
+      state.activeTab = firstTab ? firstTab.id : '';
+      renderDashboardViews();
+      renderSubbar();
+      updateCrumb();
+    }
+
+    function resolveTabs() {
+      const config = TAB_CONFIGS[state.activeSurface];
+      if (!config) return [];
+      const level = state.selectedNode.type;
+      return config[level] || config._default || Object.values(config)[0] || [];
+    }
+
+    function renderSubbar() {
+      const subbar = document.getElementById('dashboardSubbar');
+      const tabs = resolveTabs();
+      subbar.innerHTML = tabs.map(tab => `<button class="subbar-tab${state.activeTab === tab.id ? ' active' : ''}" onclick="setActiveTab('${tab.id}')">${tab.label}</button>`).join('');
+    }
+
+    function normalizePaneId(tabId) {
+      return 'pane-' + tabId;
+    }
+
+    function setActiveTab(id) {
+      state.activeTab = id;
+      renderSubbar();
+      renderDashboardViews();
+    }
+
+    function renderDashboardViews() {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      const activeView = document.getElementById('view-' + state.activeSurface);
+      if (activeView) activeView.classList.add('active');
+
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      const pane = document.getElementById(normalizePaneId(state.activeTab));
+      if (pane) pane.classList.add('active');
+
+      if (state.activeSurface === 'profiles') document.getElementById('view-profiles').classList.add('active');
+      if (state.activeSurface === 'runs') document.getElementById('view-runs').classList.add('active');
+      if (state.activeSurface === 'sessions') document.getElementById('view-sessions').classList.add('active');
+      if (state.activeSurface === 'settings') document.getElementById('view-settings').classList.add('active');
+      if (state.activeSurface === 'workspace-studio') document.getElementById('view-workspace-studio').classList.add('active');
+      if (state.activeSurface === 'agency-builder') document.getElementById('view-agency-builder').classList.add('active');
+    }
+
+    function updateCrumb() {
+      const entity = getSelectedEntity();
+      const surfaceLabels = {
+        'agency-builder':'Dashboard',
+        'workspace-studio':'Editor Environment',
+        profiles:'Profiles',
+        runs:'Runs',
+        sessions:'Sessions',
+        settings:'Settings'
+      };
+      const trail = [ENTITY_DATA.agency[state.currentAgency]?.name || 'Agency', surfaceLabels[state.activeSurface] || state.activeSurface, entity.name];
+      document.getElementById('dashboardCrumb').innerHTML = `
+        <span>${trail[0]}</span><span class="sep">/</span><strong>${trail[1]}</strong><span class="sep">/</span><span>${trail[2]}</span>
+      `;
+    }
+
+    function updateProps() {
+      const entity = getSelectedEntity();
+      const metrics = SCOPE_METRICS[entity.level] || SCOPE_METRICS.Agency;
+      document.getElementById('propLevel').textContent = entity.level;
+      document.getElementById('propName').textContent = entity.name;
+      document.getElementById('propMeta').textContent = entity.meta;
+      document.getElementById('identityName').value = entity.name;
+      document.getElementById('identityDesc').value = entity.desc;
+      document.getElementById('identityLevelBadge').innerHTML = `<span class="badge ${levelColorClass[entity.level] || ''}">${entity.level}</span>`;
+      const overviewName = document.getElementById('overviewEntityName');
+      if (overviewName) overviewName.textContent = entity.name;
+      setText('overviewScopeValue', entity.level);
+      setText('ovRuntime', metrics.runtimeMode || 'OpenClaw live');
+      setText('ovModel', metrics.model);
+      setText('ovSpend', metrics.spend);
+      setText('ovBudget', metrics.budget);
+      setText('ovConnections', metrics.connections);
+      setText('ovRuns', metrics.runs);
+      setText('ovSessions', metrics.sessions);
+      setText('ovTokens', metrics.tokens);
+      setText('ovBudgetValue', metrics.budgetValue);
+      setText('ovPresetReuse', metrics.presets);
+      setText('ovOwner', entity.owner || metrics.owner);
+      setText('ovApplies', metrics.applies);
+      setText('ovRuntimeMode', metrics.runtimeMode);
+      setText('ovSoftCap', metrics.softCap);
+      setText('ovHardCap', metrics.hardCap);
+      setText('ovEscalation', metrics.escalation);
+      if (metrics.modelMix) {
+        setText('ovModelMix1Name', metrics.modelMix[0][0]);
+        setText('ovModelMix1Meta', metrics.modelMix[0][1]);
+        setText('ovModelMix1Share', metrics.modelMix[0][2]);
+        setText('ovModelMix2Name', metrics.modelMix[1][0]);
+        setText('ovModelMix2Meta', metrics.modelMix[1][1]);
+        setText('ovModelMix2Share', metrics.modelMix[1][2]);
+        setText('ovModelMix3Name', metrics.modelMix[2][0]);
+        setText('ovModelMix3Meta', metrics.modelMix[2][1]);
+        setText('ovModelMix3Share', metrics.modelMix[2][2]);
+      }
+      setText('connectionScopeName', entity.name);
+      setText('connectionScopeMeta', metrics.scopeMeta);
+      setText('connectionChildren', metrics.children);
+      setText('connectionReusable', metrics.reusable);
+      setText('connChannels', metrics.channels);
+      setText('connHandoffs', metrics.handoffs);
+      setText('connHooks', metrics.hooks);
+      setText('connWebhook', metrics.webhook);
+      setText('connSupported', metrics.supported);
+      setText('connCoverage', metrics.coverage);
+      setText('connChannelCount', metrics.channelCount);
+      setText('connStructureText', metrics.structureText);
+      setText('connRoutingText', metrics.routingText);
+      setText('connHookText', metrics.hookText);
+      const supportedPct = parseInt(metrics.supported, 10) || 0;
+      const coveragePct = parseInt(metrics.coverage, 10) || 0;
+      const routingPct = Math.max(35, Math.min(96, supportedPct - 4));
+      const handoffPct = Math.max(20, Math.min(96, (parseInt(metrics.handoffs, 10) || 0) * 4));
+      const channelPct = Math.max(24, Math.min(96, (parseInt(metrics.channelCount, 10) || 0) * 16));
+      const setWidth = (id, pct) => { const el = document.getElementById(id); if (el) el.style.width = pct + '%'; };
+      const setRadial = (id, pct) => { const el = document.getElementById(id); if (el) el.style.setProperty('--value', pct); };
+      setWidth('connBarSupported', supportedPct);
+      setWidth('connBarCoverage', coveragePct);
+      setWidth('connBarRouting', routingPct);
+      setWidth('connBarHandoffs', handoffPct);
+      setText('connBarSupportedLabel', metrics.supported);
+      setText('connBarCoverageLabel', metrics.coverage);
+      setText('connBarRoutingLabel', routingPct + '%');
+      setText('connBarHandoffsLabel', handoffPct + '%');
+      setRadial('connRadialEdges', supportedPct);
+      setRadial('connRadialHooks', coveragePct);
+      setRadial('connRadialChannels', channelPct);
+      setText('operationsScopeName', entity.name);
+      setText('opsIdentityName', entity.name);
+      setText('opsOwner', entity.owner || metrics.owner);
+      setText('opsInheritance', metrics.inheritance);
+      setText('opsShare', metrics.share);
+      setText('opsVersionCurrent', metrics.currentVersion);
+      setText('opsVersionDraft', metrics.draftVersion);
+      setText('opsVersionState', metrics.versionState);
+      setText('opsDailyBudget', metrics.dailyBudget);
+      setText('opsBudgetUsed', metrics.budgetValue);
+      setText('opsTokenPolicy', metrics.tokenPolicy);
+      setText('opsShareability', metrics.shareability);
+      setText('opsReuse', metrics.reuse);
+      if (metrics.modelMix) {
+        const m1 = parseInt(metrics.modelMix[0][2], 10) || 0;
+        const m2 = parseInt(metrics.modelMix[1][2], 10) || 0;
+        const m3 = parseInt(metrics.modelMix[2][2], 10) || 0;
+        const overhead = Math.max(4, 100 - (m1 + m2 + m3));
+        const setWidth = (id, pct) => { const el = document.getElementById(id); if (el) el.style.width = pct + '%'; };
+        setWidth('opsModelBar1', m1); setText('opsModelBar1Label', m1 + '%');
+        setWidth('opsModelBar2', m2); setText('opsModelBar2Label', m2 + '%');
+        setWidth('opsModelBar3', m3); setText('opsModelBar3Label', m3 + '%');
+        setWidth('opsModelBar4', overhead); setText('opsModelBar4Label', overhead + '%');
+      }
+      setText('sessionsTitleName', entity.name);
+      document.getElementById('globalContextPill').textContent = `${entity.level}: ${entity.name}`;
+    }
+
+    function togglePropCard(tab, forceOpen = false) {
+      const card = document.getElementById('props-' + tab);
+      if (!card) return;
+      const shouldOpen = forceOpen || card.classList.contains('collapsed');
+      card.classList.toggle('collapsed', !shouldOpen);
+      const toggle = card.querySelector('.accordion-toggle');
+      if (toggle) toggle.classList.toggle('active', shouldOpen);
+      state.propTab = tab;
+    }
+
+    function setPropTab(tab) {
+      togglePropCard(tab, true);
+    }
+
+    function toggleDashboardPane(side) {
+      const env = document.getElementById('dashboardEnv');
+      env.classList.toggle('dashboard-collapsed-' + side);
+      const btn = document.getElementById('dashboard-toggle-' + side);
+      if (btn) btn.classList.toggle('active', !env.classList.contains('dashboard-collapsed-' + side));
+    }
+
+    function updateDashboard() {
+      const tabs = resolveTabs();
+      if (!tabs.some(t => t.id === state.activeTab)) {
+        state.activeTab = tabs[0] ? tabs[0].id : '';
+      }
+      renderSubbar();
+      renderDashboardViews();
+      updateCrumb();
+      updateProps();
+    }
+
+    function toggleTree(id, btn) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const hidden = el.style.display === 'none';
+      el.style.display = hidden ? '' : 'none';
+      if (btn) btn.textContent = hidden ? '▾' : '▸';
+    }
+
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', () => switchEnv(btn.dataset.env)));
+    document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+    document.getElementById('debugBtn').addEventListener('click', () => alert(JSON.stringify(state, null, 2)));
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#agencyDropdown')) closeAgencyMenu();
+    });
+
+    /* ===== EDITOR LOGIC ===== */
+    const nodeData = {
+      'Start': {
+        html: `
+          <div class="inspect-card"><h4>Start node</h4><div class="kv"><span>Type</span><b>Start</b></div><div class="kv"><span>Inputs</span><b>Text + state</b></div><div class="kv"><span>Schema</span><b>Lead Intake Input</b></div></div>
+          <div class="inspect-card"><div class="field"><label>Entry label</label><input value="Lead Intake Entry" /></div><div class="field"><label>Accepted channels</label><input value="WhatsApp, Email, Discord" /></div></div>
+        `
+      },
+      'Triage': {
+        html: `
+          <div class="inspect-card"><h4>Triage agent</h4><div class="kv"><span>Node type</span><b>Agent</b></div><div class="kv"><span>Workspace</span><b>Lead Intake Orchestrator</b></div><div class="kv"><span>Schema</span><b><span class="schema-chip">qualification.v2</span></b></div></div>
+          <div class="inspect-card">
+            <div class="field"><label>Name</label><input value="Triage" /></div>
+            <div class="field"><label>Instructions</label><textarea>Gather key details, normalize intent, ask concise follow-up only when required, and emit JSON.</textarea></div>
+            <div class="field"><label>Model</label><select><option>gpt-5.4</option><option>gpt-5.4 mini</option></select></div>
+            <div class="field"><label>Reasoning</label><div class="segment"><button class="seg-btn">Low</button><button class="seg-btn active">Medium</button><button class="seg-btn">High</button></div></div>
+          </div>
+          <div class="inspect-card"><div class="kv"><span>Tools</span><b>chat history, schema, handoff</b></div><div class="kv"><span>Guardrails</span><b>Inherited</b></div><div class="kv"><span>Retry policy</span><b>1 soft retry</b></div></div>
+        `
+      },
+      'Guardrails': {
+        html: `
+          <div class="inspect-card"><h4>Guardrails</h4><div class="kv"><span>Checks</span><b>Moderation · PII · jailbreak</b></div><div class="kv"><span>Mode</span><b>Blocking</b></div></div>
+          <div class="inspect-card"><div class="field"><label>PII policy</label><select><option>Mask and continue</option><option>Block</option></select></div><div class="field"><label>Escalation message</label><textarea>Potentially unsafe request detected. Escalate to human review.</textarea></div></div>
+        `
+      },
+      'Condition': {
+        html: `
+          <div class="inspect-card"><h4>If / Else branch</h4><div class="kv"><span>Expression</span><b>has_all_details == true</b></div><div class="kv"><span>True branch</span><b>Launch helper</b></div><div class="kv"><span>Else branch</span><b>Get data</b></div></div>
+          <div class="inspect-card"><div class="field"><label>Expression</label><textarea>input.output_parsed.has_all_details == true</textarea></div><div class="field"><label>Explainability note</label><input value="Branch on completeness before delegation" /></div></div>
+        `
+      },
+      'Launch helper': {
+        html: `
+          <div class="inspect-card"><h4>Launch helper</h4><div class="kv"><span>Node type</span><b>Agent handoff</b></div><div class="kv"><span>Target</span><b>Specialist planner</b></div><div class="kv"><span>Return mode</span><b>Structured result</b></div></div>
+          <div class="inspect-card"><div class="field"><label>Delegate to</label><input value="plan-helper-agent" /></div><div class="field"><label>Handoff payload</label><textarea>Send normalized context, user goals and qualified metadata.</textarea></div></div>
+        `
+      },
+      'Get data': {
+        html: `
+          <div class="inspect-card"><h4>Get data</h4><div class="kv"><span>Tool</span><b>File Search + CRM lookup</b></div><div class="kv"><span>Fallback intent</span><b>Recover missing details</b></div></div>
+          <div class="inspect-card"><div class="field"><label>Search query</label><textarea>Find prior CRM records and known user context for lead qualification.</textarea></div><div class="field"><label>Max results</label><input value="5" /></div></div>
+        `
+      },
+      'Transform': {
+        html: `
+          <div class="inspect-card"><h4>Transform</h4><div class="kv"><span>Purpose</span><b>Normalize payload</b></div><div class="kv"><span>Output</span><b>qualification.v2</b></div></div>
+          <div class="inspect-card"><div class="field"><label>Mapping</label><textarea>{
+  full_name: crm.name,
+  program_interest: search.intent,
+  ready_for_handoff: true
+}</textarea></div></div>
+        `
+      },
+      'End': {
+        html: `
+          <div class="inspect-card"><h4>End</h4><div class="kv"><span>Output</span><b>Structured response</b></div><div class="kv"><span>Persists trace</span><b>Yes</b></div></div>
+          <div class="inspect-card"><div class="field"><label>Success message</label><textarea>Lead processed and next action selected.</textarea></div></div>
+        `
+      }
+    };
+
+    const editorRoot = document.getElementById('editorRoot');
+    const studioLayout = document.getElementById('studioLayout');
+    const flow = document.getElementById('flow');
+    const canvasScroll = document.getElementById('canvasScroll');
+    const edgeLayer = document.getElementById('edgeLayer');
+    const inspectorRoot = document.getElementById('inspectorRoot');
+    const selectionLabel = document.getElementById('selectionLabel');
+
+    function renderInspector(name) {
+      selectionLabel.textContent = name || 'None';
+      inspectorRoot.innerHTML = nodeData[name]?.html || '<div class="inspect-card"><h4>No selection</h4><div class="kv"><span>Tip</span><b>Select a node to edit it.</b></div></div>';
+    }
+
+    const nodes = Array.from(document.querySelectorAll('.workflow-node'));
+    let selected = nodes.find(n => n.classList.contains('selected'));
+    let multiSelection = new Set(selected ? [selected] : []);
+
+    function updateSelectionVisual() {
+      nodes.forEach(n => {
+        n.classList.remove('selected','multi');
+        if (n === selected) n.classList.add('selected');
+        else if (multiSelection.has(n)) n.classList.add('multi');
+      });
+    }
+
+    nodes.forEach(node => {
+      node.addEventListener('click', e => {
+        if (e.shiftKey) {
+          if (multiSelection.has(node)) multiSelection.delete(node); else multiSelection.add(node);
+          if (!selected) selected = node;
+        } else {
+          selected = node;
+          multiSelection = new Set([node]);
+          renderInspector(node.dataset.node);
+        }
+        updateSelectionVisual();
+      });
+    });
+
+    document.getElementById('clearSelection').addEventListener('click', () => {
+      selected = null;
+      multiSelection = new Set();
+      updateSelectionVisual();
+      renderInspector();
+    });
+
+    let scale = 1;
+    function applyZoom() {
+      flow.style.transform = `scale(${scale})`;
+      document.getElementById('zoomLabel').textContent = `${Math.round(scale * 100)}%`;
+      drawEdges();
+    }
+    document.getElementById('zoomIn').addEventListener('click', () => { scale = Math.min(1.65, scale + 0.1); applyZoom(); });
+    document.getElementById('zoomOut').addEventListener('click', () => { scale = Math.max(0.55, scale - 0.1); applyZoom(); });
+    document.getElementById('zoomReset').addEventListener('click', () => { scale = 1; applyZoom(); });
+    document.getElementById('fitBtn').addEventListener('click', () => { scale = 0.85; applyZoom(); canvasScroll.scrollTo({left:360, top:260, behavior:'smooth'}); });
+
+    const connections = [
+      ['Start','Triage','active',''],
+      ['Triage','Condition','success',''],
+      ['Guardrails','Condition','',''],
+      ['Condition','Launch helper','warn','true'],
+      ['Condition','Get data','active','else'],
+      ['Get data','Transform','success',''],
+      ['Transform','End','success','']
+    ];
+
+    function centerOf(node, side='out') {
+      const left = parseFloat(node.style.left || 0);
+      const top = parseFloat(node.style.top || 0);
+      const width = node.offsetWidth;
+      const height = node.offsetHeight;
+      if (side === 'out') return {x:left + width, y:top + height / 2};
+      if (side === 'in') return {x:left, y:top + height / 2};
+      if (side === 'bottom') return {x:left + width / 2, y:top + height};
+      return {x:left + width / 2, y:top};
+    }
+
+    function drawEdges() {
+      edgeLayer.setAttribute('viewBox', '0 0 2200 1280');
+      edgeLayer.innerHTML = '';
+      connections.forEach(([fromName,toName,cls,label]) => {
+        const from = nodes.find(n => n.dataset.node === fromName);
+        const to = nodes.find(n => n.dataset.node === toName);
+        if (!from || !to) return;
+        const s = fromName === 'Guardrails' ? centerOf(from,'bottom') : centerOf(from,'out');
+        const t = toName === 'Condition' && fromName === 'Guardrails' ? centerOf(to,'top') : centerOf(to,'in');
+        const c1x = fromName === 'Guardrails' ? s.x : s.x + Math.max(80, (t.x - s.x) * .35);
+        const c1y = fromName === 'Guardrails' ? s.y + 120 : s.y;
+        const c2x = fromName === 'Guardrails' ? t.x : t.x - Math.max(80, (t.x - s.x) * .35);
+        const c2y = fromName === 'Guardrails' ? t.y - 90 : t.y;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${s.x} ${s.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${t.x} ${t.y}`);
+        path.setAttribute('class', `edge ${cls}`.trim());
+        edgeLayer.appendChild(path);
+        if (label) {
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', (s.x + t.x) / 2);
+          text.setAttribute('y', (s.y + t.y) / 2 - 10);
+          text.setAttribute('class', 'edge-label');
+          text.textContent = label;
+          edgeLayer.appendChild(text);
+        }
+      });
+    }
+
+    let drag = null;
+    nodes.forEach(node => {
+      node.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        const draggingNodes = multiSelection.has(node) ? Array.from(multiSelection) : [node];
+        drag = {
+          items: draggingNodes.map(n => ({el:n, x:parseFloat(n.style.left), y:parseFloat(n.style.top)})),
+          startX: e.clientX,
+          startY: e.clientY
+        };
+        draggingNodes.forEach(n => n.classList.add('dragging'));
+        node.setPointerCapture(e.pointerId);
+      });
+      node.addEventListener('pointermove', e => {
+        if (!drag) return;
+        const dx = (e.clientX - drag.startX) / scale;
+        const dy = (e.clientY - drag.startY) / scale;
+        drag.items.forEach(item => {
+          item.el.style.left = `${item.x + dx}px`;
+          item.el.style.top = `${item.y + dy}px`;
+        });
+        drawEdges();
+      });
+      node.addEventListener('pointerup', e => {
+        if (!drag) return;
+        drag.items.forEach(item => item.el.classList.remove('dragging'));
+        drag = null;
+        try { node.releasePointerCapture(e.pointerId); } catch (_) {}
+      });
+    });
+
+    function syncStudioLayoutButtons() {
+      ['left','right','bottom'].forEach(target => {
+        const collapsed = editorRoot.classList.contains('studio-collapsed-' + target);
+        document.querySelectorAll(`[data-toggle="${target}"]`).forEach(btn => btn.classList.toggle('active', !collapsed));
+      });
+    }
+
+    document.querySelectorAll('[data-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.toggle;
+        editorRoot.classList.toggle('studio-collapsed-' + target);
+        syncStudioLayoutButtons();
+      });
+    });
+
+    document.querySelectorAll('.bottom-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.bottom-tab').forEach(b => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.bottom-panel').forEach(panel => panel.classList.remove('active'));
+        const panel = document.getElementById('bottom-' + btn.dataset.bottom);
+        if (panel) panel.classList.add('active');
+      });
+    });
+
+    function syncEditorWorkspace() {
+      const entity = getSelectedEntity();
+      const agencyName = ENTITY_DATA.agency[state.currentAgency]?.name || 'Agency';
+      const scopeLabel = `${entity.level} · ${entity.name}`;
+      const workspaceName = entity.name;
+      const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+      set('editorAgencyName', agencyName);
+      set('editorScopeLevel', entity.level);
+      set('editorScopeName', workspaceName);
+      set('editorScopePill', `Scope · ${entity.level}`);
+      set('editorContextScope', scopeLabel);
+      document.getElementById('globalContextPill').textContent = `${entity.level}: ${entity.name}`;
+    }
+
+    renderInspector('Triage');
+    updateSelectionVisual();
+    drawEdges();
+    updateAgencyDropdown();
+    updateDashboard();
+    setPropTab('identity');
+    syncStudioLayoutButtons();
+    syncEditorWorkspace();
+  </script>
+</body>
+</html>

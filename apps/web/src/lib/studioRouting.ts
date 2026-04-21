@@ -5,6 +5,7 @@ export const TAB_QUERY_KEY = 'tab';
 
 export function surfaceFromPath(pathname: string): SurfaceId {
   if (pathname.startsWith('/workspace-studio')) return 'workspace-studio';
+  if (pathname.startsWith('/administration')) return 'agency-builder';
   if (pathname.startsWith('/entity-editor')) return 'entity-editor';
   if (pathname.startsWith('/profiles')) return 'profiles';
   if (pathname.startsWith('/runs')) return 'runs';
@@ -20,7 +21,7 @@ export function pathForSurface(surface: SurfaceId): string {
   if (surface === 'runs') return '/runs';
   if (surface === 'sessions') return '/sessions';
   if (surface === 'settings') return '/settings';
-  return '/agency-builder';
+  return '/administration';
 }
 
 export function buildStudioHref(options: {
@@ -53,6 +54,10 @@ export function parseBuilderTab(search: string): AgencyBuilderTab | null {
   const value = params.get(TAB_QUERY_KEY);
   if (
     value === 'overview' ||
+    value === 'connections' ||
+    value === 'sessions' ||
+    value === 'profile' ||
+    value === 'settings' ||
     value === 'topology' ||
     value === 'structure' ||
     value === 'routing' ||
@@ -64,3 +69,4 @@ export function parseBuilderTab(search: string): AgencyBuilderTab | null {
   }
   return null;
 }
+

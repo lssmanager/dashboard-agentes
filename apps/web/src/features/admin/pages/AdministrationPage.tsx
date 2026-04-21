@@ -1,5 +1,5 @@
-﻿import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 
 import {
@@ -15,6 +15,7 @@ import {
 } from '../../../lib/api';
 import { useHierarchy } from '../../../lib/HierarchyContext';
 import { SCOPE_VIEW_REGISTRY } from '../../../lib/ScopeViewRegistry';
+import { buildStudioHref } from '../../../lib/studioRouting';
 import type {
   AgencyBuilderTab,
   CanonicalNodeLevel,
@@ -26,11 +27,12 @@ import type {
   TopologyRuntimeAction,
 } from '../../../lib/types';
 import { useStudioState } from '../../../lib/StudioStateContext';
-import { ConnectionsSurface } from '../components/admin/ConnectionsSurface';
-import { OperationsSurface } from '../components/admin/OperationsSurface';
-import { OverviewSurface } from '../components/admin/OverviewSurface';
-import { ProfileScopeTab } from '../components/admin/ProfileScopeTab';
-import { RightInspectorPanel } from '../components/admin/RightInspectorPanel';
+import { ConnectionsSurface } from '../../studio/components/admin/ConnectionsSurface';
+import { OperationsSurface } from '../../studio/components/admin/OperationsSurface';
+import { OverviewSurface } from '../../studio/components/admin/OverviewSurface';
+import { ProfileScopeTab } from '../../studio/components/admin/ProfileScopeTab';
+import { RightInspectorPanel } from '../../studio/components/admin/RightInspectorPanel';
+import { SessionsSurface } from '../../studio/components/admin/SessionsSurface';
 
 const TAB_LABEL: Record<AgencyBuilderTab, string> = {
   overview: 'Overview',
@@ -72,8 +74,9 @@ function getEntityLevel(level?: string): CanonicalNodeLevel {
   return 'agency';
 }
 
-export default function AgencyBuilderPage() {
+export default function AdministrationPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { state } = useStudioState();
   const { selectedNode, selectedLineage, setBuilderTab } = useHierarchy();
 
@@ -98,16 +101,18 @@ export default function AgencyBuilderPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const contextLabel = selectedLineage.map((item) => item.label).join(' / ');
-
   const profileCatalog = useMemo(() => state.profiles ?? [], [state.profiles]);
 
   useEffect(() => {
     if (activeTab !== activeFromQuery) {
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current);
-        next.set('tab', activeTab);
-        return next;
-      }, { replace: true });
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.set('tab', activeTab);
+          return next;
+        },
+        { replace: true },
+      );
     }
 
     setBuilderTab(activeTab);
@@ -220,16 +225,42 @@ export default function AgencyBuilderPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1500, margin: '0 auto', display: 'grid', gap: 14 }}>
+    <div style={{ maxWidth: 1520, margin: '0 auto', display: 'grid', gap: 14 }}>
       <section style={panelStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 'var(--text-xl)' }}>Administration Dashboard</h1>
-            <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: 13 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Administration Environment
+            </div>
+            <h1 style={{ margin: 0, fontSize: 'var(--text-xl)' }}>Administration</h1>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>
               Scope: {contextLabel || `${entityLevel}:${entityId}`}
             </p>
           </div>
-          <button type="button" onClick={() => void loadProjections()} style={buttonStyle} disabled={loading}>Refresh</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  buildStudioHref({
+                    surface: 'workspace-studio',
+                    nodeKey: selectedNode?.key ?? null,
+                  }),
+                )
+              }
+              disabled={!viewConfig.canEnterStudio}
+              style={{
+                ...buttonStyle,
+                opacity: viewConfig.canEnterStudio ? 1 : 0.6,
+                cursor: viewConfig.canEnterStudio ? 'pointer' : 'not-allowed',
+              }}
+            >
+              Open Studio
+            </button>
+            <button type="button" onClick={() => void loadProjections()} style={buttonStyle} disabled={loading}>
+              Refresh
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, minmax(0,1fr))`, gap: 8 }}>
@@ -238,11 +269,14 @@ export default function AgencyBuilderPage() {
               key={tab}
               type="button"
               onClick={() => {
-                setSearchParams((current) => {
-                  const next = new URLSearchParams(current);
-                  next.set('tab', tab);
-                  return next;
-                }, { replace: true });
+                setSearchParams(
+                  (current) => {
+                    const next = new URLSearchParams(current);
+                    next.set('tab', tab);
+                    return next;
+                  },
+                  { replace: true },
+                );
               }}
               style={{
                 ...buttonStyle,
@@ -256,7 +290,7 @@ export default function AgencyBuilderPage() {
         </div>
       </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 14 }} className="studio-responsive-two-col">
+      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 14 }} className="studio-responsive-two-col">
         <div style={{ display: 'grid', gap: 14 }}>
           {activeTab === 'overview' && overview && <OverviewSurface data={overview} />}
           {activeTab === 'connections' && connections && <ConnectionsSurface data={connections} />}
@@ -267,20 +301,21 @@ export default function AgencyBuilderPage() {
               onRuntimeAction={(action) => void handleRuntimeAction(action)}
             />
           )}
+          {activeTab === 'sessions' && overview && operations && <SessionsSurface overview={overview} operations={operations} />}
 
           {activeTab === 'settings' && (
             <section style={panelStyle}>
-              <h2 style={{ margin: 0, fontSize: 'var(--text-lg)' }}>Settings</h2>
+              <h2 style={{ margin: 0, fontSize: 'var(--text-lg)' }}>Settings Scope</h2>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
-                Settings scope: <strong>{viewConfig.settingsScope}</strong>
+                This level resolves settings as <strong>{viewConfig.settingsScope}</strong>.
               </p>
               <div style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', padding: 12, background: 'var(--bg-secondary)' }}>
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                   {viewConfig.settingsScope === 'global/defaults'
-                    ? 'Agency-level defaults: providers, runtimes, channels, policies.'
+                    ? 'Agency defaults apply globally for providers, runtimes, channels and governance.'
                     : viewConfig.settingsScope === 'partial'
-                      ? 'Department partial settings with inherited defaults.'
-                      : 'Entity-scoped settings with inherited and override values.'}
+                      ? 'Department applies partial overrides while preserving inherited global defaults.'
+                      : 'Scope-specific settings are active and can override inherited defaults.'}
                 </span>
               </div>
             </section>
