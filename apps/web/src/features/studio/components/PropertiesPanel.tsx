@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 
 import type { AgentSpec, DeployPreview, FlowNode, SkillSpec } from '../../../lib/types';
@@ -267,28 +267,4 @@ export function PropertiesPanel({
   );
 }
 
-function actionButtonStyle(): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--shell-chip-border)',
-    background: 'var(--shell-chip-bg)',
-    color: 'var(--text-primary)',
-    fontSize: 11,
-    fontWeight: 600,
-    padding: '6px 8px',
-    cursor: 'pointer',
-    width: 'fit-content',
-  };
-}
-
-function selectStyle(): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--shell-chip-border)',
-    background: 'var(--shell-chip-bg)',
-    color: 'var(--input-text)',
-    fontSize: 12,
-    padding: '6px 8px',
-  };
-}
 

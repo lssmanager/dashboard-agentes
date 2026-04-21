@@ -53,8 +53,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
     return DEFAULT_LAYOUT;
   });
 
-  const persist = useCallback((next: LayoutState) => {
-    setLayout(next);
+  const saveToStorage = useCallback((next: LayoutState) => {
     try {
       localStorage.setItem('openclaw-studio-layout', JSON.stringify(next));
     } catch {
@@ -62,61 +61,66 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const persist = useCallback((next: LayoutState) => {
+    setLayout(next);
+    saveToStorage(next);
+  }, [saveToStorage]);
+
   const toggleLeft = useCallback(() => {
     setLayout((prev) => {
       const next = { ...prev, left: { ...prev.left, open: !prev.left.open } };
-      persist(next);
+      saveToStorage(next);
       return next;
     });
-  }, [persist]);
+  }, [saveToStorage]);
 
   const toggleRight = useCallback(() => {
     setLayout((prev) => {
       const next = { ...prev, right: { ...prev.right, open: !prev.right.open } };
-      persist(next);
+      saveToStorage(next);
       return next;
     });
-  }, [persist]);
+  }, [saveToStorage]);
 
   const toggleBottom = useCallback(() => {
     setLayout((prev) => {
       const next = { ...prev, bottom: { ...prev.bottom, open: !prev.bottom.open } };
-      persist(next);
+      saveToStorage(next);
       return next;
     });
-  }, [persist]);
+  }, [saveToStorage]);
 
   const setLeftSize = useCallback(
     (size: number) => {
       setLayout((prev) => {
         const next = { ...prev, left: { ...prev.left, size } };
-        persist(next);
+        saveToStorage(next);
         return next;
       });
     },
-    [persist],
+    [saveToStorage],
   );
 
   const setRightSize = useCallback(
     (size: number) => {
       setLayout((prev) => {
         const next = { ...prev, right: { ...prev.right, size } };
-        persist(next);
+        saveToStorage(next);
         return next;
       });
     },
-    [persist],
+    [saveToStorage],
   );
 
   const setBottomSize = useCallback(
     (size: number) => {
       setLayout((prev) => {
         const next = { ...prev, bottom: { ...prev.bottom, size } };
-        persist(next);
+        saveToStorage(next);
         return next;
       });
     },
-    [persist],
+    [saveToStorage],
   );
 
   const resetLayout = useCallback(() => {
@@ -132,10 +136,10 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         bottom: { ...prev.bottom, open: true },
         zenMode: false,
       };
-      persist(next);
+      saveToStorage(next);
       return next;
     });
-  }, [persist]);
+  }, [saveToStorage]);
 
   const toggleZenMode = useCallback(() => {
     setLayout((prev) => {
@@ -146,10 +150,10 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         right: { ...prev.right, open: !prev.zenMode ? false : prev.right.open },
         bottom: { ...prev.bottom, open: !prev.zenMode ? false : prev.bottom.open },
       };
-      persist(next);
+      saveToStorage(next);
       return next;
     });
-  }, [persist]);
+  }, [saveToStorage]);
 
   const value = useMemo(
     () => ({
