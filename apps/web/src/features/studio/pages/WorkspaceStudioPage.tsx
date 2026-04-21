@@ -24,13 +24,18 @@ import { AgentBuilderModal } from '../components/AgentBuilderModal';
 import { CorefilesDiffPreviewModal } from '../components/CorefilesDiffPreviewModal';
 import { Toast } from '../../../components';
 import {
+  CanvasGraphContainer,
   RuntimeStatusBadge,
+  StudioCommandRow,
   StudioEmptyState,
   StudioHeroSection,
   StudioInspectorCard,
   StudioMetricRow,
   StudioPageShell,
   StudioSectionCard,
+  StudioSplitPane,
+  StudioTimelineBlock,
+  StudioToolbarGroup,
 } from '../../../components/ui';
 
 export default function WorkspaceStudioPage() {
@@ -49,6 +54,7 @@ export default function WorkspaceStudioPage() {
 
   const [agentId, setAgentId] = useState<string | null>(state.agents[0]?.id || null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedTopologyAgentId, setSelectedTopologyAgentId] = useState<string | null>(state.agents[0]?.id || null);
   const selectedAgent = state.agents.find((agent) => agent.id === agentId) || state.agents[0];
   const selectedNode = useMemo(
     () => state.flows[0]?.nodes.find((node) => node.id === selectedNodeId) ?? null,
@@ -63,6 +69,10 @@ export default function WorkspaceStudioPage() {
   useEffect(() => {
     setSelectedNodeId(null);
   }, [agentId]);
+
+  useEffect(() => {
+    setSelectedTopologyAgentId((current) => current ?? state.agents[0]?.id ?? null);
+  }, [state.agents]);
 
   useEffect(() => {
     if (scope.subagentId && state.agents.some((agent) => agent.id === scope.subagentId)) {
@@ -150,6 +160,25 @@ export default function WorkspaceStudioPage() {
     [runtimeOk, diagnostics.length, sessions.length, selectedAgent?.name, selectedAgent?.model],
   );
 
+  const topologyTimeline = useMemo(
+    () =>
+      sessions.slice(0, 6).map((session, index) => {
+        const current = session as Record<string, unknown>;
+        const id = typeof current.id === 'string' ? current.id : `session-${index + 1}`;
+        const status = typeof current.status === 'string' ? current.status : 'unknown';
+        const channel = typeof current.channel === 'string' ? current.channel : 'internal';
+        return {
+          title: `${id} - ${status}`,
+          description: `Channel ${channel}`,
+          meta: typeof current.updatedAt === 'string' ? current.updatedAt : 'No timestamp',
+        };
+      }),
+    [sessions],
+  );
+
+  const topologySelectedAgent =
+    state.agents.find((agent) => agent.id === selectedTopologyAgentId) ?? selectedAgent ?? null;
+
   if (!scope.agencyId) {
     return (
       <StudioPageShell>
@@ -201,7 +230,7 @@ export default function WorkspaceStudioPage() {
         description="Compose agent behavior, test runtime readiness, and review deploy diffs from a single studio surface."
         meta={<RuntimeStatusBadge status={runtimeOk ? 'online' : 'degraded'} label={runtimeOk ? 'runtime online' : 'runtime degraded'} />}
         actions={
-          <>
+          <StudioCommandRow>
             <button type="button" style={toolButton(true)} disabled={busy} onClick={() => void handleRefresh()}>
               <RefreshCw size={14} />
               Refresh
@@ -218,7 +247,7 @@ export default function WorkspaceStudioPage() {
               <Rocket size={14} />
               Apply Deployment
             </button>
-          </>
+          </StudioCommandRow>
         }
       />
 
@@ -286,6 +315,8 @@ export default function WorkspaceStudioPage() {
 
       {activeTab === 'builder' && (
         <section
+          role="tabpanel"
+          aria-label="Builder surface"
           className="studio-builder-surface"
           style={{
             borderRadius: 'var(--radius-xl)',
@@ -302,73 +333,66 @@ export default function WorkspaceStudioPage() {
           </div>
 
           <div style={{ minHeight: 0, position: 'relative', background: 'var(--canvas-surface-bg)' }}>
-            <div
-              style={{
-                position: 'absolute',
-                inset: 10,
-                border: '1px solid var(--shell-panel-border)',
-                borderRadius: 'var(--radius-xl)',
-                background: 'var(--canvas-surface-bg)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  pointerEvents: 'none',
-                  zIndex: 2,
-                  display: 'grid',
-                  gridTemplateRows: 'repeat(4, minmax(0, 1fr))',
-                }}
-              >
-                {['Orchestration lane', 'Agent lane', 'Logic lane', 'Execution lane'].map((label, index) => (
-                  <div
-                    key={label}
-                    style={{
-                      borderBottom: index === 3 ? 'none' : '1px dashed var(--shell-chip-border)',
-                      position: 'relative',
-                    }}
-                  >
-                    <span
+            <div style={{ position: 'absolute', inset: 10 }}>
+              <CanvasGraphContainer minHeight={680}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                    display: 'grid',
+                    gridTemplateRows: 'repeat(4, minmax(0, 1fr))',
+                  }}
+                >
+                  {['Orchestration lane', 'Agent lane', 'Logic lane', 'Execution lane'].map((label, index) => (
+                    <div
+                      key={label}
                       style={{
-                        position: 'absolute',
-                        left: 14,
-                        top: 10,
-                        fontSize: 10,
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
-                        color: 'var(--text-muted)',
-                        background: 'var(--shell-chip-bg)',
-                        border: '1px solid var(--shell-chip-border)',
-                        borderRadius: 'var(--radius-full)',
-                        padding: '3px 8px',
+                        borderBottom: index === 3 ? 'none' : '1px dashed var(--shell-chip-border)',
+                        position: 'relative',
                       }}
                     >
-                      {label}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                      <span
+                        style={{
+                          position: 'absolute',
+                          left: 14,
+                          top: 10,
+                          fontSize: 10,
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          color: 'var(--text-muted)',
+                          background: 'var(--shell-chip-bg)',
+                          border: '1px solid var(--shell-chip-border)',
+                          borderRadius: 'var(--radius-full)',
+                          padding: '3px 8px',
+                        }}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
 
-              <div style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
-                {selectedAgent ? (
-                  <StudioCanvas
-                    agents={[selectedAgent]}
-                    flows={state.flows}
-                    skills={state.skills}
-                    onNodeSelect={setSelectedNodeId}
-                  />
-                ) : (
-                  <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
-                    <StudioEmptyState
-                      title="Select an agent"
-                      description="Choose a builder target to load nodes on the workspace canvas."
+                <div style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
+                  {selectedAgent ? (
+                    <StudioCanvas
+                      agents={[selectedAgent]}
+                      flows={state.flows}
+                      skills={state.skills}
+                      onNodeSelect={setSelectedNodeId}
                     />
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+                      <StudioEmptyState
+                        title="Select an agent"
+                        description="Choose a builder target to load nodes on the workspace canvas."
+                      />
+                    </div>
+                  )}
+                </div>
+              </CanvasGraphContainer>
             </div>
           </div>
 
@@ -483,20 +507,77 @@ export default function WorkspaceStudioPage() {
       )}
 
       {activeTab === 'topology' && (
-        <StudioSectionCard title="Workspace Topology Slice" description="Micro-topology summary for active workspace context.">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-            <div style={statusTile(runtimeOk ? 'success' : 'warning')}>
-              <GitBranch size={14} />
-              Runtime links {runtimeOk ? 'online' : 'degraded'}
-            </div>
-            <div style={statusTile('success')}>
-              <LayoutGrid size={14} />
-              Agents in workspace: {state.agents.length}
-            </div>
-            <div style={statusTile(sessions.length > 0 ? 'success' : 'warning')}>
-              <MessageSquare size={14} />
-              Live sessions: {sessions.length}
-            </div>
+        <StudioSectionCard title="Workspace Topology Slice" description="Graph-first runtime view scoped to this workspace.">
+          <StudioSplitPane
+            left={
+              <div style={{ display: 'grid', gap: 10, padding: 12 }}>
+                {state.agents.map((agent) => {
+                  const active = topologySelectedAgent?.id === agent.id;
+                  const tone = agent.isEnabled ? 'success' : 'warning';
+                  return (
+                    <button
+                      key={agent.id}
+                      type="button"
+                      onClick={() => setSelectedTopologyAgentId(agent.id)}
+                      style={{
+                        ...statusTile(tone),
+                        width: '100%',
+                        justifyContent: 'space-between',
+                        borderColor: active ? 'color-mix(in srgb, var(--color-primary) 45%, var(--border-primary))' : undefined,
+                        background: active ? 'var(--color-primary-soft)' : undefined,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <GitBranch size={14} />
+                        {agent.name}
+                      </span>
+                      <RuntimeStatusBadge
+                        status={agent.isEnabled ? 'online' : 'degraded'}
+                        label={agent.isEnabled ? 'active' : 'paused'}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            }
+            right={
+              <div style={{ padding: 12, display: 'grid', gap: 10 }}>
+                <StudioInspectorCard title="Selected Node">
+                  {topologySelectedAgent ? (
+                    <>
+                      <StudioMetricRow label="Agent" value={topologySelectedAgent.name} />
+                      <StudioMetricRow label="Role" value={topologySelectedAgent.role || 'n/a'} />
+                      <StudioMetricRow label="Model" value={topologySelectedAgent.model || 'n/a'} />
+                      <StudioMetricRow label="Status" value={topologySelectedAgent.isEnabled ? 'active' : 'paused'} />
+                    </>
+                  ) : (
+                    <StudioEmptyState title="No selected node" description="Select an agent from the topology list." />
+                  )}
+                </StudioInspectorCard>
+
+                <StudioInspectorCard title="Current Activity">
+                  {topologyTimeline.length > 0 ? (
+                    <StudioTimelineBlock items={topologyTimeline} />
+                  ) : (
+                    <StudioEmptyState title="No activity" description="Start a run to populate timeline events." />
+                  )}
+                </StudioInspectorCard>
+              </div>
+            }
+          />
+
+          <div style={{ marginTop: 12 }}>
+            <StudioToolbarGroup>
+              <div style={statusTile(runtimeOk ? 'success' : 'warning')}>
+                <LayoutGrid size={14} />
+                Runtime links {runtimeOk ? 'online' : 'degraded'}
+              </div>
+              <div style={statusTile(sessions.length > 0 ? 'success' : 'warning')}>
+                <MessageSquare size={14} />
+                Live sessions: {sessions.length}
+              </div>
+            </StudioToolbarGroup>
           </div>
 
           <div style={{ marginTop: 12 }}>

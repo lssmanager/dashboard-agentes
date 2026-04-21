@@ -5,6 +5,7 @@ import { NavRail } from '../components/NavRail';
 import { ContextPanel } from '../components/ContextPanel';
 import { Header } from '../components/Header';
 import { useHierarchy } from '../lib/HierarchyContext';
+import { parseBuilderTab, parseNodeQuery, surfaceFromPath } from '../lib/studioRouting';
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
@@ -24,7 +25,7 @@ function useMediaQuery(query: string): boolean {
 export function MainLayout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { setSurface } = useHierarchy();
+  const { setSurface, setBuilderTab, selectByKey, tree } = useHierarchy();
 
   const isDesktop = useMediaQuery('(min-width: 1120px)');
   const isMobile = !useMediaQuery('(min-width: 769px)');
@@ -37,14 +38,21 @@ export function MainLayout() {
   const mainPadding = isStudioSurface ? '14px 14px 18px' : '20px 22px 28px';
 
   useEffect(() => {
-    if (location.pathname.startsWith('/agency-builder')) setSurface('agency-builder');
-    else if (location.pathname.startsWith('/workspace-studio')) setSurface('workspace-studio');
-    else if (location.pathname.startsWith('/entity-editor')) setSurface('entity-editor');
-    else if (location.pathname.startsWith('/profiles')) setSurface('profiles');
-    else if (location.pathname.startsWith('/runs')) setSurface('runs');
-    else if (location.pathname.startsWith('/sessions')) setSurface('sessions');
-    else if (location.pathname.startsWith('/settings')) setSurface('settings');
+    setSurface(surfaceFromPath(location.pathname));
   }, [location.pathname, setSurface]);
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/agency-builder')) return;
+    const tab = parseBuilderTab(location.search);
+    if (tab) setBuilderTab(tab);
+  }, [location.pathname, location.search, setBuilderTab]);
+
+  useEffect(() => {
+    const nodeKey = parseNodeQuery(location.search);
+    if (!nodeKey) return;
+    if (!tree.nodes[nodeKey]) return;
+    selectByKey(nodeKey);
+  }, [location.search, selectByKey, tree.nodes]);
 
   return (
     <div

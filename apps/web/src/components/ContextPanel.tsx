@@ -3,6 +3,8 @@ import { ChevronDown, ChevronRight, FolderTree, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { type HierarchyLevel, type HierarchyNode, useHierarchy } from '../lib/HierarchyContext';
+import type { AgencyBuilderTab } from '../lib/types';
+import { buildStudioHref } from '../lib/studioRouting';
 
 const LEVEL_LABEL: Record<HierarchyLevel, string> = {
   agency: 'Agency',
@@ -20,10 +22,14 @@ const LEVEL_COLOR: Record<HierarchyLevel, string> = {
   subagent: '#9333ea',
 };
 
-function routeForNode(node: HierarchyNode): string {
-  if (node.level === 'workspace') return '/workspace-studio';
-  if (node.level === 'agent' || node.level === 'subagent') return '/entity-editor';
-  return '/agency-builder?tab=overview';
+function routeForNode(node: HierarchyNode, selectedBuilderTab: AgencyBuilderTab): string {
+  if (node.level === 'workspace') {
+    return buildStudioHref({ surface: 'workspace-studio', nodeKey: node.key });
+  }
+  if (node.level === 'agent' || node.level === 'subagent') {
+    return buildStudioHref({ surface: 'entity-editor', nodeKey: node.key });
+  }
+  return buildStudioHref({ surface: 'agency-builder', tab: selectedBuilderTab ?? 'overview', nodeKey: node.key });
 }
 
 export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
@@ -38,6 +44,7 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
     toggleExpanded,
     selectNode,
     loading,
+    selectedBuilderTab,
   } = useHierarchy();
   const [search, setSearch] = useState('');
 
@@ -143,8 +150,9 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
             onChange={(event) => {
               const nextAgency = agencies.find((agency) => agency.id === event.target.value);
               if (!nextAgency) return;
-              selectNode(`agency:${nextAgency.id}`);
-              go('/agency-builder?tab=overview');
+              const key = `agency:${nextAgency.id}`;
+              selectNode(key);
+              go(buildStudioHref({ surface: 'agency-builder', tab: selectedBuilderTab, nodeKey: key }));
             }}
             style={{
               width: '100%',
@@ -202,7 +210,7 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
             type="button"
             onClick={() => {
               if (selectedNode) {
-                go(routeForNode(selectedNode));
+                go(routeForNode(selectedNode, selectedBuilderTab));
               }
             }}
             disabled={!selectedNode}
@@ -246,21 +254,23 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
         {loading && Object.keys(tree.nodes).length === 0 ? (
           <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>Loading hierarchy...</div>
         ) : tree.rootKey ? (
-          <HierarchyBranch
-            nodeKey={tree.rootKey}
-            depth={0}
-            nodes={tree.nodes}
-            selectedKey={selectedKey}
-            isExpanded={isExpanded}
-            toggleExpanded={toggleExpanded}
-            selectNode={selectNode}
-            matches={matches}
-            onOpen={(key) => {
-              const node = tree.nodes[key];
-              if (!node) return;
-              go(routeForNode(node));
-            }}
-          />
+          <div role="tree" aria-label="Agency hierarchy">
+            <HierarchyBranch
+              nodeKey={tree.rootKey}
+              depth={0}
+              nodes={tree.nodes}
+              selectedKey={selectedKey}
+              isExpanded={isExpanded}
+              toggleExpanded={toggleExpanded}
+              selectNode={selectNode}
+              matches={matches}
+              onOpen={(key) => {
+                const node = tree.nodes[key];
+                if (!node) return;
+                go(routeForNode(node, selectedBuilderTab));
+              }}
+            />
+          </div>
         ) : (
           <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No hierarchy available</div>
         )}
@@ -304,6 +314,28 @@ function HierarchyBranch({
       <div
         onClick={() => selectNode(nodeKey)}
         onDoubleClick={() => onOpen(nodeKey)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            onOpen(nodeKey);
+          }
+          if (event.key === ' ') {
+            event.preventDefault();
+            selectNode(nodeKey);
+          }
+          if (event.key === 'ArrowRight' && hasChildren && !expanded) {
+            event.preventDefault();
+            toggleExpanded(nodeKey);
+          }
+          if (event.key === 'ArrowLeft' && hasChildren && expanded) {
+            event.preventDefault();
+            toggleExpanded(nodeKey);
+          }
+        }}
+        role="treeitem"
+        aria-selected={selected}
+        aria-expanded={hasChildren ? expanded : undefined}
+        tabIndex={0}
         style={{
           display: 'grid',
           gridTemplateColumns: '18px 1fr auto',

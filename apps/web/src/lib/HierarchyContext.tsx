@@ -46,6 +46,7 @@ interface HierarchyContextValue {
   isExpanded: (key: string) => boolean;
   toggleExpanded: (key: string) => void;
   selectNode: (key: string) => void;
+  selectByKey: (key: string) => void;
   selectByEntity: (level: HierarchyLevel, id: string) => void;
   refreshHierarchy: () => Promise<void>;
 }
@@ -461,6 +462,11 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
       );
     },
     selectNode: (key: string) => {
+      if (tree.nodes[key]) {
+        setSelectedKey(key);
+      }
+    },
+    selectByKey: (key: string) => {
       if (tree.nodes[key]) {
         setSelectedKey(key);
       }
