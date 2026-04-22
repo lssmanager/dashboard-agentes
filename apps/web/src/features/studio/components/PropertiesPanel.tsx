@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { AlertTriangle, CheckCircle2, FlaskConical, GitCompare, Lock, RadioTower, SquareMousePointer } from 'lucide-react';
 
 import type { AgentSpec, DeployPreview, FlowNode, SkillSpec } from '../../../lib/types';
 
@@ -11,113 +11,79 @@ interface PropertiesPanelProps {
   selectedNode: FlowNode | null;
   agents: AgentSpec[];
   skills: SkillSpec[];
+  runtimeOk: boolean;
 }
 
 type InspectorTab = 'properties' | 'test' | 'diff';
 type DiffStatus = 'added' | 'updated' | 'deleted' | 'unchanged';
 
 const STATUS_STYLE: Record<DiffStatus, { color: string; bg: string; prefix: string }> = {
-  added: { color: 'var(--color-success)', bg: 'rgba(34,197,94,0.08)', prefix: '+' },
-  updated: { color: '#F59E0B', bg: 'rgba(245,158,11,0.08)', prefix: '~' },
-  deleted: { color: 'var(--color-error)', bg: 'rgba(239,68,68,0.08)', prefix: '-' },
-  unchanged: { color: 'var(--text-muted)', bg: 'transparent', prefix: '.' },
+  added: { color: 'var(--tone-success-text)', bg: 'var(--tone-success-bg)', prefix: '+' },
+  updated: { color: 'var(--tone-warning-text)', bg: 'var(--tone-warning-bg)', prefix: '~' },
+  deleted: { color: 'var(--tone-danger-text)', bg: 'var(--tone-danger-bg)', prefix: '-' },
+  unchanged: { color: 'var(--text-muted)', bg: 'var(--bg-secondary)', prefix: '.' },
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
 }
 
 function toStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
+  if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
 }
 
-function SectionBlock({ title, children, compact = false }: { title: string; children: ReactNode; compact?: boolean }) {
+function inferNodeLabel(node: FlowNode | null): string | null {
+  if (!node) return null;
+  const config = asRecord(node.config);
+  const fromConfig = config && typeof config.name === 'string' ? config.name : null;
+  return fromConfig ?? node.id;
+}
+
+function SummaryCard({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
   return (
-    <div
-      style={{
-        borderRadius: 'var(--radius-md)',
-        border: '1px solid var(--shell-chip-border)',
-        background: 'var(--shell-chip-bg)',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          padding: compact ? '8px 12px' : '10px 14px',
-          borderBottom: '1px solid var(--shell-chip-border)',
-          background: 'color-mix(in srgb, var(--shell-chip-bg) 78%, transparent)',
-        }}
-      >
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</span>
+    <section style={cardStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+        {icon}
+        <h4 style={{ margin: 0, fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>{title}</h4>
       </div>
-      <div style={{ padding: compact ? '10px 12px' : '10px 14px' }}>{children}</div>
+      {children}
+    </section>
+  );
+}
+
+function KvRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div style={kvRowStyle}>
+      <span style={kvLabelStyle}>{label}</span>
+      <span style={{ color: 'var(--text-primary)', textAlign: 'right', minWidth: 0, wordBreak: 'break-word' }}>{value}</span>
     </div>
   );
 }
 
-function Pill({
-  label,
-  onRemove,
-}: {
-  label: string;
-  onRemove: () => void;
-}) {
+function ReadOnlyState({ title, description }: { title: string; description: string }) {
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        borderRadius: 999,
-        padding: '4px 10px',
-        background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
-        color: 'var(--color-primary)',
-        fontSize: 11,
-        fontWeight: 600,
-      }}
-    >
-      {label}
-      <button
-        type="button"
-        onClick={onRemove}
+    <div style={{ display: 'grid', gap: 10, padding: '20px 14px', textAlign: 'center' }}>
+      <div
         style={{
-          border: 'none',
-          background: 'transparent',
-          color: 'inherit',
-          cursor: 'pointer',
-          fontSize: 12,
-          lineHeight: 1,
-          padding: 0,
+          width: 42,
+          height: 42,
+          borderRadius: 12,
+          background: 'var(--color-primary-soft)',
+          border: '1px solid color-mix(in srgb, var(--color-primary) 26%, transparent)',
+          display: 'grid',
+          placeItems: 'center',
+          margin: '0 auto',
+          color: 'var(--color-primary)',
         }}
       >
-        ×
-      </button>
-    </span>
-  );
-}
-
-function EmptyInspectorState() {
-  return (
-    <div
-      style={{
-        border: '1px dashed var(--shell-chip-border)',
-        borderRadius: 'var(--radius-md)',
-        padding: '16px 14px',
-        color: 'var(--text-muted)',
-        fontSize: 12,
-      }}
-    >
-      Select a node on the canvas to inspect it
+        <SquareMousePointer size={18} />
+      </div>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>{title}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.45 }}>{description}</div>
+      </div>
     </div>
   );
 }
@@ -130,476 +96,313 @@ export function PropertiesPanel({
   selectedNode,
   agents,
   skills,
+  runtimeOk,
 }: PropertiesPanelProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>('properties');
 
   const config = useMemo(() => asRecord(selectedNode?.config), [selectedNode]);
-  const nodeType = selectedNode?.type === 'subagent' ? 'subagent' : selectedNode?.type === 'agent' ? 'agent' : null;
+  const selectedNodeLabel = inferNodeLabel(selectedNode);
+
   const configuredAgentId = config && typeof config.agentId === 'string' ? config.agentId : null;
-
   const linkedAgent = useMemo(() => {
-    if (!nodeType) return null;
-    if (configuredAgentId) {
-      return agents.find((agent) => agent.id === configuredAgentId) ?? null;
+    if (!selectedNode) return null;
+    if (configuredAgentId) return agents.find((agent) => agent.id === configuredAgentId) ?? null;
+    if (selectedNode.type === 'agent' || selectedNode.type === 'subagent') {
+      const matchingKind = selectedNode.type === 'subagent' ? 'subagent' : 'agent';
+      return agents.find((agent) => agent.kind === matchingKind) ?? null;
     }
+    return null;
+  }, [agents, configuredAgentId, selectedNode]);
 
-    const matchingKind = nodeType === 'subagent' ? 'subagent' : 'agent';
-    return agents.find((agent) => agent.kind === matchingKind) ?? null;
-  }, [agents, configuredAgentId, nodeType]);
+  const declaredSkills = useMemo(() => {
+    const refs = toStringArray(config?.skills).concat(toStringArray(config?.skillRefs));
+    if (refs.length > 0) return refs;
+    if (linkedAgent?.skillRefs?.length) return linkedAgent.skillRefs;
+    return [];
+  }, [config, linkedAgent]);
 
-  const initialName =
-    (config && typeof config.name === 'string' ? config.name : undefined) ??
-    linkedAgent?.name ??
-    (selectedNode ? selectedNode.id : '');
+  const knownSkillSet = useMemo(() => new Set(skills.map((skill) => skill.name)), [skills]);
+  const skillCoverage = declaredSkills.filter((skill) => knownSkillSet.has(skill));
 
-  const initialPurpose =
-    (config && typeof config.purpose === 'string' ? config.purpose : undefined) ??
-    (config && typeof config.description === 'string' ? config.description : undefined) ??
-    linkedAgent?.description ??
-    '';
+  const declaredTools = useMemo(() => {
+    const refs = toStringArray(config?.tools).concat(toStringArray(config?.toolRefs));
+    if (refs.length > 0) return refs;
+    return linkedAgent?.permissions?.tools ?? [];
+  }, [config, linkedAgent]);
 
-  const skillRefsFromConfig = toStringArray(config?.skills).concat(toStringArray(config?.skillRefs));
-  const initialSkills =
-    skillRefsFromConfig.length > 0
-      ? skillRefsFromConfig.filter((value, index, all) => all.indexOf(value) === index)
-      : linkedAgent?.skillRefs ?? [];
+  const runtimeSessions = useMemo(
+    () =>
+      sessions.map((session) => asRecord(session)).filter((session): session is Record<string, unknown> => Boolean(session)),
+    [sessions],
+  );
 
-  const initialTools =
-    toStringArray(config?.tools).length > 0
-      ? toStringArray(config?.tools)
-      : toStringArray(config?.toolRefs).length > 0
-        ? toStringArray(config?.toolRefs)
-        : linkedAgent?.permissions?.tools ?? [];
+  const nodeSessionMatches = useMemo(() => {
+    if (!selectedNode) return [];
+    const nodeLower = selectedNode.id.toLowerCase();
+    const linkedAgentId = linkedAgent?.id;
 
-  const [name, setName] = useState(initialName);
-  const [purpose, setPurpose] = useState(initialPurpose);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>(initialSkills);
-  const [selectedTools, setSelectedTools] = useState<string[]>(initialTools);
-  const [addingSkill, setAddingSkill] = useState(false);
-  const [addingTool, setAddingTool] = useState(false);
+    return runtimeSessions.filter((session) => {
+      const nodeId = typeof session.nodeId === 'string' ? session.nodeId.toLowerCase() : '';
+      const activeAgentId = typeof session.agentId === 'string' ? session.agentId : null;
+      return nodeId === nodeLower || (linkedAgentId ? activeAgentId === linkedAgentId : false);
+    });
+  }, [linkedAgent?.id, runtimeSessions, selectedNode]);
 
-  useEffect(() => {
-    setName(initialName);
-    setPurpose(initialPurpose);
-    setSelectedSkills(initialSkills);
-    setSelectedTools(initialTools);
-    setAddingSkill(false);
-    setAddingTool(false);
-  }, [selectedNodeId, initialName, initialPurpose, initialSkills, initialTools]);
+  const diffStats = useMemo(() => {
+    const source = deployPreview?.diff ?? [];
+    return {
+      total: source.length,
+      added: source.filter((entry) => entry.status === 'added').length,
+      updated: source.filter((entry) => entry.status === 'updated').length,
+      deleted: source.filter((entry) => entry.status === 'deleted').length,
+      unchanged: source.filter((entry) => entry.status === 'unchanged').length,
+    };
+  }, [deployPreview]);
 
-  const skillCatalog = useMemo(() => skills.map((skill) => skill.name).filter(Boolean), [skills]);
-
-  const toolCatalog = useMemo(() => {
-    const fromAgents = agents.flatMap((agent) => agent.permissions?.tools ?? []);
-    const fromNode = toStringArray(config?.tools).concat(toStringArray(config?.toolRefs));
-    const merged = [...fromAgents, ...fromNode, ...selectedTools];
-    return Array.from(new Set(merged.filter((item) => item.trim().length > 0)));
-  }, [agents, config, selectedTools]);
-
-  const availableSkills = skillCatalog.filter((item) => !selectedSkills.includes(item));
-  const availableTools = toolCatalog.filter((item) => !selectedTools.includes(item));
-
-  const builderWhatItDoes =
-    (config && typeof config.whatItDoes === 'string' ? config.whatItDoes : undefined) ??
-    linkedAgent?.description ??
-    'No generated summary available for this node.';
-  const builderInputs = toStringArray(config?.inputs);
-  const builderOutputs = toStringArray(config?.outputs);
+  const selectedNodeDiffEntries = useMemo(() => {
+    if (!deployPreview || !selectedNode) return [];
+    const candidates = [selectedNode.id, selectedNodeLabel].filter((value): value is string => Boolean(value)).map((value) => value.toLowerCase());
+    if (candidates.length === 0) return [];
+    return deployPreview.diff.filter((entry) => candidates.some((candidate) => entry.path.toLowerCase().includes(candidate)));
+  }, [deployPreview, selectedNode, selectedNodeLabel]);
 
   function renderPropertiesTab() {
     if (!selectedNodeId || !selectedNode) {
-      return <EmptyInspectorState />;
+      return <ReadOnlyState title="No node selected" description="Select a canvas node to inspect identity, bindings, and runtime-ready configuration." />;
     }
 
-    if (nodeType !== 'agent' && nodeType !== 'subagent') {
-      return (
-        <SectionBlock title="Node Details">
-          <div style={{ display: 'grid', gap: 6 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Node ID</div>
-            <code style={{ fontSize: 11, color: 'var(--text-primary)' }}>{selectedNode.id}</code>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Type</div>
-            <code style={{ fontSize: 11, color: 'var(--text-primary)' }}>{selectedNode.type}</code>
-          </div>
-        </SectionBlock>
-      );
-    }
+    const purpose =
+      (config && typeof config.purpose === 'string' ? config.purpose : undefined) ??
+      (config && typeof config.description === 'string' ? config.description : undefined) ??
+      linkedAgent?.description ??
+      'No description declared.';
+
+    const outputSummary = toStringArray(config?.outputs);
+    const inputSummary = toStringArray(config?.inputs);
 
     return (
       <div style={{ display: 'grid', gap: 10 }}>
-        <SectionBlock title="Identity">
-          <div style={{ display: 'grid', gap: 8 }}>
-            <label style={{ display: 'grid', gap: 4 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Name</span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                style={{
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--input-border)',
-                  background: 'var(--input-bg)',
-                  color: 'var(--input-text)',
-                  padding: '7px 9px',
-                  fontSize: 12,
-                }}
-              />
-            </label>
+        <SummaryCard title="Selected Node" icon={<SquareMousePointer size={13} style={{ color: 'var(--color-primary)' }} />}>
+          <KvRow label="Name" value={selectedNodeLabel ?? selectedNode.id} />
+          <KvRow label="Type" value={String(selectedNode.type)} />
+          <KvRow label="Node ID" value={<code style={monoTextStyle}>{selectedNode.id}</code>} />
+        </SummaryCard>
 
-            <label style={{ display: 'grid', gap: 4 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Purpose / Description</span>
-              <textarea
-                value={purpose}
-                onChange={(event) => setPurpose(event.target.value)}
-                rows={4}
-                style={{
-                  resize: 'vertical',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--input-border)',
-                  background: 'var(--input-bg)',
-                  color: 'var(--input-text)',
-                  padding: '7px 9px',
-                  fontSize: 12,
-                }}
-              />
-            </label>
+        <SummaryCard title="Bindings" icon={<RadioTower size={13} style={{ color: 'var(--color-primary)' }} />}>
+          <KvRow label="Linked Agent" value={linkedAgent ? linkedAgent.name : 'None'} />
+          <KvRow label="Agent ID" value={linkedAgent ? <code style={monoTextStyle}>{linkedAgent.id}</code> : 'n/a'} />
+          <KvRow label="Model" value={linkedAgent?.model ?? 'Inherited / none'} />
+          <KvRow label="Workspace" value={linkedAgent?.workspaceId ?? 'n/a'} />
+        </SummaryCard>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Type</span>
-                <span
-                  style={{
-                    borderRadius: 999,
-                    border: '1px solid var(--shell-chip-border)',
-                    fontSize: 11,
-                    padding: '2px 8px',
-                    color: 'var(--text-primary)',
-                    background: 'var(--shell-chip-bg)',
-                    textTransform: 'capitalize',
-                  }}
-              >
-                {nodeType === 'subagent' ? 'Subagent' : 'Agent'}
-              </span>
-            </div>
+        <SummaryCard title="Node Contract" icon={<Lock size={13} style={{ color: 'var(--color-primary)' }} />}>
+          <KvRow label="Purpose" value={purpose} />
+          <KvRow label="Inputs" value={inputSummary.length > 0 ? inputSummary.join(', ') : 'None declared'} />
+          <KvRow label="Outputs" value={outputSummary.length > 0 ? outputSummary.join(', ') : 'None declared'} />
+          <KvRow label="Skills" value={declaredSkills.length > 0 ? `${declaredSkills.length} (${skillCoverage.length} in catalog)` : 'None'} />
+          <KvRow label="Tools" value={declaredTools.length > 0 ? declaredTools.join(', ') : 'None'} />
+        </SummaryCard>
+
+        <SummaryCard title="Raw Config Snapshot">
+          <pre style={rawBlockStyle}>{JSON.stringify(selectedNode.config ?? {}, null, 2)}</pre>
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+            Inspector content is read-only in this pass.
           </div>
-        </SectionBlock>
-
-        <SectionBlock title="Skills">
-          <div style={{ display: 'grid', gap: 8 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {selectedSkills.length === 0 ? (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No skills attached</span>
-              ) : (
-                selectedSkills.map((skillName) => (
-                  <Pill
-                    key={skillName}
-                    label={skillName}
-                    onRemove={() => setSelectedSkills((previous) => previous.filter((item) => item !== skillName))}
-                  />
-                ))
-              )}
-            </div>
-            <div style={{ display: 'grid', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => setAddingSkill((previous) => !previous)}
-                style={actionButtonStyle()}
-              >
-                + Add Skill
-              </button>
-              {addingSkill && (
-                <select
-                  value=""
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!value) return;
-                    setSelectedSkills((previous) => (previous.includes(value) ? previous : [...previous, value]));
-                    setAddingSkill(false);
-                  }}
-                  style={selectStyle()}
-                >
-                  <option value="">Select skill...</option>
-                  {availableSkills.map((skillName) => (
-                    <option key={skillName} value={skillName}>
-                      {skillName}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-        </SectionBlock>
-
-        <SectionBlock title="Tools">
-          <div style={{ display: 'grid', gap: 8 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {selectedTools.length === 0 ? (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No tools attached</span>
-              ) : (
-                selectedTools.map((toolName) => (
-                  <Pill
-                    key={toolName}
-                    label={toolName}
-                    onRemove={() => setSelectedTools((previous) => previous.filter((item) => item !== toolName))}
-                  />
-                ))
-              )}
-            </div>
-            <div style={{ display: 'grid', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => setAddingTool((previous) => !previous)}
-                style={actionButtonStyle()}
-              >
-                + Add Tool
-              </button>
-              {addingTool && (
-                <select
-                  value=""
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!value) return;
-                    setSelectedTools((previous) => (previous.includes(value) ? previous : [...previous, value]));
-                    setAddingTool(false);
-                  }}
-                  style={selectStyle()}
-                >
-                  <option value="">Select tool...</option>
-                  {availableTools.map((toolName) => (
-                    <option key={toolName} value={toolName}>
-                      {toolName}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-        </SectionBlock>
-
-        <SectionBlock title="Builder Agent Function" compact>
-          <details open>
-            <summary
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-                cursor: 'pointer',
-                listStyle: 'none',
-              }}
-            >
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Builder Output</span>
-              <span
-                style={{
-                  borderRadius: 999,
-                  padding: '2px 8px',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  background: 'var(--shell-chip-bg)',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                generated
-              </span>
-            </summary>
-
-            <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>whatItDoes</div>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.45 }}>{builderWhatItDoes}</p>
-              </div>
-
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>inputs</div>
-                {builderInputs.length === 0 ? (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No generated inputs</div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    {builderInputs.map((item) => (
-                      <code key={item} style={{ fontSize: 11, color: 'var(--text-primary)' }}>
-                        {item}
-                      </code>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>outputs</div>
-                {builderOutputs.length === 0 ? (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No generated outputs</div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    {builderOutputs.map((item) => (
-                      <code key={item} style={{ fontSize: 11, color: 'var(--text-primary)' }}>
-                        {item}
-                      </code>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </details>
-        </SectionBlock>
+        </SummaryCard>
       </div>
     );
   }
 
   function renderTestTab() {
+    if (!selectedNode || !selectedNodeId) {
+      return <ReadOnlyState title="Test context unavailable" description="Select a node to see diagnostics, runtime session matching, and execution readiness." />;
+    }
+
     return (
       <div style={{ display: 'grid', gap: 10 }}>
-        <SectionBlock
-          title="Compiler Diagnostics"
-          compact
-        >
+        <SummaryCard title="Execution Readiness" icon={<FlaskConical size={13} style={{ color: 'var(--color-primary)' }} />}>
+          <KvRow label="Runtime" value={runtimeOk ? 'Online' : 'Offline'} />
+          <KvRow label="Diagnostics" value={diagnostics.length === 0 ? 'Clean' : `${diagnostics.length} issue${diagnostics.length === 1 ? '' : 's'}`} />
+          <KvRow label="Matched Sessions" value={String(nodeSessionMatches.length)} />
+        </SummaryCard>
+
+        <SummaryCard title="Compiler Diagnostics">
           {diagnostics.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-success)' }}>
-              <CheckCircle size={13} />
-              No issues found
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--tone-success-text)' }}>
+              <CheckCircle2 size={13} />
+              No compile diagnostics for current workspace.
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: 4 }}>
+            <div style={{ display: 'grid', gap: 6 }}>
               {diagnostics.map((item) => (
-                <div
-                  key={item}
-                  style={{
-                    fontSize: 12,
-                    color: '#F59E0B',
-                    background: 'rgba(245,158,11,0.08)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '4px 8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <AlertTriangle size={12} />
-                  {item}
+                <div key={item} style={warnRowStyle}>
+                  <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+                  <span>{item}</span>
                 </div>
               ))}
             </div>
           )}
-        </SectionBlock>
+        </SummaryCard>
 
-        <SectionBlock title="Runtime Sessions" compact>
-          {sessions.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>No active sessions</p>
+        <SummaryCard title="Runtime Sessions (Node/Agent Match)">
+          {!runtimeOk ? (
+            <div style={{ fontSize: 12, color: 'var(--tone-warning-text)' }}>
+              Runtime is offline. Session checks are read-only until runtime reconnects.
+            </div>
+          ) : nodeSessionMatches.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              No active session matched this node or its linked agent.
+            </div>
           ) : (
-            <div style={{ display: 'grid', gap: 4 }}>
-              {sessions.map((session, index) => {
-                const current = asRecord(session);
-                const sid = typeof current?.id === 'string' ? current.id.slice(0, 12) : `sess-${index}`;
-                const aid = typeof current?.agentId === 'string' ? current.agentId : 'Unknown';
+            <div style={{ display: 'grid', gap: 6 }}>
+              {nodeSessionMatches.slice(0, 6).map((session, index) => {
+                const sessionId = typeof session.id === 'string' ? session.id : `session-${index + 1}`;
+                const status = typeof session.status === 'string' ? session.status : 'unknown';
+                const channel = typeof session.channel === 'string' ? session.channel : 'n/a';
                 return (
-                  <div
-                    key={`${sid}-${index}`}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '6px 8px',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'var(--shell-chip-bg)',
-                    }}
-                  >
-                    <code style={{ fontSize: 11, color: 'var(--text-primary)' }}>{sid}</code>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{aid}</span>
+                  <div key={`${sessionId}-${index}`} style={sessionRowStyle}>
+                    <code style={monoTextStyle}>{sessionId.slice(0, 18)}</code>
+                    <span style={{ color: 'var(--text-muted)' }}>-</span>
+                    <span style={{ fontWeight: 700 }}>{status}</span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)' }}>ch:{channel}</span>
                   </div>
                 );
               })}
             </div>
           )}
-        </SectionBlock>
+        </SummaryCard>
       </div>
     );
   }
 
   function renderDiffTab() {
+    if (!deployPreview) {
+      return <ReadOnlyState title="Diff preview not loaded" description="Run Preview in Studio top actions to load deploy diff and node impact details." />;
+    }
+
     return (
-      <SectionBlock title="Deploy Diff" compact>
-        {!deployPreview ? (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>Run Preview Diff to see changes</p>
-        ) : deployPreview.diff.length === 0 ? (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nothing to deploy</p>
-        ) : (
-          <div style={{ display: 'grid', gap: 4 }}>
-            {deployPreview.diff.map((item) => {
-              const style = STATUS_STYLE[item.status as DiffStatus] ?? STATUS_STYLE.unchanged;
-              return (
-                <div
-                  key={item.path}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 12,
-                    fontFamily: 'var(--font-mono)',
-                    color: style.color,
-                    background: style.bg,
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '4px 8px',
-                  }}
-                >
-                  <span style={{ fontWeight: 700, width: 12, textAlign: 'center', flexShrink: 0 }}>{style.prefix}</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.path}</span>
+      <div style={{ display: 'grid', gap: 10 }}>
+        <SummaryCard title="Deploy Summary" icon={<GitCompare size={13} style={{ color: 'var(--color-primary)' }} />}>
+          <KvRow label="Total files" value={diffStats.total} />
+          <KvRow label="Added" value={diffStats.added} />
+          <KvRow label="Updated" value={diffStats.updated} />
+          <KvRow label="Deleted" value={diffStats.deleted} />
+          <KvRow label="Unchanged" value={diffStats.unchanged} />
+        </SummaryCard>
+
+        <SummaryCard title="Node Impact">
+          {!selectedNode ? (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Select a node to narrow diff impact.</div>
+          ) : selectedNodeDiffEntries.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              No diff entries directly reference node "{selectedNodeLabel ?? selectedNode.id}".
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: 6 }}>
+              {selectedNodeDiffEntries.map((entry) => {
+                const style = STATUS_STYLE[entry.status as DiffStatus] ?? STATUS_STYLE.unchanged;
+                return (
+                  <div key={entry.path} style={{ ...diffRowStyle, color: style.color, background: style.bg }}>
+                    <span style={{ width: 12, textAlign: 'center', fontWeight: 800, flexShrink: 0 }}>{style.prefix}</span>
+                    <code style={{ ...monoTextStyle, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.path}</code>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </SummaryCard>
+
+        <SummaryCard title="Preview Diagnostics">
+          {deployPreview.diagnostics.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--tone-success-text)' }}>Preview diagnostics are clean.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 6 }}>
+              {deployPreview.diagnostics.map((item) => (
+                <div key={item} style={warnRowStyle}>
+                  <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+                  <span>{item}</span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </SectionBlock>
+              ))}
+            </div>
+          )}
+        </SummaryCard>
+      </div>
     );
   }
+
+  const tabs: Array<{ id: InspectorTab; label: string; icon: ReactNode }> = [
+    { id: 'properties', label: 'Properties', icon: <SquareMousePointer size={12} /> },
+    { id: 'test', label: 'Test', icon: <FlaskConical size={12} /> },
+    { id: 'diff', label: 'Diff', icon: <GitCompare size={12} /> },
+  ];
 
   return (
     <div
       style={{
         height: '100%',
         background: 'var(--shell-panel-bg)',
-        borderLeft: '1px solid var(--shell-panel-border)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
       }}
     >
-      <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--shell-panel-border)', display: 'grid', gap: 10 }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: 'var(--text-muted)',
-          }}
-        >
+      <div style={headerStyle}>
+        <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>
           Inspector
         </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 }}>
-          {(['properties', 'test', 'diff'] as InspectorTab[]).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              style={{
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--shell-chip-border)',
-                padding: '6px 8px',
-                fontSize: 11,
-                fontWeight: 600,
-                textTransform: 'capitalize',
-                background: activeTab === tab ? 'var(--color-primary-soft)' : 'var(--shell-chip-bg)',
-                color: activeTab === tab ? 'var(--color-primary)' : 'var(--text-muted)',
-                cursor: 'pointer',
-              }}
-            >
-              {tab}
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 900,
+              color: selectedNodeLabel ? 'var(--text-primary)' : 'var(--text-muted)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1,
+            }}
+          >
+            {selectedNodeLabel ?? 'No node selected'}
+          </div>
+          {selectedNode && (
+            <span style={{ ...typeBadgeStyle, textTransform: 'capitalize' }}>{String(selectedNode.type)}</span>
+          )}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+      <div style={tabShellStyle}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                flex: 1,
+                border: 'none',
+                borderRadius: 10,
+                padding: '6px 8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+                fontSize: 11,
+                fontWeight: 800,
+                cursor: 'pointer',
+                background: isActive ? 'var(--shell-chip-bg)' : 'transparent',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              }}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
         {activeTab === 'properties' && renderPropertiesTab()}
         {activeTab === 'test' && renderTestTab()}
         {activeTab === 'diff' && renderDiffTab()}
@@ -608,28 +411,106 @@ export function PropertiesPanel({
   );
 }
 
-function actionButtonStyle(): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--shell-chip-border)',
-    background: 'var(--shell-chip-bg)',
-    color: 'var(--text-primary)',
-    fontSize: 11,
-    fontWeight: 600,
-    padding: '6px 8px',
-    cursor: 'pointer',
-    width: 'fit-content',
-  };
-}
+const cardStyle: CSSProperties = {
+  border: '1px solid var(--border-primary)',
+  background: 'linear-gradient(180deg, var(--shell-chip-bg), var(--bg-primary, #fff))',
+  borderRadius: 14,
+  padding: 12,
+};
 
-function selectStyle(): CSSProperties {
-  return {
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--shell-chip-border)',
-    background: 'var(--shell-chip-bg)',
-    color: 'var(--input-text)',
-    fontSize: 12,
-    padding: '6px 8px',
-  };
-}
+const kvRowStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 10,
+  padding: '7px 0',
+  borderBottom: '1px solid var(--border-secondary)',
+  fontSize: 12,
+};
 
+const kvLabelStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 900,
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+  color: 'var(--text-muted)',
+  flexShrink: 0,
+};
+
+const monoTextStyle: CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  color: 'var(--text-primary)',
+};
+
+const rawBlockStyle: CSSProperties = {
+  margin: 0,
+  borderRadius: 10,
+  border: '1px solid var(--border-primary)',
+  background: 'var(--bg-secondary)',
+  padding: 10,
+  maxHeight: 220,
+  overflow: 'auto',
+  color: 'var(--text-muted)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+};
+
+const warnRowStyle: CSSProperties = {
+  fontSize: 12,
+  color: 'var(--tone-warning-text)',
+  background: 'var(--tone-warning-bg)',
+  borderRadius: 8,
+  border: '1px solid var(--tone-warning-border)',
+  padding: '6px 8px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+};
+
+const sessionRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '6px 8px',
+  borderRadius: 8,
+  background: 'var(--bg-secondary)',
+  border: '1px solid var(--border-primary)',
+  fontSize: 11,
+  color: 'var(--text-primary)',
+};
+
+const diffRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  borderRadius: 8,
+  padding: '6px 8px',
+  fontSize: 11,
+};
+
+const headerStyle: CSSProperties = {
+  padding: '10px 14px',
+  borderBottom: '1px solid var(--border-primary)',
+  display: 'grid',
+  gap: 4,
+  background: 'var(--shell-chip-bg)',
+  flexShrink: 0,
+};
+
+const tabShellStyle: CSSProperties = {
+  padding: '8px 14px',
+  borderBottom: '1px solid var(--border-secondary)',
+  background: 'var(--shell-chip-bg)',
+  display: 'flex',
+  gap: 4,
+};
+
+const typeBadgeStyle: CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid var(--border-primary)',
+  fontSize: 10,
+  padding: '2px 8px',
+  color: 'var(--text-primary)',
+  background: 'var(--bg-secondary)',
+  fontWeight: 700,
+};

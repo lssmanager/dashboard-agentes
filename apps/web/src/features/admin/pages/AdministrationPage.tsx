@@ -248,7 +248,7 @@ export default function AdministrationPage() {
                 navigate(
                   buildStudioHref({
                     surface: 'workspace-studio',
-                    nodeKey: selectedNode?.key ?? null,
+                    nodeKey: selectedNode?.key ?? selectedLineage[selectedLineage.length - 1]?.key ?? null,
                   }),
                 )
               }

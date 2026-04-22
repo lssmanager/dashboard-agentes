@@ -84,7 +84,7 @@ export function Header({ onToggleSidebar, showHamburger = false }: HeaderProps) 
                   </span>
                 )}
               </div>
-              {selectedNode && (
+              {selectedLineage.length > 0 && (
                 <span
                   style={{
                     fontSize: 11,

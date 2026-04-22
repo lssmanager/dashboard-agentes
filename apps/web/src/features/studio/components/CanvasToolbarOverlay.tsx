@@ -1,3 +1,4 @@
+import { type CSSProperties } from 'react';
 import { ZoomIn, ZoomOut, Undo2, Redo2, Save, ShieldCheck } from 'lucide-react';
 
 interface CanvasToolbarOverlayProps {
@@ -26,7 +27,7 @@ export function CanvasToolbarOverlay({
   validating = false,
 }: CanvasToolbarOverlayProps) {
 
-  const btnStyle = (disabled?: boolean): React.CSSProperties => ({
+  const btnStyle = (disabled?: boolean): CSSProperties => ({
     width: 36,
     height: 36,
     borderRadius: 'var(--radius-md)',
@@ -40,7 +41,7 @@ export function CanvasToolbarOverlay({
     transition: 'background var(--transition)',
   });
 
-  const sep: React.CSSProperties = {
+  const sep: CSSProperties = {
     width: 1,
     height: 24,
     background: 'var(--border-secondary)',

@@ -40,7 +40,7 @@ export function MainLayout() {
   );
 
   const contentColumn = isMobile ? '1' : showContext ? '3' : '2';
-  const mainPadding = isStudioSurface ? '14px 14px 18px' : '20px 22px 28px';
+  const mainPadding = isStudioEnvironment ? '0' : isStudioSurface ? '14px 14px 18px' : '20px 22px 28px';
 
   useEffect(() => {
     setSurface(surfaceFromPath(location.pathname));
@@ -105,12 +105,13 @@ export function MainLayout() {
         style={{
           gridColumn: contentColumn,
           gridRow: '2',
-          overflow: 'auto',
+          overflow: isStudioEnvironment ? 'hidden' : 'auto',
           padding: mainPadding,
           background: 'var(--shell-content-bg)',
           minWidth: 0,
         }}
       >
+        {!isStudioEnvironment && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
           <div style={{ display: 'inline-flex', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
             <button
@@ -163,6 +164,7 @@ export function MainLayout() {
             </button>
           </div>
         </div>
+        )}
         <Outlet />
       </main>
 

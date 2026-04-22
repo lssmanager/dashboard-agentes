@@ -3,16 +3,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { saveFlow, validateFlow } from '../../../lib/api';
 import type { AgentSpec, FlowSpec, SkillSpec } from '../../../lib/types';
 import { EditableFlowCanvas } from '../../canvas/components/EditableFlowCanvas';
-import { CanvasToolbar } from '../../canvas/components/CanvasToolbar';
+import { CanvasToolbarOverlay } from './CanvasToolbarOverlay';
 
 interface StudioCanvasProps {
   agents: AgentSpec[];
   flows: FlowSpec[];
   skills: SkillSpec[];
   onNodeSelect?: (nodeId: string | null) => void;
+  selectedNodeId?: string | null;
 }
 
-export function StudioCanvas({ agents, flows, skills, onNodeSelect }: StudioCanvasProps) {
+export function StudioCanvas({ agents, flows, skills, onNodeSelect, selectedNodeId }: StudioCanvasProps) {
   const [editableFlow, setEditableFlow] = useState<FlowSpec | null>(flows[0] ?? null);
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
@@ -81,47 +82,56 @@ export function StudioCanvas({ agents, flows, skills, onNodeSelect }: StudioCanv
     () => (
       <div
         style={{
-          height: '100%',
-          border: '1px dashed var(--border-primary)',
-          borderRadius: 'var(--radius-lg)',
-          color: 'var(--text-muted)',
+          position: 'absolute',
+          inset: 0,
           display: 'grid',
           placeItems: 'center',
-          fontSize: 'var(--text-sm)',
+          color: 'var(--text-muted)',
+          fontSize: 13,
+          pointerEvents: 'none',
         }}
       >
-        No flow loaded
+        <div
+          style={{
+            padding: '24px 32px',
+            borderRadius: 16,
+            border: '1.5px dashed var(--border-primary)',
+            background: 'var(--shell-chip-bg)',
+            textAlign: 'center',
+          }}
+        >
+          No flow loaded
+        </div>
       </div>
     ),
     [],
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 p-2">
-      <CanvasToolbar
-        onSave={handleSave}
-        onValidate={handleValidate}
+    <div style={{ position: 'relative', height: '100%' }}>
+      {editableFlow ? (
+        <EditableFlowCanvas
+          flow={editableFlow}
+          onChange={handleFlowChange}
+          agents={agents}
+          skills={skills}
+          onNodeSelect={onNodeSelect}
+          selectedNodeId={selectedNodeId}
+        />
+      ) : (
+        emptyState
+      )}
+
+      <CanvasToolbarOverlay
         onUndo={handleUndo}
         onRedo={handleRedo}
+        onSave={handleSave}
+        onValidate={handleValidate}
         canUndo={canUndo}
         canRedo={canRedo}
         saving={saving}
         validating={validating}
       />
-
-      <div className="min-h-0 flex-1">
-        {editableFlow ? (
-          <EditableFlowCanvas
-            flow={editableFlow}
-            onChange={handleFlowChange}
-            agents={agents}
-            skills={skills}
-            onNodeSelect={onNodeSelect}
-          />
-        ) : (
-          emptyState
-        )}
-      </div>
     </div>
   );
 }

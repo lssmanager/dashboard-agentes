@@ -37,10 +37,13 @@ import {
   StudioTimelineBlock,
   StudioToolbarGroup,
 } from '../../../components/ui';
+import { buildStudioHref } from '../../../lib/studioRouting';
+
+const STUDIO_AGENT_STORAGE_KEY = 'studio-active-agent-id';
 
 export default function WorkspaceStudioPage() {
   const { state, refresh } = useStudioState();
-  const { scope, selectByEntity } = useHierarchy();
+  const { scope, selectByEntity, selectedLineage, selectedBuilderTab, selectedKey } = useHierarchy();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<StudioTab>('builder');
@@ -52,7 +55,15 @@ export default function WorkspaceStudioPage() {
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const [agentId, setAgentId] = useState<string | null>(state.agents[0]?.id || null);
+  const [agentId, setAgentId] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem(STUDIO_AGENT_STORAGE_KEY);
+      if (stored && state.agents.some((agent) => agent.id === stored)) return stored;
+    } catch {
+      // ignore storage failures
+    }
+    return state.agents[0]?.id || null;
+  });
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedTopologyAgentId, setSelectedTopologyAgentId] = useState<string | null>(state.agents[0]?.id || null);
   const selectedAgent = state.agents.find((agent) => agent.id === agentId) || state.agents[0];
@@ -60,6 +71,11 @@ export default function WorkspaceStudioPage() {
     () => state.flows[0]?.nodes.find((node) => node.id === selectedNodeId) ?? null,
     [state.flows, selectedNodeId],
   );
+  const selectedNodeName = useMemo(() => {
+    if (!selectedNode) return null;
+    const config = selectedNode.config as Record<string, unknown>;
+    return typeof config.name === 'string' ? config.name : selectedNode.id;
+  }, [selectedNode]);
 
   const workspaceId = scope.workspaceId ?? state.workspace?.id;
   const runtimeOk = state.runtime?.health?.ok ?? false;
@@ -67,7 +83,12 @@ export default function WorkspaceStudioPage() {
   const sessions = state.runtime?.sessions?.payload ?? [];
 
   useEffect(() => {
-    setSelectedNodeId(null);
+    if (!agentId) return;
+    try {
+      localStorage.setItem(STUDIO_AGENT_STORAGE_KEY, agentId);
+    } catch {
+      // ignore storage failures
+    }
   }, [agentId]);
 
   useEffect(() => {
@@ -92,6 +113,12 @@ export default function WorkspaceStudioPage() {
       }
     }
   }, [scope.agentId, scope.subagentId, scope.workspaceId, state.agents]);
+
+  useEffect(() => {
+    if (!selectedNodeId) return;
+    const exists = state.flows.some((flow) => flow.nodes.some((node) => node.id === selectedNodeId));
+    if (!exists) setSelectedNodeId(null);
+  }, [selectedNodeId, state.flows]);
 
   async function handleRefresh() {
     setBusy(true);
@@ -182,10 +209,10 @@ export default function WorkspaceStudioPage() {
   if (!scope.agencyId) {
     return (
       <StudioPageShell>
-        <StudioSectionCard title="Workspace Studio" description="No agency selected">
+        <StudioSectionCard title="Studio" description="No agency selected">
           <StudioEmptyState
             title="No agency selected"
-            description="Create or connect an agency to open Workspace Studio."
+            description="Create or connect an agency to open Studio."
           />
         </StudioSectionCard>
       </StudioPageShell>
@@ -195,10 +222,10 @@ export default function WorkspaceStudioPage() {
   if (!workspaceId) {
     return (
       <StudioPageShell>
-        <StudioSectionCard title="Workspace Studio" description="No workspace loaded yet">
+        <StudioSectionCard title="Studio" description="No workspace loaded yet">
           <StudioEmptyState
             title="Create a workspace first"
-            description="Workspace Studio needs a workspace context before opening the builder surface."
+            description="Studio needs a workspace context before opening the editor surface."
           />
         </StudioSectionCard>
       </StudioPageShell>
@@ -208,10 +235,10 @@ export default function WorkspaceStudioPage() {
   if (state.agents.length === 0) {
     return (
       <StudioPageShell>
-        <StudioSectionCard title="Workspace Studio" description="Builder requires at least one agent">
+        <StudioSectionCard title="Studio" description="Editor requires at least one agent">
           <StudioEmptyState
             title="No agents available"
-            description="Create your first agent so the builder can generate editable graph surfaces."
+            description="Create your first agent so Studio can generate editable graph surfaces."
             actionLabel="Go to Agents"
             onAction={() => {
               navigate('/entity-editor');
@@ -225,8 +252,8 @@ export default function WorkspaceStudioPage() {
   return (
     <StudioPageShell maxWidth={1440}>
       <StudioHeroSection
-        eyebrow="Workspace Studio"
-        title="Builder Surface"
+        eyebrow="Studio"
+        title="Editor"
         description="Compose agent behavior, test runtime readiness, and review deploy diffs from a single studio surface."
         meta={<RuntimeStatusBadge status={runtimeOk ? 'online' : 'degraded'} label={runtimeOk ? 'runtime online' : 'runtime degraded'} />}
         actions={
@@ -252,15 +279,47 @@ export default function WorkspaceStudioPage() {
       />
 
       <StudioSectionCard
-        title="Studio Toolbar"
-        description="Select your active builder target and switch operational panes."
+        title="Studio Context"
+        description="Keep scope, agent, selection, mode, and runtime aligned while working."
         actions={
-          <button type="button" style={toolButton()} disabled={busy} onClick={() => setDiffModalOpen(true)}>
-            <Eye size={14} />
-            Open Diff Modal
-          </button>
+          <StudioCommandRow>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  buildStudioHref({
+                    surface: 'agency-builder',
+                    tab: selectedBuilderTab,
+                    nodeKey: selectedKey,
+                  }),
+                )
+              }
+              style={toolButton()}
+            >
+              Administration
+            </button>
+            <button type="button" style={toolButton()} disabled={busy} onClick={() => setDiffModalOpen(true)}>
+              <Eye size={14} />
+              Open Diff Modal
+            </button>
+          </StudioCommandRow>
         }
       >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+            gap: 8,
+            marginBottom: 10,
+          }}
+        >
+          <ContextPill label="Scope" value={selectedLineage[selectedLineage.length - 1]?.label ?? state.workspace?.name ?? 'n/a'} />
+          <ContextPill label="Agent" value={selectedAgent?.name ?? 'n/a'} />
+          <ContextPill label="Node" value={selectedNodeName ?? 'None selected'} />
+          <ContextPill label="Mode" value={activeTab === 'diff' ? 'Diff / Apply' : activeTab[0].toUpperCase() + activeTab.slice(1)} />
+          <ContextPill label="Runtime" value={runtimeOk ? 'Online' : 'Degraded'} tone={runtimeOk ? 'success' : 'warning'} />
+        </div>
+
         <StudioTabBar
           active={activeTab}
           onChange={setActiveTab}
@@ -281,6 +340,7 @@ export default function WorkspaceStudioPage() {
             value={agentId || ''}
             onChange={(event) => {
               const next = event.target.value;
+              setSelectedNodeId(null);
               setAgentId(next);
               if (next) {
                 const agent = state.agents.find((entry) => entry.id === next);
@@ -382,6 +442,7 @@ export default function WorkspaceStudioPage() {
                       flows={state.flows}
                       skills={state.skills}
                       onNodeSelect={setSelectedNodeId}
+                      selectedNodeId={selectedNodeId}
                     />
                   ) : (
                     <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
@@ -405,6 +466,7 @@ export default function WorkspaceStudioPage() {
               selectedNode={selectedNode}
               agents={state.agents}
               skills={state.skills}
+              runtimeOk={runtimeOk}
             />
           </div>
         </section>
@@ -581,7 +643,19 @@ export default function WorkspaceStudioPage() {
           </div>
 
           <div style={{ marginTop: 12 }}>
-            <button type="button" style={toolButton()} onClick={() => navigate('/administration?tab=connections')}>
+            <button
+              type="button"
+              style={toolButton()}
+              onClick={() =>
+                navigate(
+                  buildStudioHref({
+                    surface: 'agency-builder',
+                    tab: 'connections',
+                    nodeKey: selectedKey,
+                  }),
+                )
+              }
+            >
               Open Connections
             </button>
           </div>
@@ -671,6 +745,48 @@ export default function WorkspaceStudioPage() {
 
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
     </StudioPageShell>
+  );
+}
+
+function ContextPill({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'success' | 'warning';
+}) {
+  const toneColor =
+    tone === 'success'
+      ? 'var(--tone-success-text)'
+      : tone === 'warning'
+        ? 'var(--tone-warning-text)'
+        : 'var(--text-primary)';
+  const toneBg =
+    tone === 'success'
+      ? 'var(--tone-success-bg)'
+      : tone === 'warning'
+        ? 'var(--tone-warning-bg)'
+        : 'var(--bg-secondary)';
+  return (
+    <div
+      style={{
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-primary)',
+        background: toneBg,
+        padding: '8px 10px',
+        display: 'grid',
+        gap: 2,
+      }}
+    >
+      <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: toneColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {value}
+      </span>
+    </div>
   );
 }
 

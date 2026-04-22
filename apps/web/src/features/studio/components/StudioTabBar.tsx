@@ -25,7 +25,7 @@ export function StudioTabBar({ active, onChange, tabs }: StudioTabBarProps) {
         tabs={tabs}
         active={active}
         onChange={onChange}
-        ariaLabel="Workspace studio sections"
+        ariaLabel="Studio editor modes"
       />
     </div>
   );

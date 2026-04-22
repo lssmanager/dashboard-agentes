@@ -140,6 +140,15 @@ export default function SessionsPage() {
         </button>
       </div>
 
+      <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+        <div className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+          Surface
+        </div>
+        <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+          Administration / Sessions
+        </div>
+      </div>
+
       {!scope.agencyId && (
         <div
           className="rounded-lg border p-4 text-sm"

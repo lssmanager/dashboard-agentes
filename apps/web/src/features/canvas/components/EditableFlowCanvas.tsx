@@ -52,9 +52,18 @@ interface EditableFlowCanvasProps {
   agents: AgentSpec[];
   skills: SkillSpec[];
   onNodeSelect?: (nodeId: string | null) => void;
+  selectedNodeId?: string | null;
 }
 
-export function EditableFlowCanvas({ flow, onChange, activeRun, agents, skills, onNodeSelect }: EditableFlowCanvasProps) {
+export function EditableFlowCanvas({
+  flow,
+  onChange,
+  activeRun,
+  agents,
+  skills,
+  onNodeSelect,
+  selectedNodeId,
+}: EditableFlowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
 
@@ -77,11 +86,12 @@ export function EditableFlowCanvas({ flow, onChange, activeRun, agents, skills, 
           id: node.id,
           type: node.type as string,
           position: node.position ?? { x: 200, y: 100 },
+          selected: selectedNodeId === node.id,
           data: { label: node.type, config: node.config },
           style: stepStatus ? { boxShadow: `0 0 0 3px ${STATUS_COLORS[stepStatus] ?? '#f3f4f6'}` } : undefined,
         };
       }),
-    [flow.nodes, stepStatusMap],
+    [flow.nodes, selectedNodeId, stepStatusMap],
   );
 
   // Convert FlowSpec edges -> ReactFlow edges.
@@ -215,6 +225,7 @@ export function EditableFlowCanvas({ flow, onChange, activeRun, agents, skills, 
         onInit={setRfInstance}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onPaneClick={() => onNodeSelect?.(null)}
         fitView
         deleteKeyCode="Delete"
         snapToGrid

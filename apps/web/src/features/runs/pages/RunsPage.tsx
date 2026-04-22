@@ -14,14 +14,17 @@ export default function RunsPage() {
   const { scope, selectedLineage, canonical } = useHierarchy();
   const [runs, setRuns] = useState<RunSpec[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<RunStep | null>(null);
 
   const loadRuns = useCallback(async () => {
     try {
+      setError(null);
       const data = await getRuns();
       setRuns(data);
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load runs');
       setRuns([]);
     } finally {
       setLoading(false);
@@ -112,6 +115,13 @@ export default function RunsPage() {
         </button>
       </div>
 
+      <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+        <div className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+          Surface
+        </div>
+        <div className="text-sm" style={{ color: 'var(--text-primary)' }}>Administration / Runs</div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
         {[
           { label: 'Total', value: filteredRuns.length, tone: 'default' },
@@ -151,6 +161,12 @@ export default function RunsPage() {
           </div>
         ))}
       </div>
+
+      {error && (
+        <div className="rounded-lg border p-3 text-sm" style={{ borderColor: 'var(--tone-danger-border)', background: 'var(--tone-danger-bg)', color: 'var(--tone-danger-text)' }}>
+          {error}
+        </div>
+      )}
 
       {filteredRuns.length === 0 ? (
         <EmptyState
