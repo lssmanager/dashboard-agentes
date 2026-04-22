@@ -24,9 +24,11 @@ import type {
   DashboardOperationsDto,
   DashboardOverviewDto,
   EffectiveProfileDto,
+  TopologyActionResult,
   TopologyRuntimeAction,
 } from '../../../lib/types';
 import { useStudioState } from '../../../lib/StudioStateContext';
+import { AdminSettingsPanel } from '../../studio/components/admin/AdminSettingsPanel';
 import { ConnectionsSurface } from '../../studio/components/admin/ConnectionsSurface';
 import { OperationsSurface } from '../../studio/components/admin/OperationsSurface';
 import { OverviewSurface } from '../../studio/components/admin/OverviewSurface';
@@ -99,6 +101,7 @@ export default function AdministrationPage() {
   const [runtimeActionBusy, setRuntimeActionBusy] = useState<TopologyRuntimeAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [actionResult, setActionResult] = useState<Pick<TopologyActionResult, 'status' | 'message' | 'action'> | null>(null);
 
   const contextLabel = selectedLineage.map((item) => item.label).join(' / ');
   const profileCatalog = useMemo(() => state.profiles ?? [], [state.profiles]);
@@ -211,10 +214,11 @@ export default function AdministrationPage() {
     setRuntimeActionBusy(action);
     setError(null);
     setNotice(null);
+    setActionResult(null);
 
     try {
       const response = await sendRuntimeCommand(entityLevel, entityId, action);
-      setNotice(`${action}: ${response.result.message}`);
+      setActionResult({ status: response.result.status, message: response.result.message, action });
       setOperations(await getDashboardOperations(entityLevel, entityId));
       setOverview(await getDashboardOverview(entityLevel, entityId));
     } catch (err) {
@@ -305,19 +309,7 @@ export default function AdministrationPage() {
 
           {activeTab === 'settings' && (
             <section style={panelStyle}>
-              <h2 style={{ margin: 0, fontSize: 'var(--text-lg)' }}>Settings Scope</h2>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
-                This level resolves settings as <strong>{viewConfig.settingsScope}</strong>.
-              </p>
-              <div style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', padding: 12, background: 'var(--bg-secondary)' }}>
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  {viewConfig.settingsScope === 'global/defaults'
-                    ? 'Agency defaults apply globally for providers, runtimes, channels and governance.'
-                    : viewConfig.settingsScope === 'partial'
-                      ? 'Department applies partial overrides while preserving inherited global defaults.'
-                      : 'Scope-specific settings are active and can override inherited defaults.'}
-                </span>
-              </div>
+              <AdminSettingsPanel settingsScope={viewConfig.settingsScope} />
             </section>
           )}
 
@@ -337,6 +329,32 @@ export default function AdministrationPage() {
       </section>
 
       {notice && <div style={noticeStyle}>{notice}</div>}
+      {actionResult && (
+        <div
+          style={{
+            ...noticeStyle,
+            background:
+              actionResult.status === 'applied'
+                ? 'rgba(16,185,129,0.15)'
+                : actionResult.status === 'unsupported_by_runtime'
+                  ? 'rgba(245,158,11,0.15)'
+                  : 'rgba(239,68,68,0.15)',
+            borderLeft: `3px solid ${
+              actionResult.status === 'applied'
+                ? 'var(--tone-success-text)'
+                : actionResult.status === 'unsupported_by_runtime'
+                  ? 'var(--tone-warning-text)'
+                  : 'var(--tone-danger-text)'
+            }`,
+          }}
+        >
+          <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 11 }}>
+            {actionResult.status === 'applied' ? 'Applied' : actionResult.status === 'unsupported_by_runtime' ? 'Unsupported' : 'Rejected'}
+          </span>
+          {' — '}
+          {actionResult.action}: {actionResult.message}
+        </div>
+      )}
       {error && (
         <div style={{ ...noticeStyle, background: 'rgba(239,68,68,0.15)' }}>
           <AlertTriangle size={14} /> {error}

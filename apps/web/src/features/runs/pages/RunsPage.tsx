@@ -77,7 +77,6 @@ export default function RunsPage() {
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto space-y-6">
-        <PageHeader title="Runs" icon={Play} description="Flow execution history and step traces" />
         <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading runs...</div>
       </div>
     );
@@ -111,6 +110,46 @@ export default function RunsPage() {
           <RefreshCw size={14} />
           Refresh
         </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        {[
+          { label: 'Total', value: filteredRuns.length, tone: 'default' },
+          { label: 'Running', value: filteredRuns.filter((r) => r.status === 'running').length, tone: 'success' },
+          { label: 'Awaiting Approval', value: filteredRuns.filter((r) => r.status === 'waiting_approval').length, tone: 'warning' },
+          { label: 'Failed', value: filteredRuns.filter((r) => r.status === 'failed').length, tone: 'danger' },
+        ].map(({ label, value, tone }) => (
+          <div
+            key={label}
+            style={{
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-primary)',
+              background: tone === 'default' ? 'var(--bg-secondary)'
+                : tone === 'success' ? 'var(--tone-success-bg, rgba(16,185,129,0.08))'
+                : tone === 'warning' ? 'var(--tone-warning-bg, rgba(245,158,11,0.08))'
+                : 'var(--tone-danger-bg, rgba(239,68,68,0.08))',
+              padding: '10px 14px',
+              display: 'grid',
+              gap: 3,
+            }}
+          >
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>
+              {label}
+            </span>
+            <span
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: tone === 'default' ? 'var(--text-primary)'
+                  : tone === 'success' ? 'var(--tone-success-text, #10b981)'
+                  : tone === 'warning' ? 'var(--tone-warning-text, #f59e0b)'
+                  : 'var(--tone-danger-text, #ef4444)',
+              }}
+            >
+              {value}
+            </span>
+          </div>
+        ))}
       </div>
 
       {filteredRuns.length === 0 ? (
@@ -147,7 +186,7 @@ export default function RunsPage() {
                 </div>
                 <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   {run.steps.length} step{run.steps.length !== 1 ? 's' : ''}
-                  {run.error && <span style={{ color: '#dc2626' }}> — {run.error}</span>}
+                  {run.error && <span style={{ color: 'var(--tone-danger-text, #ef4444)' }}> — {run.error}</span>}
                 </div>
               </button>
             ))}
@@ -170,8 +209,8 @@ export default function RunsPage() {
                     {(selectedRun.status === 'running' || selectedRun.status === 'queued') && (
                       <button
                         onClick={() => void handleCancel(selectedRun.id)}
-                        className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-white"
-                        style={{ background: '#dc2626' }}
+                        className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium"
+                        style={{ background: 'var(--tone-danger-text, #ef4444)', color: '#fff' }}
                       >
                         <XCircle size={12} />
                         Cancel

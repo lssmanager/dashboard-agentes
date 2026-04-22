@@ -162,9 +162,6 @@ export function MainLayout() {
               Studio
             </button>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Active scope level: {selectedLevel}
-          </span>
         </div>
         <Outlet />
       </main>

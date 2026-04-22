@@ -10,7 +10,7 @@ import type { SurfaceId } from '../lib/types';
 const NAV: Array<{ label: string; surface: SurfaceId; Icon: ComponentType<{ size?: number }> }> = [
   { label: 'Administration', surface: 'agency-builder', Icon: Building2 },
   { label: 'Studio', surface: 'workspace-studio', Icon: Cpu },
-  { label: 'Entity', surface: 'entity-editor', Icon: SquarePen },
+  { label: 'Editor', surface: 'entity-editor', Icon: SquarePen },
   { label: 'Runs', surface: 'runs', Icon: Play },
   { label: 'Sessions', surface: 'sessions', Icon: MessageSquare },
 ];

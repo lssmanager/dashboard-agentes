@@ -25,7 +25,7 @@ export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition
     runsMode: 'aggregated',
   },
   department: {
-    adminTabs: ['overview', 'connections', 'operations', 'sessions'],
+    adminTabs: ['overview', 'connections', 'operations', 'sessions', 'settings'],
     canEnterStudio: false,
     showProfileTab: false,
     settingsScope: 'partial',
@@ -34,7 +34,7 @@ export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition
     runsMode: 'aggregated',
   },
   workspace: {
-    adminTabs: ['overview', 'connections', 'operations', 'sessions', 'profile'],
+    adminTabs: ['overview', 'connections', 'operations', 'sessions', 'profile', 'settings'],
     canEnterStudio: true,
     showProfileTab: true,
     settingsScope: 'scoped',
@@ -43,7 +43,7 @@ export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition
     runsMode: 'scoped',
   },
   agent: {
-    adminTabs: ['overview', 'connections', 'operations', 'sessions', 'profile'],
+    adminTabs: ['overview', 'connections', 'operations', 'sessions', 'profile', 'settings'],
     canEnterStudio: true,
     showProfileTab: true,
     settingsScope: 'scoped',
@@ -52,7 +52,7 @@ export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition
     runsMode: 'scoped',
   },
   subagent: {
-    adminTabs: ['overview', 'connections', 'operations', 'sessions', 'profile'],
+    adminTabs: ['overview', 'connections', 'operations', 'sessions', 'profile', 'settings'],
     canEnterStudio: true,
     showProfileTab: true,
     settingsScope: 'scoped',
