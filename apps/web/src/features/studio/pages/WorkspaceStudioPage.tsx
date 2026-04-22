@@ -477,111 +477,139 @@ export default function WorkspaceStudioPage() {
       )}
 
       {activeTab === 'test' && (
-        <section className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 14 }}>
-          <StudioSectionCard title="Runtime Test Console" description="Run-time readiness and diagnostics for the active builder state.">
-            <StudioInspectorCard title="Readiness checks">
-              {testRows.map((row) => (
-                <StudioMetricRow key={row.label} label={row.label} value={row.value} hint={row.hint} />
-              ))}
-            </StudioInspectorCard>
+        <section style={flatTabSurfaceStyle}>
+          <div style={flatTabHeaderStyle}>
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span style={flatTabKickerStyle}>Test</span>
+              <strong style={flatTabTitleStyle}>Runtime Test Console</strong>
+              <span style={flatTabDescriptionStyle}>Run-time readiness and live session sampling for the active builder state.</span>
+            </div>
+          </div>
 
-            {diagnostics.length > 0 && (
-              <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-                {diagnostics.map((item) => (
-                  <div
-                    key={item}
-                    style={{
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--tone-warning-border)',
-                      background: 'var(--tone-warning-bg)',
-                      color: 'var(--tone-warning-text)',
-                      padding: '10px 12px',
-                      fontSize: 12,
-                    }}
-                  >
-                    {item}
-                  </div>
+          <div className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 14 }}>
+            <div style={flatModePanelStyle}>
+              <StudioInspectorCard title="Readiness checks">
+                {testRows.map((row) => (
+                  <StudioMetricRow key={row.label} label={row.label} value={row.value} hint={row.hint} />
                 ))}
-              </div>
-            )}
-          </StudioSectionCard>
-
-          <StudioSectionCard title="Session Sampling" description="Current runtime sessions for quick manual validation.">
-            {sessions.length === 0 ? (
-              <StudioEmptyState
-                title="No runtime sessions"
-                description="Start or replay a run to populate session traces in this panel."
-              />
-            ) : (
-              <StudioInspectorCard title="Live sessions">
-                {sessions.slice(0, 8).map((session, index) => {
-                  const current = session as Record<string, unknown>;
-                  const id = typeof current.id === 'string' ? current.id.slice(0, 12) : `session-${index + 1}`;
-                  const status = typeof current.status === 'string' ? current.status : 'unknown';
-                  const channel = typeof current.channel === 'string' ? current.channel : 'n/a';
-
-                  return (
-                    <StudioMetricRow
-                      key={`${id}-${index}`}
-                      label={id}
-                      value={status}
-                      hint={`Channel: ${channel}`}
-                    />
-                  );
-                })}
               </StudioInspectorCard>
-            )}
-          </StudioSectionCard>
+
+              {diagnostics.length > 0 && (
+                <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+                  {diagnostics.map((item) => (
+                    <div
+                      key={item}
+                      style={{
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--tone-warning-border)',
+                        background: 'var(--tone-warning-bg)',
+                        color: 'var(--tone-warning-text)',
+                        padding: '10px 12px',
+                        fontSize: 12,
+                      }}
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={flatModePanelStyle}>
+              {sessions.length === 0 ? (
+                <StudioEmptyState
+                  title="No runtime sessions"
+                  description="Start or replay a run to populate session traces in this panel."
+                />
+              ) : (
+                <StudioInspectorCard title="Live sessions">
+                  {sessions.slice(0, 8).map((session, index) => {
+                    const current = session as Record<string, unknown>;
+                    const id = typeof current.id === 'string' ? current.id.slice(0, 12) : `session-${index + 1}`;
+                    const status = typeof current.status === 'string' ? current.status : 'unknown';
+                    const channel = typeof current.channel === 'string' ? current.channel : 'n/a';
+
+                    return (
+                      <StudioMetricRow
+                        key={`${id}-${index}`}
+                        label={id}
+                        value={status}
+                        hint={`Channel: ${channel}`}
+                      />
+                    );
+                  })}
+                </StudioInspectorCard>
+              )}
+            </div>
+          </div>
         </section>
       )}
 
       {activeTab === 'debug' && (
-        <section className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <div style={modePanelStyle}>
-            <div style={modePanelHeaderStyle}>
-              <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Diagnostics Stream</strong>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Workspace compile/runtime warnings</span>
+        <section style={flatTabSurfaceStyle}>
+          <div style={flatTabHeaderStyle}>
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span style={flatTabKickerStyle}>Debug</span>
+              <strong style={flatTabTitleStyle}>Diagnostics Stream</strong>
+              <span style={flatTabDescriptionStyle}>Workspace compile/runtime warnings and builder output, kept close to the active agent.</span>
             </div>
-            {diagnostics.length === 0 ? (
-              <StudioEmptyState title="No diagnostics" description="Builder surface currently passes compile checks." />
-            ) : (
-              <div style={{ display: 'grid', gap: 8 }}>
-                {diagnostics.map((item) => (
-                  <div key={item} style={statusTile('warning')}>
-                    <AlertTriangle size={14} />
-                    {item}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
-          <div style={modePanelStyle}>
-            <div style={modePanelHeaderStyle}>
-              <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Builder Agent Output</strong>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Generated summary for the active agent</span>
+          <div className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={flatModePanelStyle}>
+              <div style={modePanelHeaderStyle}>
+                <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Diagnostics Stream</strong>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Workspace compile/runtime warnings</span>
+              </div>
+              {diagnostics.length === 0 ? (
+                <StudioEmptyState title="No diagnostics" description="Builder surface currently passes compile checks." />
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {diagnostics.map((item) => (
+                    <div key={item} style={statusTile('warning')}>
+                      <AlertTriangle size={14} />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {!builderOutput ? (
-              <StudioEmptyState
-                title="No builder output generated"
-                description="Open Builder Agent Function and run generation to inspect suggested IO and collaborators."
-                actionLabel="Open Builder Agent Function"
-                onAction={() => setBuilderModalOpen(true)}
-              />
-            ) : (
-              <StudioInspectorCard title={builderOutput.entityName}>
-                <StudioMetricRow label="Inputs" value={`${builderOutput.inputs.length}`} />
-                <StudioMetricRow label="Outputs" value={`${builderOutput.outputs.length}`} />
-                <StudioMetricRow label="Collaborators" value={`${builderOutput.collaborators.length}`} />
-                <StudioMetricRow label="Diff Targets" value={`${builderOutput.proposedCoreFileDiffs.length}`} />
-              </StudioInspectorCard>
-            )}
+
+            <div style={flatModePanelStyle}>
+              <div style={modePanelHeaderStyle}>
+                <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Builder Agent Output</strong>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Generated summary for the active agent</span>
+              </div>
+              {!builderOutput ? (
+                <StudioEmptyState
+                  title="No builder output generated"
+                  description="Open Builder Agent Function and run generation to inspect suggested IO and collaborators."
+                  actionLabel="Open Builder Agent Function"
+                  onAction={() => setBuilderModalOpen(true)}
+                />
+              ) : (
+                <StudioInspectorCard title={builderOutput.entityName}>
+                  <StudioMetricRow label="Inputs" value={`${builderOutput.inputs.length}`} />
+                  <StudioMetricRow label="Outputs" value={`${builderOutput.outputs.length}`} />
+                  <StudioMetricRow label="Collaborators" value={`${builderOutput.collaborators.length}`} />
+                  <StudioMetricRow label="Diff Targets" value={`${builderOutput.proposedCoreFileDiffs.length}`} />
+                </StudioInspectorCard>
+              )}
+            </div>
           </div>
         </section>
       )}
 
       {activeTab === 'topology' && (
-        <StudioSectionCard title="Workspace Topology Slice" description="Graph-first runtime view scoped to this workspace.">
+        <section style={flatTabSurfaceStyle}>
+          <div style={flatTabHeaderStyle}>
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span style={flatTabKickerStyle}>Topology</span>
+              <strong style={flatTabTitleStyle}>Workspace Topology Slice</strong>
+              <span style={flatTabDescriptionStyle}>Graph-first runtime view scoped to this workspace.</span>
+            </div>
+          </div>
+
           <StudioSplitPane
             left={
               <div style={{ display: 'grid', gap: 10, padding: 12 }}>
@@ -671,69 +699,79 @@ export default function WorkspaceStudioPage() {
               Open Connections
             </button>
           </div>
-        </StudioSectionCard>
+        </section>
       )}
 
       {activeTab === 'diff' && (
-        <section className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <StudioSectionCard title="Deploy Diff" description="Proposed file changes generated by current studio state.">
-            {!preview ? (
-              <StudioEmptyState
-                title="No preview loaded"
-                description="Run Preview Diff from the toolbar to inspect proposed core-file changes."
-                actionLabel="Preview Diff"
-                onAction={() => void handlePreview()}
-              />
-            ) : preview.diff.length === 0 ? (
-              <StudioEmptyState
-                title="No file changes"
-                description="Current studio state matches deployed core files."
-              />
-            ) : (
-              <StudioInspectorCard title="Diff entries">
-                {preview.diff.map((entry) => (
-                  <StudioMetricRow
-                    key={`${entry.path}-${entry.status}`}
-                    label={entry.path}
-                    value={entry.status}
-                    hint={entry.status === 'unchanged' ? 'No update required' : 'Ready for apply'}
-                  />
-                ))}
-              </StudioInspectorCard>
-            )}
-          </StudioSectionCard>
+        <section style={flatTabSurfaceStyle}>
+          <div style={flatTabHeaderStyle}>
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span style={flatTabKickerStyle}>Diff / Apply</span>
+              <strong style={flatTabTitleStyle}>Deploy Diff</strong>
+              <span style={flatTabDescriptionStyle}>Proposed file changes generated by the current studio state.</span>
+            </div>
+          </div>
 
-          <StudioSectionCard title="Diagnostics + Lifecycle" description="Compile checks and deployment readiness summary.">
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={statusTile(runtimeOk ? 'success' : 'warning')}>
-                {runtimeOk ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-                Runtime: {runtimeOk ? 'healthy' : 'degraded'}
-              </div>
-              <div style={statusTile(diagnostics.length === 0 ? 'success' : 'warning')}>
-                {diagnostics.length === 0 ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-                Compile diagnostics: {diagnostics.length === 0 ? 'none' : diagnostics.length}
-              </div>
-              <div style={statusTile((preview?.diff.length ?? 0) > 0 ? 'warning' : 'success')}>
-                <LayoutGrid size={14} />
-                Diff entries: {preview?.diff.length ?? 0}
-              </div>
+          <div className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={flatModePanelStyle}>
+              {!preview ? (
+                <StudioEmptyState
+                  title="No preview loaded"
+                  description="Run Preview Diff from the toolbar to inspect proposed core-file changes."
+                  actionLabel="Preview Diff"
+                  onAction={() => void handlePreview()}
+                />
+              ) : preview.diff.length === 0 ? (
+                <StudioEmptyState
+                  title="No file changes"
+                  description="Current studio state matches deployed core files."
+                />
+              ) : (
+                <StudioInspectorCard title="Diff entries">
+                  {preview.diff.map((entry) => (
+                    <StudioMetricRow
+                      key={`${entry.path}-${entry.status}`}
+                      label={entry.path}
+                      value={entry.status}
+                      hint={entry.status === 'unchanged' ? 'No update required' : 'Ready for apply'}
+                    />
+                  ))}
+                </StudioInspectorCard>
+              )}
             </div>
 
-            <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
-              <button type="button" style={toolButton()} onClick={() => void handlePreview()} disabled={busy}>
-                <Eye size={14} />
-                Refresh Diff
-              </button>
-              <button type="button" style={toolButton()} onClick={() => setDiffModalOpen(true)} disabled={busy}>
-                <Wrench size={14} />
-                Open Diff Modal
-              </button>
-              <button type="button" style={primaryActionButton()} onClick={() => void handleDeploy()} disabled={busy}>
-                <Rocket size={14} />
-                Apply Changes
-              </button>
+            <div style={flatModePanelStyle}>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div style={statusTile(runtimeOk ? 'success' : 'warning')}>
+                  {runtimeOk ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                  Runtime: {runtimeOk ? 'healthy' : 'degraded'}
+                </div>
+                <div style={statusTile(diagnostics.length === 0 ? 'success' : 'warning')}>
+                  {diagnostics.length === 0 ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                  Compile diagnostics: {diagnostics.length === 0 ? 'none' : diagnostics.length}
+                </div>
+                <div style={statusTile((preview?.diff.length ?? 0) > 0 ? 'warning' : 'success')}>
+                  <LayoutGrid size={14} />
+                  Diff entries: {preview?.diff.length ?? 0}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                <button type="button" style={toolButton()} onClick={() => void handlePreview()} disabled={busy}>
+                  <Eye size={14} />
+                  Refresh Diff
+                </button>
+                <button type="button" style={toolButton()} onClick={() => setDiffModalOpen(true)} disabled={busy}>
+                  <Wrench size={14} />
+                  Open Diff Modal
+                </button>
+                <button type="button" style={primaryActionButton()} onClick={() => void handleDeploy()} disabled={busy}>
+                  <Rocket size={14} />
+                  Apply Changes
+                </button>
+              </div>
             </div>
-          </StudioSectionCard>
+          </div>
         </section>
       )}
 
@@ -826,6 +864,48 @@ const modePanelHeaderStyle: CSSProperties = {
   gap: 2,
   borderBottom: '1px solid var(--shell-chip-border)',
   paddingBottom: 8,
+};
+
+const flatTabSurfaceStyle: CSSProperties = {
+  display: 'grid',
+  gap: 14,
+  padding: 2,
+};
+
+const flatTabHeaderStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'end',
+  gap: 12,
+  padding: '0 2px 2px',
+};
+
+const flatTabKickerStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 900,
+  textTransform: 'uppercase',
+  letterSpacing: '0.09em',
+  color: 'var(--text-muted)',
+};
+
+const flatTabTitleStyle: CSSProperties = {
+  fontSize: 15,
+  color: 'var(--text-primary)',
+};
+
+const flatTabDescriptionStyle: CSSProperties = {
+  fontSize: 12,
+  color: 'var(--text-muted)',
+  lineHeight: 1.45,
+  maxWidth: 760,
+};
+
+const flatModePanelStyle: CSSProperties = {
+  borderTop: '1px solid var(--border-primary)',
+  paddingTop: 12,
+  display: 'grid',
+  gap: 10,
+  alignContent: 'start',
 };
 
 function toolButton(withPulse = false): CSSProperties {

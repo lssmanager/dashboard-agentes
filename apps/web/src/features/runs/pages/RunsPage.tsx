@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Play, RefreshCw, XCircle } from 'lucide-react';
 
 import { cancelRun, getDashboardRuns } from '../../../lib/api';
-import { Card, EmptyState, PageHeader } from '../../../components';
+import { Card, EmptyState } from '../../../components';
 import { StepBadge } from '../../../components/ui/StepBadge';
 import type { CanonicalNodeLevel, RunSpec, RunStep } from '../../../lib/types';
 import { RunTimeline } from '../components/RunTimeline';
 import { StepDetail } from '../components/StepDetail';
 import { ApprovalPanel } from '../components/ApprovalPanel';
 import { useHierarchy } from '../../../lib/HierarchyContext';
+import { buildStudioHref } from '../../../lib/studioRouting';
 
 function resolveActiveScope(scope: {
   agencyId?: string | null;
@@ -25,6 +27,7 @@ function resolveActiveScope(scope: {
 }
 
 export default function RunsPage() {
+  const navigate = useNavigate();
   const { scope, selectedLineage } = useHierarchy();
   const [runs, setRuns] = useState<RunSpec[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,20 +64,59 @@ export default function RunsPage() {
 
   const selectedRun = runs.find((r) => r.id === selectedRunId) ?? null;
   const contextLabel = selectedLineage.map((node) => node.label).join(' / ');
+  const currentNodeKey = selectedLineage[selectedLineage.length - 1]?.key ?? null;
 
   async function handleCancel(runId: string) {
     await cancelRun(runId);
     await loadRuns();
   }
 
+  const scopeLabel = contextLabel || `${activeScope.level}:${activeScope.id}`;
+
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div style={{ maxWidth: 1520, margin: '0 auto', display: 'grid', gap: 14 }}>
+        <section style={panelStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+              <div style={eyebrowStyle}>Administration</div>
+              <h1 style={{ margin: 0, fontSize: 'var(--text-xl)' }}>Runs</h1>
+              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>Scope: {scopeLabel}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => navigate(buildStudioHref({ surface: 'workspace-studio', nodeKey: currentNodeKey }))}
+                disabled={!currentNodeKey}
+                title={currentNodeKey ? 'Open the studio for the current scope' : 'Studio is unavailable at this scope'}
+                style={{
+                  ...buttonStyle,
+                  opacity: currentNodeKey ? 1 : 0.6,
+                  cursor: currentNodeKey ? 'pointer' : 'not-allowed',
+                }}
+              >
+                Open Studio
+              </button>
+              <button type="button" onClick={() => void loadRuns()} style={buttonStyle} disabled={loading}>
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+          </div>
+
+          <div style={stripGridStyle}>
+            <div style={stripStyle}>
+              <div style={stripLabelStyle}>Active Context</div>
+              <div style={stripValueStyle}>{scopeLabel}</div>
+            </div>
+            <div style={stripStyle}>
+              <div style={stripLabelStyle}>Surface</div>
+              <div style={stripValueStyle}>Administration / Runs</div>
+            </div>
+          </div>
+        </section>
+
         <Card>
           <div className="space-y-2">
-            <div className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-              Administration / Runs
-            </div>
             <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
               Loading run activity...
             </div>
@@ -88,7 +130,7 @@ export default function RunsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div style={{ maxWidth: 1520, margin: '0 auto', display: 'grid', gap: 14 }}>
       {!scope.agencyId && (
         <Card>
           <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -97,68 +139,56 @@ export default function RunsPage() {
         </Card>
       )}
 
-      <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
-        <div className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-          Active Context
-        </div>
-        <div className="text-sm" style={{ color: 'var(--text-primary)' }}>{contextLabel || 'No context selected'}</div>
-      </div>
+      <section style={panelStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+            <div style={eyebrowStyle}>Administration</div>
+            <h1 style={{ margin: 0, fontSize: 'var(--text-xl)' }}>Runs</h1>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>Scope: {scopeLabel}</p>
+          </div>
 
-      <div className="flex items-center justify-between">
-        <PageHeader title="Runs" icon={Play} description="Flow execution history and step traces" />
-        <button
-          onClick={() => void loadRuns()}
-          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors"
-          style={{ color: 'var(--color-primary)', background: 'var(--color-primary-soft)' }}
-        >
-          <RefreshCw size={14} />
-          Refresh
-        </button>
-      </div>
-
-      <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
-        <div className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-          Surface
-        </div>
-        <div className="text-sm" style={{ color: 'var(--text-primary)' }}>Administration / Runs</div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-        {[
-          { label: 'Total', value: runs.length, tone: 'default' },
-          { label: 'Running', value: runs.filter((r) => r.status === 'running').length, tone: 'success' },
-          { label: 'Awaiting Approval', value: runs.filter((r) => r.status === 'waiting_approval').length, tone: 'warning' },
-          { label: 'Failed', value: runs.filter((r) => r.status === 'failed').length, tone: 'danger' },
-        ].map(({ label, value, tone }) => (
-          <div
-            key={label}
-            style={{
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-primary)',
-              background: tone === 'default' ? 'var(--bg-secondary)'
-                : tone === 'success' ? 'var(--tone-success-bg, rgba(16,185,129,0.08))'
-                : tone === 'warning' ? 'var(--tone-warning-bg, rgba(245,158,11,0.08))'
-                : 'var(--tone-danger-bg, rgba(239,68,68,0.08))',
-              padding: '10px 14px',
-              display: 'grid',
-              gap: 3,
-            }}
-          >
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>
-              {label}
-            </span>
-            <span
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => navigate(buildStudioHref({ surface: 'workspace-studio', nodeKey: currentNodeKey }))}
+              disabled={!currentNodeKey}
+              title={currentNodeKey ? 'Open the studio for the current scope' : 'Studio is unavailable at this scope'}
               style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: tone === 'default' ? 'var(--text-primary)'
-                  : tone === 'success' ? 'var(--tone-success-text, #10b981)'
-                  : tone === 'warning' ? 'var(--tone-warning-text, #f59e0b)'
-                  : 'var(--tone-danger-text, #ef4444)',
+                ...buttonStyle,
+                opacity: currentNodeKey ? 1 : 0.6,
+                cursor: currentNodeKey ? 'pointer' : 'not-allowed',
               }}
             >
-              {value}
-            </span>
+              Open Studio
+            </button>
+            <button type="button" onClick={() => void loadRuns()} style={buttonStyle} disabled={loading}>
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+        </div>
+
+        <div style={stripGridStyle}>
+          <div style={stripStyle}>
+            <div style={stripLabelStyle}>Active Context</div>
+            <div style={stripValueStyle}>{scopeLabel}</div>
+          </div>
+          <div style={stripStyle}>
+            <div style={stripLabelStyle}>Surface</div>
+            <div style={stripValueStyle}>Administration / Runs</div>
+          </div>
+        </div>
+      </section>
+
+      <div style={summaryGridStyle}>
+        {[
+          { label: 'Total Runs', value: runs.length, tone: 'default' as const },
+          { label: 'Running', value: runs.filter((r) => r.status === 'running').length, tone: 'success' as const },
+          { label: 'Awaiting Approval', value: runs.filter((r) => r.status === 'waiting_approval').length, tone: 'warning' as const },
+          { label: 'Failed', value: runs.filter((r) => r.status === 'failed').length, tone: 'danger' as const },
+        ].map(({ label, value, tone }) => (
+          <div key={label} style={metricStyle(tone)}>
+            <span style={metricLabelStyle}>{label}</span>
+            <span style={metricValueStyle(tone)}>{value}</span>
           </div>
         ))}
       </div>
@@ -227,6 +257,7 @@ export default function RunsPage() {
                     <StepBadge status={selectedRun.status} size="md" />
                     {(selectedRun.status === 'running' || selectedRun.status === 'queued') && (
                       <button
+                        type="button"
                         onClick={() => void handleCancel(selectedRun.id)}
                         className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium"
                         style={{ background: 'var(--tone-danger-text, #ef4444)', color: '#fff' }}
@@ -265,4 +296,108 @@ export default function RunsPage() {
       )}
     </div>
   );
+}
+
+const panelStyle = {
+  borderRadius: 'var(--radius-lg)',
+  border: '1px solid var(--border-primary)',
+  background: 'var(--bg-primary)',
+  padding: 16,
+  display: 'grid',
+  gap: 12,
+};
+
+const buttonStyle = {
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-primary)',
+  background: 'var(--bg-secondary)',
+  color: 'var(--text-primary)',
+  padding: '8px 12px',
+  cursor: 'pointer',
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const eyebrowStyle = {
+  fontSize: 11,
+  color: 'var(--text-muted)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+} as const;
+
+const stripGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: 10,
+} as const;
+
+const stripStyle = {
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-primary)',
+  background: 'var(--bg-secondary)',
+  padding: '10px 12px',
+  display: 'grid',
+  gap: 4,
+} as const;
+
+const stripLabelStyle = {
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.07em',
+  color: 'var(--text-muted)',
+} as const;
+
+const stripValueStyle = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'var(--text-primary)',
+  lineHeight: 1.5,
+} as const;
+
+const summaryGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gap: 10,
+} as const;
+
+function metricStyle(tone: 'default' | 'success' | 'warning' | 'danger') {
+  return {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--border-primary)',
+    background:
+      tone === 'default'
+        ? 'var(--bg-secondary)'
+        : tone === 'success'
+          ? 'var(--tone-success-bg, rgba(16,185,129,0.08))'
+          : tone === 'warning'
+            ? 'var(--tone-warning-bg, rgba(245,158,11,0.08))'
+            : 'var(--tone-danger-bg, rgba(239,68,68,0.08))',
+    padding: '10px 14px',
+    display: 'grid',
+    gap: 3,
+  } as const;
+}
+
+const metricLabelStyle = {
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.07em',
+  color: 'var(--text-muted)',
+} as const;
+
+function metricValueStyle(tone: 'default' | 'success' | 'warning' | 'danger') {
+  return {
+    fontSize: 22,
+    fontWeight: 800,
+    color:
+      tone === 'default'
+        ? 'var(--text-primary)'
+        : tone === 'success'
+          ? 'var(--tone-success-text, #10b981)'
+          : tone === 'warning'
+            ? 'var(--tone-warning-text, #f59e0b)'
+            : 'var(--tone-danger-text, #ef4444)',
+  } as const;
 }

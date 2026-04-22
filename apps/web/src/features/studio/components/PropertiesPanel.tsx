@@ -6,6 +6,7 @@ import {
   FlaskConical,
   GitCompare,
   Lock,
+  MousePointerClick,
   RadioTower,
 } from 'lucide-react';
 
@@ -78,7 +79,7 @@ function inferNodePurpose(config: Record<string, unknown> | null, linkedAgent: A
 function InspectorBlock({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
   return (
     <section style={blockStyle}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <div style={blockHeaderStyle}>
         {icon}
         <h4 style={{ margin: 0, fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>{title}</h4>
       </div>
@@ -114,9 +115,9 @@ function SelectionEmptyState({
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={emptyStateStyle}>
-          <div style={emptyStateIconStyle}>
-            <span style={{ fontSize: 18 }}>🖱️</span>
-          </div>
+        <div style={emptyStateIconStyle}>
+          <MousePointerClick size={18} />
+        </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-primary)' }}>No node selected</div>
           <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.45, color: 'var(--text-muted)' }}>
@@ -245,9 +246,7 @@ export function PropertiesPanel({
   const [activeTab, setActiveTab] = useState<InspectorTab>('selection');
 
   useEffect(() => {
-    if (selectedNodeId) {
-      setActiveTab('selection');
-    }
+    if (selectedNodeId) setActiveTab('selection');
   }, [selectedNodeId]);
 
   const config = useMemo(() => asRecord(selectedNode?.config), [selectedNode]);
@@ -277,18 +276,11 @@ export function PropertiesPanel({
   }, [config, linkedAgent]);
 
   const knownSkillSet = useMemo(() => new Set(skills.map((skill) => skill.name)), [skills]);
-  const coveredSkills = useMemo(
-    () => declaredSkills.filter((skill) => knownSkillSet.has(skill)),
-    [declaredSkills, knownSkillSet],
-  );
-  const uncoveredSkills = useMemo(
-    () => declaredSkills.filter((skill) => !knownSkillSet.has(skill)),
-    [declaredSkills, knownSkillSet],
-  );
+  const coveredSkills = useMemo(() => declaredSkills.filter((skill) => knownSkillSet.has(skill)), [declaredSkills, knownSkillSet]);
+  const uncoveredSkills = useMemo(() => declaredSkills.filter((skill) => !knownSkillSet.has(skill)), [declaredSkills, knownSkillSet]);
 
   const runtimeSessions = useMemo(
-    () =>
-      sessions.map((session) => asRecord(session)).filter((session): session is Record<string, unknown> => Boolean(session)),
+    () => sessions.map((session) => asRecord(session)).filter((session): session is Record<string, unknown> => Boolean(session)),
     [sessions],
   );
 
@@ -340,7 +332,7 @@ export function PropertiesPanel({
 
     return (
       <div style={contentStackStyle}>
-        <InspectorBlock title="Node Identity" icon={<span style={{ fontSize: 13, color: 'var(--color-primary)' }}>🖱️</span>}>
+        <InspectorBlock title="Node Identity" icon={<MousePointerClick size={13} style={{ color: 'var(--color-primary)' }} />}>
           <MetricRow label="Name" value={selectedNodeLabel ?? selectedNode.id} />
           <MetricRow label="Type" value={String(selectedNode.type)} />
           <MetricRow label="Node ID" value={<code style={monoTextStyle}>{selectedNode.id}</code>} />
@@ -391,9 +383,7 @@ export function PropertiesPanel({
 
   function renderRuntimeTab() {
     if (!selectedNode || !selectedNodeId) {
-      return (
-        <SelectionEmptyState runtimeOk={runtimeOk} diagnosticsCount={diagnostics.length} diffCount={diffStats.total} />
-      );
+      return <SelectionEmptyState runtimeOk={runtimeOk} diagnosticsCount={diagnostics.length} diffCount={diffStats.total} />;
     }
 
     return (
@@ -554,6 +544,28 @@ export function PropertiesPanel({
           </div>
         </div>
 
+        {selectedNode ? (
+          <div style={selectionRailStyle}>
+            <div style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+              <span style={selectionRailKickerStyle}>Pinned from canvas</span>
+              <strong style={selectionRailTitleStyle}>{selectedNodeLabel ?? selectedNode.id}</strong>
+              <span style={selectionRailSubtitleStyle}>
+                {linkedAgent ? `Linked to ${linkedAgent.name}` : 'No linked agent resolved'}
+                {purpose ? ` | ${purpose}` : ''}
+              </span>
+            </div>
+            <div style={{ display: 'grid', justifyItems: 'end', gap: 6, flexShrink: 0 }}>
+              <span style={selectionRailBadgeStyle}>Focused</span>
+              <span style={selectionRailMetaStyle}>{selectedNode.id}</span>
+            </div>
+          </div>
+        ) : (
+          <div style={selectionRailEmptyStyle}>
+            <MousePointerClick size={14} />
+            Click a canvas node to pin this inspector.
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
           <StatusMiniTile label="Selection" value={selectedNode ? 'Pinned' : 'Idle'} tone={selectedNode ? 'success' : 'default'} />
           <StatusMiniTile label="Runtime" value={runtimeOk ? 'Online' : 'Degraded'} tone={runtimeOk ? 'success' : 'warning'} />
@@ -605,10 +617,17 @@ const contentStackStyle: CSSProperties = {
 };
 
 const blockStyle: CSSProperties = {
-  border: '1px solid var(--border-primary)',
-  background: 'linear-gradient(180deg, var(--shell-chip-bg), var(--bg-primary, #fff))',
-  borderRadius: 14,
-  padding: 12,
+  borderTop: '1px solid var(--border-secondary)',
+  paddingTop: 12,
+  display: 'grid',
+  gap: 10,
+};
+
+const blockHeaderStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  paddingBottom: 2,
 };
 
 const metricRowStyle: CSSProperties = {
@@ -725,7 +744,7 @@ const headerStyle: CSSProperties = {
   padding: '14px 14px 12px',
   borderBottom: '1px solid var(--border-primary)',
   display: 'grid',
-  gap: 12,
+  gap: 10,
   background: 'linear-gradient(180deg, var(--shell-chip-bg), color-mix(in srgb, var(--shell-panel-bg) 96%, transparent))',
   flexShrink: 0,
 };
@@ -739,10 +758,11 @@ const headerKickerStyle: CSSProperties = {
 };
 
 const tabShellStyle: CSSProperties = {
-  padding: '8px 14px',
+  padding: '8px 14px 10px',
   borderBottom: '1px solid var(--border-secondary)',
-  background: 'var(--shell-chip-bg)',
-  display: 'flex',
+  background: 'linear-gradient(180deg, var(--shell-chip-bg), color-mix(in srgb, var(--shell-panel-bg) 96%, transparent))',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
   gap: 6,
 };
 
@@ -755,4 +775,73 @@ const typeBadgeStyle: CSSProperties = {
   background: 'var(--bg-secondary)',
   fontWeight: 800,
   textTransform: 'capitalize',
+};
+
+const selectionRailStyle: CSSProperties = {
+  borderRadius: 14,
+  border: '1px solid color-mix(in srgb, var(--color-primary) 18%, var(--border-primary))',
+  background: 'linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 12%, transparent), var(--shell-chip-bg))',
+  padding: '10px 12px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+};
+
+const selectionRailEmptyStyle: CSSProperties = {
+  borderRadius: 14,
+  border: '1px dashed var(--border-primary)',
+  background: 'var(--bg-secondary)',
+  padding: '10px 12px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  fontSize: 12,
+  color: 'var(--text-muted)',
+};
+
+const selectionRailKickerStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 900,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  color: 'var(--text-muted)',
+};
+
+const selectionRailTitleStyle: CSSProperties = {
+  fontSize: 13,
+  color: 'var(--text-primary)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const selectionRailSubtitleStyle: CSSProperties = {
+  fontSize: 11,
+  color: 'var(--text-muted)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const selectionRailBadgeStyle: CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid var(--tone-success-border)',
+  background: 'var(--tone-success-bg)',
+  color: 'var(--tone-success-text)',
+  padding: '3px 8px',
+  fontSize: 10,
+  fontWeight: 800,
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+};
+
+const selectionRailMetaStyle: CSSProperties = {
+  fontSize: 10,
+  color: 'var(--text-muted)',
+  fontFamily: 'var(--font-mono)',
+  maxWidth: 220,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
