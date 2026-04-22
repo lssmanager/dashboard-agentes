@@ -77,4 +77,53 @@ describe('OpenClawRuntimeAdapter contract', () => {
     expect(result.runtimeSupported).toBe(false);
     expect(gatewayMock.call).not.toHaveBeenCalled();
   });
+
+  it('returns fail-closed capability matrix when capability endpoint fails', async () => {
+    const gatewayMock = {
+      health: jest.fn(),
+      diagnostics: jest.fn(),
+      listSessions: jest.fn(),
+      getRuntimeCapabilityMatrix: jest.fn().mockRejectedValue(new Error('gateway down')),
+      inspectSessions: jest.fn().mockResolvedValue([]),
+      inspectChannels: jest.fn().mockResolvedValue([]),
+      call: jest.fn(),
+    };
+
+    const adapter = new OpenClawRuntimeAdapter(gatewayMock as any);
+    const capabilities = await adapter.getCapabilities();
+
+    expect(capabilities.source).toBe('unknown');
+    expect(capabilities.topology.connect).toBe(false);
+    expect(capabilities.inspection.sessions).toBe(false);
+  });
+
+  it('returns empty sessions/channels when inspection endpoints fail', async () => {
+    const gatewayMock = {
+      health: jest.fn(),
+      diagnostics: jest.fn(),
+      listSessions: jest.fn(),
+      getRuntimeCapabilityMatrix: jest.fn().mockResolvedValue({
+        source: 'gateway_capabilities',
+        topology: {
+          connect: true,
+          disconnect: true,
+          pause: true,
+          reactivate: true,
+          redirect: true,
+          continue: true,
+        },
+        inspection: { sessions: true, channels: true, topology: true },
+      }),
+      inspectSessions: jest.fn().mockRejectedValue(new Error('sessions unavailable')),
+      inspectChannels: jest.fn().mockRejectedValue(new Error('channels unavailable')),
+      call: jest.fn(),
+    };
+
+    const adapter = new OpenClawRuntimeAdapter(gatewayMock as any);
+    const sessions = await adapter.inspectSessions();
+    const channels = await adapter.inspectChannels();
+
+    expect(sessions).toEqual([]);
+    expect(channels).toEqual([]);
+  });
 });

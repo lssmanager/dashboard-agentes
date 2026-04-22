@@ -24,7 +24,11 @@ export class RuntimeInspectionService {
   }
 
   async getTopologyLinks() {
-    const canonical = await this.studio.getCanonicalState();
-    return this.runtimeAdapter.inspectTopologyLinks(canonical.topology.connections);
+    try {
+      const canonical = await this.studio.getCanonicalState();
+      return this.runtimeAdapter.inspectTopologyLinks(canonical.topology.connections);
+    } catch {
+      return this.runtimeAdapter.inspectTopologyLinks([]);
+    }
   }
 }

@@ -136,15 +136,38 @@ export class OpenClawRuntimeAdapter implements RuntimeAdapter {
   }
 
   async getCapabilities(): Promise<RuntimeCapabilityMatrix> {
-    return this.gateway.getRuntimeCapabilityMatrix();
+    try {
+      return await this.gateway.getRuntimeCapabilityMatrix();
+    } catch {
+      return {
+        source: 'unknown',
+        topology: {
+          connect: false,
+          disconnect: false,
+          pause: false,
+          reactivate: false,
+          redirect: false,
+          continue: false,
+        },
+        inspection: { sessions: false, channels: false, topology: false },
+      };
+    }
   }
 
   async inspectSessions(): Promise<SessionState[]> {
-    return this.gateway.inspectSessions();
+    try {
+      return await this.gateway.inspectSessions();
+    } catch {
+      return [];
+    }
   }
 
   async inspectChannels(): Promise<Array<{ channel: string; sessions: number; activeSessions: number }>> {
-    return this.gateway.inspectChannels();
+    try {
+      return await this.gateway.inspectChannels();
+    } catch {
+      return [];
+    }
   }
 
   async inspectTopologyLinks(connections: ConnectionSpec[]): Promise<TopologyLinkState[]> {
