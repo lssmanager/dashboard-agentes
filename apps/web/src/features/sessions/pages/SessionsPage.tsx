@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { MessageSquare, Circle, RefreshCw, Terminal, ChevronRight, AlertTriangle } from 'lucide-react';
-import { PageHeader, Card, Badge } from '../../../components';
+import { PageHeader, Card } from '../../../components';
 import { useStudioState } from '../../../lib/StudioStateContext';
 import { useHierarchy } from '../../../lib/HierarchyContext';
 import { sendRuntimeCommand, getRuntimeSessions } from '../../../lib/api';
@@ -89,10 +89,6 @@ export default function SessionsPage() {
     ? filteredSessions.find((s) => s.ref.id === selectedSessionId) ?? null
     : null;
 
-  const hasStatusData = filteredSessions.some((s) => s.status !== undefined);
-  const activeCount = hasStatusData
-    ? filteredSessions.filter((s) => s.status === 'active').length
-    : filteredSessions.length;
   const contextLabel = selectedLineage.map((node) => node.label).join(' / ');
 
   // ── Handlers ──────────────────────────────────────────────────────────
@@ -122,16 +118,6 @@ export default function SessionsPage() {
       setRefreshing(false);
     }
   }, [refresh]);
-
-  // ── Stats ─────────────────────────────────────────────────────────────
-  const avgMessages = useMemo(() => {
-    if (!filteredSessions.length) return null;
-    const total = filteredSessions.reduce((sum, s) => {
-      const msgs = Array.isArray(s.metadata?.messages) ? s.metadata.messages.length : 0;
-      return sum + msgs;
-    }, 0);
-    return Math.round(total / filteredSessions.length);
-  }, [filteredSessions]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -163,31 +149,66 @@ export default function SessionsPage() {
         </div>
       )}
 
-      {/* Context + Runtime Command */}
-      <Card>
-        <div className="space-y-4">
-          <div>
-            <div className="text-xs uppercase font-semibold mb-1" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-              Active Context
-            </div>
-            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              {contextLabel || 'No context selected'}
-            </div>
-            {scopeLevel && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--color-primary-soft)', color: 'var(--color-primary)' }}>
-                  {scopeLevel}
-                </span>
-                <code className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{scopeId}</code>
-              </div>
-            )}
+      {/* Scope context */}
+      <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+        <div className="text-xs uppercase font-semibold mb-1" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+          Active Context
+        </div>
+        <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+          {contextLabel || 'No context selected'}
+        </div>
+        {scopeLevel && (
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: 'var(--color-primary-soft)', color: 'var(--color-primary)' }}>
+              {scopeLevel}
+            </span>
+            <code className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{scopeId}</code>
           </div>
+        )}
+      </div>
 
-          {/* Runtime Command Panel */}
+      {/* Stats strip — matches RunsPage tone pattern */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        {[
+          { label: 'Total', value: filteredSessions.length, tone: 'default' },
+          { label: 'Active', value: filteredSessions.filter((s) => s.status === 'active').length, tone: 'success' },
+          { label: 'Paused', value: filteredSessions.filter((s) => s.status === 'paused').length, tone: 'warning' },
+          { label: 'Closed', value: filteredSessions.filter((s) => s.status === 'closed').length, tone: 'muted' },
+        ].map(({ label, value, tone }) => (
           <div
-            className="rounded-lg border p-4 space-y-3"
-            style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
+            key={label}
+            style={{
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-primary)',
+              background:
+                tone === 'success' ? 'var(--tone-success-bg, rgba(16,185,129,0.08))'
+                : tone === 'warning' ? 'var(--tone-warning-bg, rgba(245,158,11,0.08))'
+                : 'var(--bg-secondary)',
+              padding: '10px 14px',
+              display: 'grid',
+              gap: 3,
+            }}
           >
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>
+              {label}
+            </span>
+            <span style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color:
+                tone === 'success' ? 'var(--tone-success-text, #10b981)'
+                : tone === 'warning' ? 'var(--tone-warning-text, #f59e0b)'
+                : 'var(--text-primary)',
+            }}>
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Runtime Command Panel */}
+      <Card>
+        <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Terminal size={14} style={{ color: 'var(--color-primary)' }} />
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Runtime Command</p>
@@ -290,7 +311,6 @@ export default function SessionsPage() {
                 )}
               </>
             )}
-          </div>
         </div>
       </Card>
 
@@ -432,25 +452,6 @@ export default function SessionsPage() {
             )}
           </Card>
         )}
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Total Sessions</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{filteredSessions.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{hasStatusData ? 'Active Now' : 'Sessions'}</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: activeCount > 0 ? 'var(--color-success)' : 'var(--text-primary)' }}>{activeCount}</p>
-          <div className="mt-1.5">
-            <Badge variant={activeCount > 0 ? 'success' : 'default'}>{activeCount > 0 ? 'Active' : 'None'}</Badge>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Avg Messages / Session</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{avgMessages ?? '—'}</p>
-        </Card>
       </div>
     </div>
   );

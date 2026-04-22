@@ -302,6 +302,7 @@ export default function AdministrationPage() {
             <OperationsSurface
               data={operations}
               busyAction={runtimeActionBusy}
+              capabilities={overview?.capabilities}
               onRuntimeAction={(action) => void handleRuntimeAction(action)}
             />
           )}
