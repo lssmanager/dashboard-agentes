@@ -14,7 +14,7 @@ export type TopologyRuntimeAction =
   | 'redirect'
   | 'continue';
 
-export type TopologyActionStatus = 'applied' | 'unsupported_by_runtime' | 'rejected';
+export type TopologyActionStatus = 'applied' | 'partial' | 'unsupported_by_runtime' | 'rejected';
 export type SessionExecutionState = 'active' | 'idle' | 'paused' | 'closed' | 'unknown';
 
 export type CoreFileTarget =

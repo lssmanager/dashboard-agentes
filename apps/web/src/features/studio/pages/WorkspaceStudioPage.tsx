@@ -204,6 +204,8 @@ export default function WorkspaceStudioPage() {
 
   const topologySelectedAgent =
     state.agents.find((agent) => agent.id === selectedTopologyAgentId) ?? selectedAgent ?? null;
+  const scopeLabel = selectedLineage[selectedLineage.length - 1]?.label ?? state.workspace?.name ?? 'n/a';
+  const runtimeLabel = runtimeOk ? 'Online' : 'Degraded';
 
   if (!scope.agencyId) {
     return (
@@ -250,11 +252,19 @@ export default function WorkspaceStudioPage() {
 
   return (
     <StudioPageShell maxWidth={1440}>
-      <StudioSectionCard
-        title="Editor Control Bar"
-        description="Operational actions for the active Studio context."
-        actions={<RuntimeStatusBadge status={runtimeOk ? 'online' : 'degraded'} label={runtimeOk ? 'runtime online' : 'runtime degraded'} />}
-      >
+      <section style={studioControlShellStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gap: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              Studio Command Deck
+            </span>
+            <strong style={{ fontSize: 15, color: 'var(--text-primary)' }}>
+              Immersive editor controls for the active scope
+            </strong>
+          </div>
+          <RuntimeStatusBadge status={runtimeOk ? 'online' : 'degraded'} label={runtimeOk ? 'runtime online' : 'runtime degraded'} />
+        </div>
+
         <StudioCommandRow>
           <button type="button" style={toolButton(true)} disabled={busy} onClick={() => void handleRefresh()}>
             <RefreshCw size={14} />
@@ -273,35 +283,7 @@ export default function WorkspaceStudioPage() {
             Apply Deployment
           </button>
         </StudioCommandRow>
-      </StudioSectionCard>
 
-      <StudioSectionCard
-        title="Studio Context"
-        description="Keep scope, agent, selection, mode, and runtime aligned while working."
-        actions={
-          <StudioCommandRow>
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  buildStudioHref({
-                    surface: 'agency-builder',
-                    tab: selectedBuilderTab,
-                    nodeKey: selectedKey,
-                  }),
-                )
-              }
-              style={toolButton()}
-            >
-              Administration
-            </button>
-            <button type="button" style={toolButton()} disabled={busy} onClick={() => setDiffModalOpen(true)}>
-              <Eye size={14} />
-              Open Diff Modal
-            </button>
-          </StudioCommandRow>
-        }
-      >
         <div
           style={{
             display: 'grid',
@@ -310,26 +292,50 @@ export default function WorkspaceStudioPage() {
             marginBottom: 10,
           }}
         >
-          <ContextPill label="Scope" value={selectedLineage[selectedLineage.length - 1]?.label ?? state.workspace?.name ?? 'n/a'} />
+          <ContextPill label="Scope" value={scopeLabel} />
           <ContextPill label="Agent" value={selectedAgent?.name ?? 'n/a'} />
           <ContextPill label="Node" value={selectedNodeName ?? 'None selected'} />
           <ContextPill label="Mode" value={activeTab === 'diff' ? 'Diff / Apply' : activeTab[0].toUpperCase() + activeTab.slice(1)} />
-          <ContextPill label="Runtime" value={runtimeOk ? 'Online' : 'Degraded'} tone={runtimeOk ? 'success' : 'warning'} />
+          <ContextPill label="Runtime" value={runtimeLabel} tone={runtimeOk ? 'success' : 'warning'} />
         </div>
 
         <StudioTabBar
           active={activeTab}
           onChange={setActiveTab}
           tabs={[
-            { id: 'builder', label: 'Builder' },
-            { id: 'test', label: 'Test' },
-            { id: 'debug', label: 'Debug' },
-            { id: 'topology', label: 'Topology' },
-            { id: 'diff', label: 'Diff / Apply' },
+            { id: 'builder', label: 'Builder', hint: 'Compose canvas nodes and contracts.', count: state.flows[0]?.nodes.length ?? 0 },
+            { id: 'test', label: 'Test', hint: 'Validate runtime readiness and live sessions.', count: diagnostics.length + sessions.length },
+            { id: 'debug', label: 'Debug', hint: 'Inspect diagnostics and builder output.', count: diagnostics.length },
+            { id: 'topology', label: 'Topology', hint: 'Check workspace routing and active links.', count: state.agents.length },
+            { id: 'diff', label: 'Diff / Apply', hint: 'Preview and apply core-file changes.', count: preview?.diff.length ?? 0 },
           ]}
+          scopeLabel={scopeLabel}
+          agentLabel={selectedAgent?.name ?? 'n/a'}
+          selectedNodeLabel={selectedNodeName}
+          runtimeLabel={runtimeLabel}
+          runtimeTone={runtimeOk ? 'success' : 'warning'}
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() =>
+              navigate(
+                buildStudioHref({
+                  surface: 'agency-builder',
+                  tab: selectedBuilderTab,
+                  nodeKey: selectedKey,
+                }),
+              )
+            }
+            style={toolButton()}
+          >
+            Administration
+          </button>
+          <button type="button" style={toolButton()} disabled={busy} onClick={() => setDiffModalOpen(true)}>
+            <Eye size={14} />
+            Open Diff Modal
+          </button>
           <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Active Agent
           </span>
@@ -368,7 +374,7 @@ export default function WorkspaceStudioPage() {
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedAgent.description}</span>
           )}
         </div>
-      </StudioSectionCard>
+      </section>
 
       {activeTab === 'builder' && (
         <section
@@ -440,6 +446,7 @@ export default function WorkspaceStudioPage() {
                       skills={state.skills}
                       onNodeSelect={setSelectedNodeId}
                       selectedNodeId={selectedNodeId}
+                      selectedAgent={selectedAgent}
                     />
                   ) : (
                     <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
@@ -530,7 +537,11 @@ export default function WorkspaceStudioPage() {
 
       {activeTab === 'debug' && (
         <section className="studio-responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <StudioSectionCard title="Diagnostics Stream" description="Compile/runtime warnings scoped to current workspace state.">
+          <div style={modePanelStyle}>
+            <div style={modePanelHeaderStyle}>
+              <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Diagnostics Stream</strong>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Workspace compile/runtime warnings</span>
+            </div>
             {diagnostics.length === 0 ? (
               <StudioEmptyState title="No diagnostics" description="Builder surface currently passes compile checks." />
             ) : (
@@ -543,9 +554,13 @@ export default function WorkspaceStudioPage() {
                 ))}
               </div>
             )}
-          </StudioSectionCard>
+          </div>
 
-          <StudioSectionCard title="Builder Agent Output" description="Generated profile summary for selected agent.">
+          <div style={modePanelStyle}>
+            <div style={modePanelHeaderStyle}>
+              <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Builder Agent Output</strong>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Generated summary for the active agent</span>
+            </div>
             {!builderOutput ? (
               <StudioEmptyState
                 title="No builder output generated"
@@ -561,7 +576,7 @@ export default function WorkspaceStudioPage() {
                 <StudioMetricRow label="Diff Targets" value={`${builderOutput.proposedCoreFileDiffs.length}`} />
               </StudioInspectorCard>
             )}
-          </StudioSectionCard>
+          </div>
         </section>
       )}
 
@@ -786,6 +801,32 @@ function ContextPill({
     </div>
   );
 }
+
+const studioControlShellStyle: CSSProperties = {
+  borderRadius: 'var(--radius-xl)',
+  border: '1px solid var(--shell-panel-border)',
+  background: 'var(--shell-panel-bg)',
+  padding: 14,
+  display: 'grid',
+  gap: 12,
+};
+
+const modePanelStyle: CSSProperties = {
+  borderRadius: 'var(--radius-xl)',
+  border: '1px solid var(--shell-panel-border)',
+  background: 'var(--shell-panel-bg)',
+  padding: 14,
+  display: 'grid',
+  gap: 10,
+  alignContent: 'start',
+};
+
+const modePanelHeaderStyle: CSSProperties = {
+  display: 'grid',
+  gap: 2,
+  borderBottom: '1px solid var(--shell-chip-border)',
+  paddingBottom: 8,
+};
 
 function toolButton(withPulse = false): CSSProperties {
   return {

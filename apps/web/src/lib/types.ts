@@ -337,7 +337,7 @@ export interface CanonicalStudioStateResponse {
 
 export interface TopologyActionResult {
   action: TopologyRuntimeAction;
-  status: 'applied' | 'unsupported_by_runtime' | 'rejected';
+  status: 'applied' | 'partial' | 'unsupported_by_runtime' | 'rejected';
   message: string;
   runtimeSupported: boolean;
   requestedAt: string;
@@ -527,6 +527,22 @@ export interface DashboardOperationsDto {
     latestSnapshots: Array<{ id: string; label?: string; createdAt: string }>;
     timeline: Array<{ at: string; type: 'diff' | 'apply' | 'rollback' | 'publish'; detail: string }>;
   };
+}
+
+export interface DashboardRunsDto {
+  scope: DashboardScope;
+  lineage: DashboardLineageItem[];
+  mode: 'aggregated' | 'scoped';
+  total: number;
+  runs: RunSpec[];
+}
+
+export interface ProfileTemplatesStateDto {
+  status: 'planned';
+  available: false;
+  mode: 'read_only';
+  message: string;
+  updatedAt: string;
 }
 
 export interface EffectiveProfileDto {

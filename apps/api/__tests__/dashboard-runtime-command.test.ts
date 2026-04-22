@@ -7,7 +7,7 @@ import { DashboardService } from '../src/modules/dashboard/dashboard.service';
  * HTTP contract tests for POST /dashboard/runtime/command.
  *
  * Key contract invariant (fixed in prior session):
- *   HTTP 200 for ALL operational outcomes (applied / unsupported_by_runtime / rejected).
+ *   HTTP 200 for ALL operational outcomes (applied / partial / unsupported_by_runtime / rejected).
  *   HTTP 4xx/5xx are reserved for request validation failures and unexpected server errors.
  */
 
@@ -150,6 +150,33 @@ describe('POST /dashboard/runtime/command – HTTP semantics', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.result.errorCode).toBe('TOPOLOGY_FORBIDDEN');
+  });
+
+  it('returns HTTP 200 with status=partial when runtime applies only part of the request', async () => {
+    const mockResult = {
+      command: 'redirect',
+      scope: { level: 'workspace', id: 'workspace-1' },
+      result: {
+        action: 'redirect',
+        status: 'partial',
+        runtimeSupported: true,
+        message: 'Redirect applied for primary target, fallback target remains pending',
+        requestedAt: new Date().toISOString(),
+        errorCode: 'FALLBACK_PENDING',
+      },
+    };
+
+    jest.spyOn(DashboardService.prototype, 'executeRuntimeCommand').mockResolvedValue(mockResult as any);
+
+    const app = buildApp();
+    const res = await request(app)
+      .post('/dashboard/runtime/command')
+      .send({ ...VALID_COMMAND_BODY, action: 'redirect' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.result.status).toBe('partial');
+    expect(res.body.result.runtimeSupported).toBe(true);
+    expect(res.body.result.errorCode).toBe('FALLBACK_PENDING');
   });
 });
 

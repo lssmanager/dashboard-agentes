@@ -3,7 +3,19 @@ import { Activity, Zap, Cpu, Tag, ChevronDown, ChevronRight } from 'lucide-react
 
 import type { DashboardInspectorDto } from '../../../../lib/types';
 
-export function RightInspectorPanel({ data }: { data: DashboardInspectorDto | null }) {
+type InspectorState = 'loading' | 'empty' | 'error';
+
+export function RightInspectorPanel({
+  data,
+  state,
+  message,
+}: {
+  data: DashboardInspectorDto | null;
+  state?: InspectorState;
+  message?: string;
+}) {
+  const resolvedState: InspectorState = state ?? (data ? 'empty' : 'loading');
+
   return (
     <aside style={panelStyle}>
       {/* Header */}
@@ -125,6 +137,48 @@ export function RightInspectorPanel({ data }: { data: DashboardInspectorDto | nu
             )}
           </Section>
         </>
+      ) : resolvedState === 'error' ? (
+        <div style={{ padding: '24px 0', textAlign: 'center', display: 'grid', gap: 6 }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'var(--tone-danger-bg, rgba(239,68,68,0.08))',
+              border: '1px solid var(--tone-danger-border, rgba(239,68,68,0.28))',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Activity size={14} style={{ color: 'var(--tone-danger-text, #ef4444)' }} />
+          </div>
+          <p style={{ margin: 0, color: 'var(--tone-danger-text, #ef4444)', fontSize: 12 }}>
+            {message ?? 'Inspector data could not be loaded.'}
+          </p>
+        </div>
+      ) : resolvedState === 'empty' ? (
+        <div style={{ padding: '24px 0', textAlign: 'center', display: 'grid', gap: 6 }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-primary)',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Activity size={14} style={{ color: 'var(--text-muted)' }} />
+          </div>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>
+            {message ?? 'No inspector data available for this scope.'}
+          </p>
+        </div>
       ) : (
         <div style={{ padding: '24px 0', textAlign: 'center', display: 'grid', gap: 6 }}>
           <div

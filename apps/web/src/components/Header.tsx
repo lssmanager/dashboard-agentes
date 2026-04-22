@@ -1,9 +1,11 @@
 import { Menu, Moon, Plus, RotateCw, Sun } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 import { useHierarchy } from '../lib/HierarchyContext';
 import { useOnboarding } from '../lib/OnboardingContext';
 import { useStudioState } from '../lib/StudioStateContext';
 import { useTheme } from '../lib/ThemeProvider';
+import { getSurfaceLabel, surfaceFromPath } from '../lib/studioRouting';
 import { RuntimeBadge } from './ui/RuntimeBadge';
 
 interface HeaderProps {
@@ -12,12 +14,14 @@ interface HeaderProps {
 }
 
 export function Header({ onToggleSidebar, showHamburger = false }: HeaderProps) {
+  const location = useLocation();
   const { state, refresh } = useStudioState();
   const { selectedLineage } = useHierarchy();
   const { theme, toggleTheme } = useTheme();
   const { openOnboarding } = useOnboarding();
 
   const workspace = state.workspace;
+  const surfaceLabel = getSurfaceLabel(surfaceFromPath(location.pathname));
   const runtimeOk = state.runtime?.health?.ok ?? false;
 
   const iconButton: React.CSSProperties = {
@@ -43,19 +47,19 @@ export function Header({ onToggleSidebar, showHamburger = false }: HeaderProps) 
         )}
 
         <div style={{ minWidth: 0, display: 'grid', gap: 2 }}>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              color: 'var(--color-primary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            {surfaceLabel}
+          </span>
           {workspace ? (
             <>
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                Workspace
-              </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 <span
                   style={{

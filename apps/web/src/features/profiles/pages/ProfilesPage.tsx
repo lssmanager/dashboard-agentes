@@ -1,13 +1,13 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BookOpen, Hammer, Layers3, Sparkles, Cpu, Zap, Star, Tag, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import { createWorkspace } from '../../../lib/api';
+import { createWorkspace, getProfileTemplatesState } from '../../../lib/api';
 import { useStudioState } from '../../../lib/StudioStateContext';
 import { useHierarchy } from '../../../lib/HierarchyContext';
 import { PageHeader, Toast } from '../../../components';
-import type { ProfileSpec } from '../../../lib/types';
+import type { ProfileSpec, ProfileTemplatesStateDto } from '../../../lib/types';
 
 type HubTab = 'profiles' | 'skills' | 'tools' | 'templates';
 
@@ -28,6 +28,9 @@ export default function ProfilesPage() {
   const [workspaceName, setWorkspaceName] = useState('');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [templatesState, setTemplatesState] = useState<ProfileTemplatesStateDto | null>(null);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
 
   const selectedProfile = useMemo(
     () => state.profiles.find((p) => p.id === selectedProfileId) ?? null,
@@ -35,6 +38,28 @@ export default function ProfilesPage() {
   );
 
   const tools = canonical?.catalog.tools ?? [];
+
+  useEffect(() => {
+    if (activeTab !== 'templates' || templatesState || templatesLoading) return;
+
+    let cancelled = false;
+    setTemplatesLoading(true);
+    setTemplatesError(null);
+    void getProfileTemplatesState()
+      .then((payload) => {
+        if (!cancelled) setTemplatesState(payload);
+      })
+      .catch((err) => {
+        if (!cancelled) setTemplatesError(err instanceof Error ? err.message : 'Failed to load templates status');
+      })
+      .finally(() => {
+        if (!cancelled) setTemplatesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, templatesLoading, templatesState]);
 
   async function handleCreateWorkspace() {
     if (!selectedProfile || !workspaceName.trim()) return;
@@ -241,7 +266,11 @@ export default function ProfilesPage() {
                 letterSpacing: '0.06em',
               }}
             >
-              Planned — not yet operational
+              {templatesLoading
+                ? 'Loading status...'
+                : templatesState?.status === 'planned'
+                  ? 'Planned - read-only'
+                  : 'Planned - not yet operational'}
             </span>
           </div>
 
@@ -256,7 +285,10 @@ export default function ProfilesPage() {
               color: 'var(--tone-warning-text, #f59e0b)',
             }}
           >
-            Templates are a planned feature. They will allow bootstrapping workspaces from pre-configured starting points once the template catalog backend is implemented. For now, use the <strong>Profiles</strong> tab to create a workspace from a profile directly.
+            {templatesError
+              ? `Templates status could not be loaded: ${templatesError}`
+              : templatesState?.message ??
+                'Templates are a planned feature. Use the Profiles tab to create a workspace from a profile directly.'}
           </div>
 
           {/* Preview-only cards (non-interactive) */}

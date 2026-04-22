@@ -110,6 +110,27 @@ describe('OpenClawRuntimeAdapter – applied state', () => {
   });
 });
 
+describe('OpenClawRuntimeAdapter – partial state', () => {
+  it('preserves explicit partial status from runtime responses', async () => {
+    const gateway = makeGateway({
+      call: jest.fn().mockResolvedValue({
+        ok: true,
+        status: 'partial',
+        message: 'Connection applied, but target remained paused',
+        code: 'TARGET_REMAINED_PAUSED',
+      }),
+    });
+    const adapter = new OpenClawRuntimeAdapter(gateway as any);
+
+    const result = await adapter.executeTopologyAction('connect', SAMPLE_PAYLOAD);
+
+    expect(result.status).toBe('partial');
+    expect(result.runtimeSupported).toBe(true);
+    expect(result.message).toContain('target remained paused');
+    expect(result.errorCode).toBe('TARGET_REMAINED_PAUSED');
+  });
+});
+
 describe('OpenClawRuntimeAdapter – rejected state', () => {
   it('returns rejected when gateway responds ok:false', async () => {
     const gateway = makeGateway({
@@ -217,6 +238,25 @@ describe('OpenClawRuntimeAdapter – rejected state', () => {
 });
 
 describe('OpenClawRuntimeAdapter – unsupported_by_runtime state', () => {
+  it('preserves explicit unsupported_by_runtime from runtime responses', async () => {
+    const gateway = makeGateway({
+      call: jest.fn().mockResolvedValue({
+        ok: false,
+        status: 'unsupported_by_runtime',
+        message: 'Runtime disabled topology.connect for this deployment',
+        code: 'CAPABILITY_DISABLED_AT_RUNTIME',
+      }),
+    });
+    const adapter = new OpenClawRuntimeAdapter(gateway as any);
+
+    const result = await adapter.executeTopologyAction('connect', SAMPLE_PAYLOAD);
+
+    expect(result.status).toBe('unsupported_by_runtime');
+    expect(result.runtimeSupported).toBe(false);
+    expect(result.message).toContain('disabled topology.connect');
+    expect(result.errorCode).toBe('CAPABILITY_DISABLED_AT_RUNTIME');
+  });
+
   it('returns unsupported_by_runtime and does not call gateway when action is disabled', async () => {
     const gateway = makeGateway({
       getRuntimeCapabilityMatrix: jest.fn().mockResolvedValue(NO_CAPABILITY_MATRIX),

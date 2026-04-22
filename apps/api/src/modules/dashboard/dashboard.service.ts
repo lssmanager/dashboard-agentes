@@ -11,6 +11,7 @@ import type {
   DashboardInspectorDto,
   DashboardOperationsDto,
   DashboardOverviewDto,
+  DashboardRunsDto,
   RuntimeCommandRequestDto,
   RuntimeCommandResultDto,
 } from './dashboard.dto';
@@ -255,6 +256,27 @@ export class DashboardService {
     };
   }
 
+  async getRuns(input: { level?: string; id?: string }, options?: { limit?: number }): Promise<DashboardRunsDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const safeLimit =
+      typeof options?.limit === 'number' && Number.isFinite(options.limit)
+        ? Math.max(1, Math.min(Math.floor(options.limit), 200))
+        : undefined;
+
+    const scopedRuns = this.filterRunsByScope(canonical, resolved.workspaceIds, resolved.agentIds)
+      .slice()
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+    return {
+      scope: resolved.scope,
+      lineage: resolved.lineage,
+      mode: resolved.capabilities.runsMode,
+      total: scopedRuns.length,
+      runs: safeLimit ? scopedRuns.slice(0, safeLimit) : scopedRuns,
+    };
+  }
+
   async getEffectiveProfile(input: { level?: string; id?: string }) {
     const canonical = await this.studioService.getCanonicalState();
     const resolved = this.scopeResolver.resolve(canonical, input);
@@ -411,4 +433,3 @@ export class DashboardService {
     return pending;
   }
 }
-

@@ -6,7 +6,14 @@ import { ContextPanel } from '../components/ContextPanel';
 import { Header } from '../components/Header';
 import { useHierarchy } from '../lib/HierarchyContext';
 import { SCOPE_VIEW_REGISTRY } from '../lib/ScopeViewRegistry';
-import { buildStudioHref, parseBuilderTab, parseNodeQuery, surfaceFromPath } from '../lib/studioRouting';
+import {
+  buildStudioHref,
+  isAdministrationPath,
+  isStudioPath,
+  parseBuilderTab,
+  parseNodeQuery,
+  surfaceFromPath,
+} from '../lib/studioRouting';
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
@@ -31,10 +38,11 @@ export function MainLayout() {
 
   const isDesktop = useMediaQuery('(min-width: 1120px)');
   const isMobile = !useMediaQuery('(min-width: 769px)');
-  const isAdministration = ['/administration', '/agency-builder'].some((route) => location.pathname.startsWith(route));
-  const isStudioEnvironment = location.pathname.startsWith('/workspace-studio');
+  const activeSurface = surfaceFromPath(location.pathname);
+  const isAdministration = isAdministrationPath(location.pathname);
+  const isStudioEnvironment = isStudioPath(location.pathname) && location.pathname.startsWith('/workspace-studio');
   const canOpenStudio = SCOPE_VIEW_REGISTRY[selectedLevel].canEnterStudio;
-  const showContext = isDesktop && (isAdministration || isStudioEnvironment || location.pathname.startsWith('/entity-editor'));
+  const showContext = isDesktop && !isStudioEnvironment;
   const isStudioSurface = ['/workspace-studio', '/administration', '/agency-builder', '/entity-editor', '/runs', '/sessions', '/settings', '/profiles'].some((route) =>
     location.pathname.startsWith(route),
   );
@@ -43,21 +51,17 @@ export function MainLayout() {
   const mainPadding = isStudioEnvironment ? '0' : isStudioSurface ? '14px 14px 18px' : '20px 22px 28px';
 
   useEffect(() => {
-    setSurface(surfaceFromPath(location.pathname));
-  }, [location.pathname, setSurface]);
+    setSurface(activeSurface);
 
-  useEffect(() => {
-    if (!location.pathname.startsWith('/agency-builder') && !location.pathname.startsWith('/administration')) return;
-    const tab = parseBuilderTab(location.search);
-    if (tab) setBuilderTab(tab);
-  }, [location.pathname, location.search, setBuilderTab]);
-
-  useEffect(() => {
-    const nodeKey = parseNodeQuery(location.search);
-    if (!nodeKey) return;
-    if (!tree.nodes[nodeKey]) return;
-    selectByKey(nodeKey);
-  }, [location.search, selectByKey, tree.nodes]);
+    if (isAdministration) {
+      const nodeKey = parseNodeQuery(location.search);
+      if (nodeKey && tree.nodes[nodeKey]) {
+        selectByKey(nodeKey);
+      }
+      const tab = parseBuilderTab(location.search);
+      if (tab) setBuilderTab(tab);
+    }
+  }, [activeSurface, isAdministration, location.search, selectByKey, setBuilderTab, setSurface, tree.nodes]);
 
   return (
     <div

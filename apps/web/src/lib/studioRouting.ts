@@ -3,6 +3,16 @@ import type { AgencyBuilderTab, SurfaceId } from './types';
 export const NODE_QUERY_KEY = 'node';
 export const TAB_QUERY_KEY = 'tab';
 
+export const SURFACE_LABELS: Record<SurfaceId, string> = {
+  'agency-builder': 'Administration',
+  'workspace-studio': 'Studio',
+  'entity-editor': 'Editor',
+  profiles: 'Profiles Hub',
+  runs: 'Runs',
+  sessions: 'Sessions',
+  settings: 'Settings',
+};
+
 export function surfaceFromPath(pathname: string): SurfaceId {
   if (pathname.startsWith('/workspace-studio')) return 'workspace-studio';
   if (pathname.startsWith('/agency-builder')) return 'agency-builder';
@@ -13,6 +23,28 @@ export function surfaceFromPath(pathname: string): SurfaceId {
   if (pathname.startsWith('/sessions')) return 'sessions';
   if (pathname.startsWith('/settings')) return 'settings';
   return 'agency-builder';
+}
+
+export function isAdministrationPath(pathname: string): boolean {
+  return pathname.startsWith('/administration') || pathname.startsWith('/agency-builder');
+}
+
+export function isStudioPath(pathname: string): boolean {
+  return pathname.startsWith('/workspace-studio') || pathname.startsWith('/entity-editor');
+}
+
+export function isProductSurfacePath(pathname: string, surface: SurfaceId): boolean {
+  if (surface === 'agency-builder') return isAdministrationPath(pathname);
+  if (surface === 'workspace-studio') return pathname.startsWith('/workspace-studio');
+  if (surface === 'entity-editor') return pathname.startsWith('/entity-editor');
+  if (surface === 'profiles') return pathname.startsWith('/profiles');
+  if (surface === 'runs') return pathname.startsWith('/runs');
+  if (surface === 'sessions') return pathname.startsWith('/sessions');
+  return pathname.startsWith('/settings');
+}
+
+export function getSurfaceLabel(surface: SurfaceId): string {
+  return SURFACE_LABELS[surface];
 }
 
 export function pathForSurface(surface: SurfaceId): string {

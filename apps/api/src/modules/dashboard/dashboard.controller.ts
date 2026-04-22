@@ -34,6 +34,12 @@ export function registerDashboardRoutes(router: Router) {
     res.json(await service.getOperations(parseScope(req as any)));
   });
 
+  router.get('/dashboard/runs', async (req, res) => {
+    const rawLimit = Number(req.query.limit);
+    const limit = Number.isFinite(rawLimit) ? rawLimit : undefined;
+    res.json(await service.getRuns(parseScope(req as any), { limit }));
+  });
+
   router.get('/dashboard/effective-profile', async (req, res) => {
     res.json(await service.getEffectiveProfile(parseScope(req as any)));
   });
@@ -73,10 +79,8 @@ export function registerDashboardRoutes(router: Router) {
 
     try {
       const result = await service.executeRuntimeCommand(payload);
-      // Always return 200 — the result.result.status field carries the operational outcome:
-      //   'applied'               → action succeeded
-      //   'unsupported_by_runtime'→ runtime does not support this action (expected, not an error)
-      //   'rejected'              → runtime supported it but rejected the request (e.g. wrong state)
+      // Always return 200; the operational outcome is carried in result.result.status.
+      // Supported statuses: applied, partial, unsupported_by_runtime, rejected.
       // HTTP 4xx/5xx are reserved for request validation failures and unexpected server errors.
       return res.json(result);
     } catch (err) {
@@ -89,4 +93,3 @@ export function registerDashboardRoutes(router: Router) {
     }
   });
 }
-

@@ -3,6 +3,7 @@ import {
   RuntimeCapabilityMatrix,
   SessionState,
   TopologyActionRequest,
+  TopologyActionStatus,
   TopologyActionResult,
   TopologyLinkState,
 } from '../../../../../../packages/core-types/src';
@@ -77,6 +78,44 @@ const isOkResult = (value: unknown): value is { ok: boolean } => {
   return Boolean(record && typeof record.ok === 'boolean' && record.ok);
 };
 
+const asTopologyActionStatus = (value: unknown): TopologyActionStatus | null => {
+  if (value === 'applied' || value === 'partial' || value === 'unsupported_by_runtime' || value === 'rejected') {
+    return value;
+  }
+
+  return null;
+};
+
+const extractRuntimeMessage = (record: Record<string, unknown> | null): string | null => {
+  if (!record) {
+    return null;
+  }
+
+  if (typeof record.message === 'string' && record.message.trim().length > 0) {
+    return record.message;
+  }
+
+  if (typeof record.reason === 'string' && record.reason.trim().length > 0) {
+    return record.reason;
+  }
+
+  if (typeof record.error === 'string' && record.error.trim().length > 0) {
+    return record.error;
+  }
+
+  return null;
+};
+
+const extractRuntimeCode = (record: Record<string, unknown> | null, fallback: string): string => {
+  return typeof record?.code === 'string' && record.code.trim().length > 0
+    ? record.code
+    : fallback;
+};
+
+const extractAppliedAt = (record: Record<string, unknown> | null): string | undefined => {
+  return typeof record?.appliedAt === 'string' ? record.appliedAt : undefined;
+};
+
 export class OpenClawRuntimeAdapter implements RuntimeAdapter {
   readonly name = 'openclaw';
 
@@ -146,16 +185,49 @@ export class OpenClawRuntimeAdapter implements RuntimeAdapter {
       reason: payload.reason,
       metadata: payload.metadata,
     });
+    const runtimeRecord = asRecord(runtimeResult);
+    const runtimeMessage = extractRuntimeMessage(runtimeRecord);
+    const explicitStatus =
+      asTopologyActionStatus(runtimeRecord?.status) ??
+      (runtimeRecord?.partial === true ? 'partial' : null);
+
+    if (explicitStatus) {
+      const appliedAt = extractAppliedAt(runtimeRecord);
+      const runtimeSupported =
+        typeof runtimeRecord?.runtimeSupported === 'boolean'
+          ? runtimeRecord.runtimeSupported
+          : explicitStatus !== 'unsupported_by_runtime';
+      const fallbackMessage =
+        explicitStatus === 'applied'
+          ? `Topology action "${action}" applied successfully`
+          : explicitStatus === 'partial'
+            ? `Topology action "${action}" was only partially applied`
+            : explicitStatus === 'unsupported_by_runtime'
+              ? `Topology action "${action}" is unsupported by runtime`
+              : `Runtime rejected topology action "${action}"`;
+
+      return topologyActionResultSchema.parse({
+        action,
+        status: explicitStatus,
+        runtimeSupported,
+        message: runtimeMessage ?? fallbackMessage,
+        requestedAt,
+        appliedAt: explicitStatus === 'applied' ? appliedAt ?? new Date().toISOString() : appliedAt,
+        errorCode:
+          explicitStatus === 'applied'
+            ? undefined
+            : extractRuntimeCode(
+                runtimeRecord,
+                explicitStatus === 'partial'
+                  ? 'RUNTIME_PARTIAL'
+                  : explicitStatus === 'unsupported_by_runtime'
+                    ? 'UNSUPPORTED_BY_RUNTIME'
+                    : 'RUNTIME_REJECTED',
+              ),
+      });
+    }
 
     if (!isOkResult(runtimeResult)) {
-      // Try to extract a reason from the runtime response
-      const runtimeRecord = asRecord(runtimeResult);
-      const runtimeMessage =
-        typeof runtimeRecord?.message === 'string' ? runtimeRecord.message
-        : typeof runtimeRecord?.reason === 'string' ? runtimeRecord.reason
-        : typeof runtimeRecord?.error === 'string' ? runtimeRecord.error
-        : null;
-
       return topologyActionResultSchema.parse({
         action,
         status: 'rejected',
@@ -174,7 +246,7 @@ export class OpenClawRuntimeAdapter implements RuntimeAdapter {
       runtimeSupported: true,
       message: `Topology action "${action}" applied successfully`,
       requestedAt,
-      appliedAt: new Date().toISOString(),
+      appliedAt: extractAppliedAt(runtimeRecord) ?? new Date().toISOString(),
     });
   }
 }

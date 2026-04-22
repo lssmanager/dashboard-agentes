@@ -4,7 +4,7 @@ import type { ComponentType } from 'react';
 
 import { useStudioState } from '../lib/StudioStateContext';
 import { useHierarchy } from '../lib/HierarchyContext';
-import { buildStudioHref } from '../lib/studioRouting';
+import { buildStudioHref, getSurfaceLabel, isProductSurfacePath, surfaceFromPath } from '../lib/studioRouting';
 import type { SurfaceId } from '../lib/types';
 
 const NAV: Array<{ label: string; surface: SurfaceId; Icon: ComponentType<{ size?: number }> }> = [
@@ -15,22 +15,13 @@ const NAV: Array<{ label: string; surface: SurfaceId; Icon: ComponentType<{ size
   { label: 'Sessions', surface: 'sessions', Icon: MessageSquare },
 ];
 
-function isPathActive(pathname: string, surface: SurfaceId): boolean {
-  if (surface === 'agency-builder') return pathname.startsWith('/administration') || pathname.startsWith('/agency-builder');
-  if (surface === 'workspace-studio') return pathname.startsWith('/workspace-studio');
-  if (surface === 'entity-editor') return pathname.startsWith('/entity-editor');
-  if (surface === 'profiles') return pathname.startsWith('/profiles');
-  if (surface === 'runs') return pathname.startsWith('/runs');
-  if (surface === 'sessions') return pathname.startsWith('/sessions');
-  return pathname.startsWith('/settings');
-}
-
 export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { state } = useStudioState();
-  const { setSurface, selectedKey, selectedBuilderTab, selectedSurface } = useHierarchy();
+  const { setSurface, selectedKey, selectedBuilderTab } = useHierarchy();
   const runtimeOk = state.runtime?.health?.ok ?? false;
+  const currentSurface = surfaceFromPath(location.pathname);
 
   function go(surface: SurfaceId, path: string) {
     setSurface(surface);
@@ -81,7 +72,7 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
           fontSize: 13,
           letterSpacing: '0.04em',
         }}
-        title="OpenClaw Studio"
+        title={getSurfaceLabel('agency-builder')}
         aria-label="Open Administration"
       >
         OC
@@ -90,7 +81,7 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
       <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Environment</div>
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%' }}>
         {NAV.map(({ label, surface, Icon }) => {
-          const isActive = selectedSurface ? selectedSurface === surface : isPathActive(location.pathname, surface);
+          const isActive = currentSurface === surface || isProductSurfacePath(location.pathname, surface);
           const href = buildStudioHref({
             surface,
             tab: surface === 'agency-builder' ? selectedBuilderTab : undefined,
@@ -139,18 +130,18 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
         />
         <button
           onClick={() => go('profiles', buildStudioHref({ surface: 'profiles', nodeKey: selectedKey }))}
-          data-tip="Profiles Hub"
-          aria-label="Profiles Hub"
+          data-tip={getSurfaceLabel('profiles')}
+          aria-label={getSurfaceLabel('profiles')}
           style={{
             width: 72,
             borderRadius: 12,
-            border: selectedSurface === 'profiles' || location.pathname.startsWith('/profiles')
+            border: currentSurface === 'profiles'
               ? '1px solid rgba(77,124,255,0.34)'
               : '1px solid transparent',
-            background: selectedSurface === 'profiles' || location.pathname.startsWith('/profiles')
+            background: currentSurface === 'profiles'
               ? 'rgba(77,124,255,0.2)'
               : 'transparent',
-            color: selectedSurface === 'profiles' || location.pathname.startsWith('/profiles') ? '#f2f7ff' : 'var(--shell-rail-text)',
+            color: currentSurface === 'profiles' ? '#f2f7ff' : 'var(--shell-rail-text)',
             display: 'grid',
             placeItems: 'center',
             gap: 3,
@@ -159,22 +150,22 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
           }}
         >
           <BookOpen size={17} />
-          <span style={{ fontSize: 10, fontWeight: 700 }}>Profiles Hub</span>
+          <span style={{ fontSize: 10, fontWeight: 700 }}>{getSurfaceLabel('profiles')}</span>
         </button>
         <button
           onClick={() => go('settings', buildStudioHref({ surface: 'settings', nodeKey: selectedKey }))}
-          data-tip="Settings"
-          aria-label="Settings"
+          data-tip={getSurfaceLabel('settings')}
+          aria-label={getSurfaceLabel('settings')}
           style={{
             width: 72,
             borderRadius: 12,
-            border: selectedSurface === 'settings' || location.pathname.startsWith('/settings')
+            border: currentSurface === 'settings'
               ? '1px solid rgba(77,124,255,0.34)'
               : '1px solid transparent',
-            background: selectedSurface === 'settings' || location.pathname.startsWith('/settings')
+            background: currentSurface === 'settings'
               ? 'rgba(77,124,255,0.2)'
               : 'transparent',
-            color: selectedSurface === 'settings' || location.pathname.startsWith('/settings') ? '#f2f7ff' : 'var(--shell-rail-text)',
+            color: currentSurface === 'settings' ? '#f2f7ff' : 'var(--shell-rail-text)',
             display: 'grid',
             placeItems: 'center',
             gap: 3,
@@ -183,7 +174,7 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
           }}
         >
           <Settings size={17} />
-          <span style={{ fontSize: 10, fontWeight: 700 }}>Settings</span>
+          <span style={{ fontSize: 10, fontWeight: 700 }}>{getSurfaceLabel('settings')}</span>
         </button>
       </div>
     </div>

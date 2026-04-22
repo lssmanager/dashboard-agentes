@@ -14,4 +14,15 @@ export function registerProfilesRoutes(router: Router) {
       res.status(500).json({ error: 'Failed to load profiles', details: message });
     }
   });
+
+  router.get('/profiles/templates', (_req, res) => {
+    res.json({
+      status: 'planned',
+      available: false,
+      mode: 'read_only',
+      message:
+        'Templates catalog is explicitly out of V1 scope. Use profiles catalog + workspace bootstrap flows for now.',
+      updatedAt: new Date().toISOString(),
+    });
+  });
 }

@@ -446,6 +446,7 @@ export const topologyRuntimeActionEnum = z.enum([
 
 export const topologyActionStatusEnum = z.enum([
   'applied',
+  'partial',
   'unsupported_by_runtime',
   'rejected',
 ]);

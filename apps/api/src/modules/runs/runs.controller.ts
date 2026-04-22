@@ -6,8 +6,18 @@ export function registerRunsRoutes(router: Router) {
   const service = new RunsService();
 
   // GET /runs — list all runs
-  router.get('/runs', (_req, res) => {
-    res.json(service.findAll());
+  router.get('/runs', (req, res) => {
+    const view = typeof req.query.view === 'string' ? req.query.view : undefined;
+    const workspaceId = typeof req.query.workspaceId === 'string' ? req.query.workspaceId : undefined;
+    const agentId = typeof req.query.agentId === 'string' ? req.query.agentId : undefined;
+
+    if (view === 'dashboard') {
+      const parsedLimit = Number(req.query.limit);
+      const limit = Number.isFinite(parsedLimit) ? parsedLimit : 20;
+      return res.json(service.getDashboardProjection(limit, { workspaceId, agentId }));
+    }
+
+    return res.json(service.findAll({ workspaceId, agentId }));
   });
 
   // GET /runs/compare?ids=a,b — compare two or more runs (must be before :id)

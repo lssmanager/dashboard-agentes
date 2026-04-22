@@ -1,35 +1,51 @@
-﻿import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Play, RefreshCw, XCircle } from 'lucide-react';
 
-import { getRuns, cancelRun } from '../../../lib/api';
-import { PageHeader, EmptyState } from '../../../components';
+import { cancelRun, getDashboardRuns } from '../../../lib/api';
+import { Card, EmptyState, PageHeader } from '../../../components';
 import { StepBadge } from '../../../components/ui/StepBadge';
-import type { RunSpec, RunStep } from '../../../lib/types';
+import type { CanonicalNodeLevel, RunSpec, RunStep } from '../../../lib/types';
 import { RunTimeline } from '../components/RunTimeline';
 import { StepDetail } from '../components/StepDetail';
 import { ApprovalPanel } from '../components/ApprovalPanel';
 import { useHierarchy } from '../../../lib/HierarchyContext';
 
+function resolveActiveScope(scope: {
+  agencyId?: string | null;
+  departmentId?: string | null;
+  workspaceId?: string | null;
+  agentId?: string | null;
+  subagentId?: string | null;
+}): { level: CanonicalNodeLevel; id: string } {
+  if (scope.subagentId) return { level: 'subagent', id: scope.subagentId };
+  if (scope.agentId) return { level: 'agent', id: scope.agentId };
+  if (scope.workspaceId) return { level: 'workspace', id: scope.workspaceId };
+  if (scope.departmentId) return { level: 'department', id: scope.departmentId };
+  return { level: 'agency', id: scope.agencyId ?? 'agency-default' };
+}
+
 export default function RunsPage() {
-  const { scope, selectedLineage, canonical } = useHierarchy();
+  const { scope, selectedLineage } = useHierarchy();
   const [runs, setRuns] = useState<RunSpec[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<RunStep | null>(null);
+  const activeScope = useMemo(() => resolveActiveScope(scope), [scope]);
 
   const loadRuns = useCallback(async () => {
+    setLoading(true);
     try {
       setError(null);
-      const data = await getRuns();
-      setRuns(data);
+      const data = await getDashboardRuns(activeScope.level, activeScope.id, 250);
+      setRuns(data.runs);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load runs');
       setRuns([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeScope.id, activeScope.level]);
 
   useEffect(() => {
     void loadRuns();
@@ -43,33 +59,7 @@ export default function RunsPage() {
     return () => clearInterval(interval);
   }, [runs, loadRuns]);
 
-  const departmentWorkspaceIds = useMemo(() => {
-    if (!scope.departmentId || !canonical) return null;
-    return new Set(
-      canonical.workspaces
-        .filter((workspace) => workspace.departmentId === scope.departmentId)
-        .map((workspace) => workspace.id),
-    );
-  }, [canonical, scope.departmentId]);
-
-  const filteredRuns = useMemo(() => {
-    if (scope.subagentId || scope.agentId) {
-      const scopedAgentId = scope.subagentId ?? scope.agentId;
-      return runs.filter((run) => run.steps.some((step) => step.agentId === scopedAgentId));
-    }
-
-    if (scope.workspaceId) {
-      return runs.filter((run) => run.workspaceId === scope.workspaceId);
-    }
-
-    if (scope.departmentId && departmentWorkspaceIds) {
-      return runs.filter((run) => departmentWorkspaceIds.has(run.workspaceId));
-    }
-
-    return runs;
-  }, [departmentWorkspaceIds, runs, scope.agentId, scope.departmentId, scope.subagentId, scope.workspaceId]);
-
-  const selectedRun = filteredRuns.find((r) => r.id === selectedRunId) ?? null;
+  const selectedRun = runs.find((r) => r.id === selectedRunId) ?? null;
   const contextLabel = selectedLineage.map((node) => node.label).join(' / ');
 
   async function handleCancel(runId: string) {
@@ -80,7 +70,19 @@ export default function RunsPage() {
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading runs...</div>
+        <Card>
+          <div className="space-y-2">
+            <div className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+              Administration / Runs
+            </div>
+            <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Loading run activity...
+            </div>
+            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Fetching runs for the current hierarchy scope.
+            </div>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -88,12 +90,11 @@ export default function RunsPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {!scope.agencyId && (
-        <div
-          className="rounded-lg border p-4 text-sm"
-          style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
-        >
-          No agency selected. Create or connect an agency to inspect runs.
-        </div>
+        <Card>
+          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            No agency selected. Create or connect an agency to inspect runs.
+          </div>
+        </Card>
       )}
 
       <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
@@ -124,10 +125,10 @@ export default function RunsPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
         {[
-          { label: 'Total', value: filteredRuns.length, tone: 'default' },
-          { label: 'Running', value: filteredRuns.filter((r) => r.status === 'running').length, tone: 'success' },
-          { label: 'Awaiting Approval', value: filteredRuns.filter((r) => r.status === 'waiting_approval').length, tone: 'warning' },
-          { label: 'Failed', value: filteredRuns.filter((r) => r.status === 'failed').length, tone: 'danger' },
+          { label: 'Total', value: runs.length, tone: 'default' },
+          { label: 'Running', value: runs.filter((r) => r.status === 'running').length, tone: 'success' },
+          { label: 'Awaiting Approval', value: runs.filter((r) => r.status === 'waiting_approval').length, tone: 'warning' },
+          { label: 'Failed', value: runs.filter((r) => r.status === 'failed').length, tone: 'danger' },
         ].map(({ label, value, tone }) => (
           <div
             key={label}
@@ -163,12 +164,14 @@ export default function RunsPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border p-3 text-sm" style={{ borderColor: 'var(--tone-danger-border)', background: 'var(--tone-danger-bg)', color: 'var(--tone-danger-text)' }}>
-          {error}
-        </div>
+        <Card>
+          <div className="text-sm" style={{ color: 'var(--tone-danger-text, #ef4444)' }}>
+            {error}
+          </div>
+        </Card>
       )}
 
-      {filteredRuns.length === 0 ? (
+      {runs.length === 0 ? (
         <EmptyState
           icon={Play}
           title="No runs for current context"
@@ -177,7 +180,7 @@ export default function RunsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-1 space-y-2">
-            {filteredRuns.map((run) => (
+            {runs.map((run) => (
               <button
                 key={run.id}
                 type="button"
@@ -198,11 +201,11 @@ export default function RunsPage() {
                   <StepBadge status={run.status} />
                 </div>
                 <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
-                  {run.trigger.type} — {new Date(run.startedAt).toLocaleString()}
+                  {run.trigger.type} - {new Date(run.startedAt).toLocaleString()}
                 </div>
                 <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   {run.steps.length} step{run.steps.length !== 1 ? 's' : ''}
-                  {run.error && <span style={{ color: 'var(--tone-danger-text, #ef4444)' }}> — {run.error}</span>}
+                  {run.error && <span style={{ color: 'var(--tone-danger-text, #ef4444)' }}> - {run.error}</span>}
                 </div>
               </button>
             ))}
@@ -217,7 +220,7 @@ export default function RunsPage() {
                       Run {selectedRun.id.slice(0, 8)}
                     </h3>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Flow: {selectedRun.flowId} — Trigger: {selectedRun.trigger.type}
+                      Flow: {selectedRun.flowId} - Trigger: {selectedRun.trigger.type}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

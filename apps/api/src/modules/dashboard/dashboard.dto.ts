@@ -3,6 +3,7 @@ import type {
   ChannelBinding,
   ConnectionSpec,
   RuntimeCapabilityMatrix,
+  RunSpec,
   SessionState,
   TopologyNodeRef,
   TopologyRuntimeAction,
@@ -140,6 +141,14 @@ export interface DashboardOperationsDto {
     latestSnapshots: Array<{ id: string; label?: string; createdAt: string }>;
     timeline: Array<{ at: string; type: 'diff' | 'apply' | 'rollback' | 'publish'; detail: string }>;
   };
+}
+
+export interface DashboardRunsDto {
+  scope: ScopeDto;
+  lineage: LineageItemDto[];
+  mode: 'aggregated' | 'scoped';
+  total: number;
+  runs: RunSpec[];
 }
 
 export interface EffectiveProfileDto {

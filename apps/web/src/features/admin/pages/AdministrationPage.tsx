@@ -69,6 +69,51 @@ function parseTab(value: string | null): AgencyBuilderTab | null {
   return null;
 }
 
+function SurfaceStateCard({
+  title,
+  description,
+  tone = 'neutral',
+}: {
+  title: string;
+  description: string;
+  tone?: 'neutral' | 'warning' | 'danger';
+}) {
+  const background =
+    tone === 'warning'
+      ? 'var(--tone-warning-bg, rgba(245,158,11,0.08))'
+      : tone === 'danger'
+        ? 'var(--tone-danger-bg, rgba(239,68,68,0.08))'
+        : 'var(--bg-secondary)';
+  const borderColor =
+    tone === 'warning'
+      ? 'var(--tone-warning-border, rgba(245,158,11,0.28))'
+      : tone === 'danger'
+        ? 'var(--tone-danger-border, rgba(239,68,68,0.28))'
+        : 'var(--border-primary)';
+  const textColor =
+    tone === 'warning'
+      ? 'var(--tone-warning-text, #f59e0b)'
+      : tone === 'danger'
+        ? 'var(--tone-danger-text, #ef4444)'
+        : 'var(--text-muted)';
+
+  return (
+    <div
+      style={{
+        borderRadius: 'var(--radius-lg)',
+        border: `1px solid ${borderColor}`,
+        background,
+        padding: 16,
+        display: 'grid',
+        gap: 6,
+      }}
+    >
+      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)' }}>{title}</div>
+      <div style={{ fontSize: 13, color: textColor, lineHeight: 1.5 }}>{description}</div>
+    </div>
+  );
+}
+
 function getEntityLevel(level?: string): CanonicalNodeLevel {
   if (level === 'agency' || level === 'department' || level === 'workspace' || level === 'agent' || level === 'subagent') {
     return level;
@@ -105,6 +150,9 @@ export default function AdministrationPage() {
 
   const contextLabel = selectedLineage.map((item) => item.label).join(' / ');
   const profileCatalog = useMemo(() => state.profiles ?? [], [state.profiles]);
+  const hasLoadedProjections = Boolean(overview && connections && operations && inspector);
+  const isInitialLoading = loading && !hasLoadedProjections;
+  const unsupportedProfileTab = activeTab === 'profile' && !viewConfig.showProfileTab;
 
   useEffect(() => {
     if (activeTab !== activeFromQuery) {
@@ -124,6 +172,13 @@ export default function AdministrationPage() {
   async function loadProjections() {
     setLoading(true);
     setError(null);
+    setNotice(null);
+    setActionResult(null);
+    setOverview(null);
+    setConnections(null);
+    setOperations(null);
+    setInspector(null);
+    setProfile(null);
 
     try {
       const [nextOverview, nextConnections, nextOperations, nextInspector] = await Promise.all([
@@ -232,15 +287,16 @@ export default function AdministrationPage() {
     <div style={{ maxWidth: 1520, margin: '0 auto', display: 'grid', gap: 14 }}>
       <section style={panelStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ display: 'grid', gap: 6 }}>
+          <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Administration Environment
+              Administration
             </div>
             <h1 style={{ margin: 0, fontSize: 'var(--text-xl)' }}>Administration</h1>
             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>
               Scope: {contextLabel || `${entityLevel}:${entityId}`}
             </p>
           </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
@@ -253,6 +309,7 @@ export default function AdministrationPage() {
                 )
               }
               disabled={!viewConfig.canEnterStudio}
+              title={viewConfig.canEnterStudio ? 'Open the studio for the current scope' : 'Studio is unavailable at this scope'}
               style={{
                 ...buttonStyle,
                 opacity: viewConfig.canEnterStudio ? 1 : 0.6,
@@ -262,7 +319,7 @@ export default function AdministrationPage() {
               Open Studio
             </button>
             <button type="button" onClick={() => void loadProjections()} style={buttonStyle} disabled={loading}>
-              Refresh
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
@@ -296,37 +353,74 @@ export default function AdministrationPage() {
 
       <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 14 }} className="studio-responsive-two-col">
         <div style={{ display: 'grid', gap: 14 }}>
-          {activeTab === 'overview' && overview && <OverviewSurface data={overview} />}
-          {activeTab === 'connections' && connections && <ConnectionsSurface data={connections} />}
-          {activeTab === 'operations' && operations && (
-            <OperationsSurface
-              data={operations}
-              busyAction={runtimeActionBusy}
-              capabilities={overview?.capabilities}
-              onRuntimeAction={(action) => void handleRuntimeAction(action)}
+          {isInitialLoading && <SurfaceStateCard title="Loading administration projections" description="Fetching overview, connections, operations and inspector data for the current scope." />}
+          {error && !hasLoadedProjections && (
+            <SurfaceStateCard title="Failed to load administration data" description={error} tone="danger" />
+          )}
+          {unsupportedProfileTab && (
+            <SurfaceStateCard
+              title="Profile unavailable"
+              description="Profiles are only exposed for workspace, agent and subagent scopes."
+              tone="warning"
             />
           )}
-          {activeTab === 'sessions' && overview && operations && <SessionsSurface overview={overview} operations={operations} />}
+
+          {activeTab === 'overview' && (
+            overview ? <OverviewSurface data={overview} /> : !isInitialLoading && !error && <SurfaceStateCard title="No overview available" description="Refresh the current scope or choose another node to inspect administration metrics." />
+          )}
+
+          {activeTab === 'connections' && (
+            connections ? <ConnectionsSurface data={connections} /> : !isInitialLoading && !error && <SurfaceStateCard title="No connections available" description="This scope does not currently expose connection data." />
+          )}
+
+          {activeTab === 'operations' && (
+            operations ? (
+              <OperationsSurface
+                data={operations}
+                busyAction={runtimeActionBusy}
+                capabilities={overview?.capabilities}
+                onRuntimeAction={(action) => void handleRuntimeAction(action)}
+              />
+            ) : !isInitialLoading && !error && <SurfaceStateCard title="No operations available" description="Operations data is not ready for the current scope." />
+          )}
+
+          {activeTab === 'sessions' && (
+            overview && operations ? (
+              <SessionsSurface overview={overview} operations={operations} />
+            ) : !isInitialLoading && !error && <SurfaceStateCard title="No sessions available" description="Sessions need overview and operations projections to render." />
+          )}
 
           {activeTab === 'settings' && (
             <section style={panelStyle}>
-              <AdminSettingsPanel settingsScope={viewConfig.settingsScope} />
+              {isInitialLoading || (error && !hasLoadedProjections) ? (
+                <SurfaceStateCard title="Loading settings" description="Waiting for the current scope projections before showing settings." />
+              ) : (
+                <AdminSettingsPanel settingsScope={viewConfig.settingsScope} />
+              )}
             </section>
           )}
 
-          {activeTab === 'profile' && profile && (
-            <ProfileScopeTab
-              profile={profile}
-              profiles={profileCatalog}
-              busy={busy}
-              onBind={(profileId) => void handleBindProfile(profileId)}
-              onUnbind={() => void handleUnbindProfile()}
-              onSaveOverride={(payload) => void handleSaveOverride(payload)}
-            />
+          {activeTab === 'profile' && (
+            unsupportedProfileTab ? null : profile ? (
+              <ProfileScopeTab
+                profile={profile}
+                profiles={profileCatalog}
+                busy={busy}
+                onBind={(profileId) => void handleBindProfile(profileId)}
+                onUnbind={() => void handleUnbindProfile()}
+                onSaveOverride={(payload) => void handleSaveOverride(payload)}
+              />
+            ) : !isInitialLoading && !error ? (
+              <SurfaceStateCard title="No profile bound" description="Select or bind a profile to inspect the effective configuration for this scope." />
+            ) : null
           )}
         </div>
 
-        <RightInspectorPanel data={inspector} />
+        <RightInspectorPanel
+          data={inspector}
+          state={isInitialLoading ? 'loading' : error && !hasLoadedProjections ? 'error' : 'empty'}
+          message={error ?? 'No inspector data available for this scope.'}
+        />
       </section>
 
       {notice && <div style={noticeStyle}>{notice}</div>}
@@ -356,7 +450,7 @@ export default function AdministrationPage() {
           {actionResult.action}: {actionResult.message}
         </div>
       )}
-      {error && (
+      {error && hasLoadedProjections && (
         <div style={{ ...noticeStyle, background: 'rgba(239,68,68,0.15)' }}>
           <AlertTriangle size={14} /> {error}
         </div>

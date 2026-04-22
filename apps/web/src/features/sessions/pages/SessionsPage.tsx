@@ -215,17 +215,17 @@ export default function SessionsPage() {
         ))}
       </div>
 
-      {/* Runtime Command Panel */}
+      {/* Runtime Controls Panel */}
       <Card>
         <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Terminal size={14} style={{ color: 'var(--color-primary)' }} />
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Runtime Command</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Runtime Controls</p>
             </div>
 
             {!capMatrix ? (
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Runtime capability matrix not available. Connect to a runtime to send commands.
+                Runtime capability matrix is unavailable at this scope. Connect to a runtime to send commands.
               </p>
             ) : !canSendCommand ? (
               <div className="flex items-start gap-2 rounded-md border p-2.5" style={{ borderColor: 'var(--tone-warning-border)', background: 'var(--tone-warning-bg)' }}>
@@ -438,11 +438,11 @@ export default function SessionsPage() {
           )}
         </Card>
 
-        {/* Session Detail Panel */}
+        {/* Session Inspector Panel */}
         {selectedSession && (
           <Card className="p-4 space-y-4 h-fit">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Session Detail</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Session Inspector</p>
               <button
                 type="button"
                 onClick={() => setSelectedSessionId(null)}

@@ -23,8 +23,7 @@ export function registerTopologyRoutes(router: Router) {
       try {
         const payload = req.body as Omit<TopologyActionRequest, 'action'>;
         const result = await service.executeAction(action, payload);
-        const statusCode = result.status === 'applied' ? 200 : 501;
-        res.status(statusCode).json(result);
+        res.status(200).json(result);
       } catch (error) {
         res.status(400).json({
           action,

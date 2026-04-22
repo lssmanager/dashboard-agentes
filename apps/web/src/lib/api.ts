@@ -9,6 +9,7 @@ import {
   DashboardInspectorDto,
   DashboardOperationsDto,
   DashboardOverviewDto,
+  DashboardRunsDto,
   DeployPreview,
   EffectiveProfileDto,
   EffectiveConfig,
@@ -21,6 +22,7 @@ import {
   RunSpec,
   SkillSpec,
   StudioStateResponse,
+  ProfileTemplatesStateDto,
   TopologyActionResult,
   TopologyNodeRef,
   TopologyRuntimeAction,
@@ -143,6 +145,15 @@ export async function getDashboardOperations(level: CanonicalNodeLevel, id: stri
   return parseJson<DashboardOperationsDto>(response);
 }
 
+export async function getDashboardRuns(level: CanonicalNodeLevel, id: string, limit?: number) {
+  const params = new URLSearchParams({ level, id });
+  if (typeof limit === 'number' && Number.isFinite(limit)) {
+    params.set('limit', String(Math.max(1, Math.floor(limit))));
+  }
+  const response = await fetch(`${API_BASE}/dashboard/runs?${params.toString()}`);
+  return parseJson<DashboardRunsDto>(response);
+}
+
 export async function getEffectiveProfile(level: CanonicalNodeLevel, id: string) {
   const response = await fetch(`${API_BASE}/dashboard/effective-profile?${toScopeQuery(level, id)}`);
   return parseJson<EffectiveProfileDto>(response);
@@ -177,6 +188,11 @@ export async function saveProfileOverride(
     body: JSON.stringify({ level, id, overrides }),
   });
   return parseJson<{ ok: boolean }>(response);
+}
+
+export async function getProfileTemplatesState() {
+  const response = await fetch(`${API_BASE}/profiles/templates`);
+  return parseJson<ProfileTemplatesStateDto>(response);
 }
 
 export async function sendRuntimeCommand(

@@ -23,8 +23,31 @@ function getExecutor(): FlowExecutor {
 }
 
 export class RunsService {
-  findAll(): RunSpec[] {
-    return runRepository.findAll();
+  findAll(filters?: { workspaceId?: string; agentId?: string }): RunSpec[] {
+    return this.applyScopeFilter(runRepository.findAll(), filters);
+  }
+
+  getDashboardProjection(limit = 20, filters?: { workspaceId?: string; agentId?: string }) {
+    const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(limit, 200)) : 20;
+
+    return this.findAll(filters)
+      .slice()
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+      .slice(0, safeLimit)
+      .map((run) => ({
+        id: run.id,
+        workspaceId: run.workspaceId,
+        flowId: run.flowId,
+        status: run.status,
+        startedAt: run.startedAt,
+        completedAt: run.completedAt,
+        costUsd: run.steps.reduce((sum, step) => sum + (step.costUsd ?? 0), 0),
+        waitingApprovalCount: run.steps.filter((step) => step.status === 'waiting_approval').length,
+        failedStepCount: run.steps.filter((step) => step.status === 'failed').length,
+        agentIds: Array.from(
+          new Set(run.steps.map((step) => step.agentId).filter((agentId): agentId is string => typeof agentId === 'string')),
+        ),
+      }));
   }
 
   findById(id: string): RunSpec | null {
@@ -215,5 +238,23 @@ export class RunsService {
     return Array.from(agentMap.entries())
       .map(([agentId, data]) => ({ agentId, ...data }))
       .sort((a, b) => b.cost - a.cost);
+  }
+
+  private applyScopeFilter(runs: RunSpec[], filters?: { workspaceId?: string; agentId?: string }): RunSpec[] {
+    if (!filters?.workspaceId && !filters?.agentId) {
+      return runs;
+    }
+
+    return runs.filter((run) => {
+      if (filters.workspaceId && run.workspaceId !== filters.workspaceId) {
+        return false;
+      }
+
+      if (filters.agentId && !run.steps.some((step) => step.agentId === filters.agentId)) {
+        return false;
+      }
+
+      return true;
+    });
   }
 }

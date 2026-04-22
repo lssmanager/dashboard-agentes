@@ -1,5 +1,5 @@
 import { type DragEvent, type ReactNode, useState } from 'react';
-import { Layers, Package, Workflow } from 'lucide-react';
+import { Grip, Layers, Package, Workflow } from 'lucide-react';
 
 import { NODE_TEMPLATES } from '../../canvas/lib/canvas-utils';
 import type { FlowNodeType } from '../../../lib/types';
@@ -55,26 +55,43 @@ export function ComponentLibrary() {
         color: 'var(--text-primary)',
       }}
     >
-      {/* pane-head */}
       <div
         style={{
-          height: 52,
-          padding: '0 14px',
+          padding: '14px 14px 12px',
           borderBottom: '1px solid var(--border-primary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          display: 'grid',
           gap: 10,
           background: 'var(--shell-chip-bg)',
           flexShrink: 0,
         }}
       >
-        <strong style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-primary)' }}>
-          Explorer / Library
-        </strong>
+        <div style={{ display: 'grid', gap: 4 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: 'var(--text-muted)',
+            }}
+          >
+            Studio Library
+          </div>
+          <strong style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)' }}>
+            Blocks, agents, and active flow inventory
+          </strong>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>
+            Drag builder blocks onto the canvas or inspect the current workspace catalog.
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <MiniPill label="Agents" value={String(state.agents.length)} />
+          <MiniPill label="Flows" value={String(state.flows.length)} />
+          <MiniPill label="Mode" value={activeTab === 'components' ? 'Build' : activeTab === 'agents' ? 'Agents' : 'Flows'} />
+        </div>
       </div>
 
-      {/* pane-body */}
       <div
         style={{
           flex: 1,
@@ -85,11 +102,10 @@ export function ComponentLibrary() {
           gap: 12,
         }}
       >
-        {/* search */}
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search nodes, templates..."
+          placeholder="Search blocks, agents, flows..."
           style={{
             width: '100%',
             padding: '9px 12px',
@@ -102,7 +118,6 @@ export function ComponentLibrary() {
           }}
         />
 
-        {/* segment tab control */}
         <div
           style={{
             display: 'flex',
@@ -146,7 +161,6 @@ export function ComponentLibrary() {
           })}
         </div>
 
-        {/* Components tab */}
         {activeTab === 'components' && (
           <div style={{ display: 'grid', gap: 14 }}>
             {CATEGORY_GROUPS.map((group) => {
@@ -161,7 +175,6 @@ export function ComponentLibrary() {
 
               return (
                 <div key={group.name}>
-                  {/* group-label */}
                   <div
                     style={{
                       fontSize: 10,
@@ -220,7 +233,7 @@ export function ComponentLibrary() {
                           >
                             {template.icon}
                           </div>
-                          <div style={{ minWidth: 0 }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
                             <strong
                               style={{
                                 display: 'block',
@@ -231,6 +244,32 @@ export function ComponentLibrary() {
                             >
                               {template.label}
                             </strong>
+                            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  color: 'var(--text-muted)',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.08em',
+                                  fontWeight: 900,
+                                }}
+                              >
+                                {template.type}
+                              </span>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: 'var(--text-muted)',
+                                }}
+                              >
+                                <Grip size={10} />
+                                Drag
+                              </span>
+                            </div>
                             <span
                               style={{
                                 display: 'block',
@@ -268,7 +307,6 @@ export function ComponentLibrary() {
           </div>
         )}
 
-        {/* Agents tab */}
         {activeTab === 'agents' && (
           <div style={{ display: 'grid', gap: 6 }}>
             {state.agents.length === 0 ? (
@@ -307,7 +345,7 @@ export function ComponentLibrary() {
                           flexShrink: 0,
                         }}
                       />
-                      <div style={{ minWidth: 0 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <strong
                           style={{
                             display: 'block',
@@ -334,6 +372,20 @@ export function ComponentLibrary() {
                           </span>
                         )}
                       </div>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          color: 'var(--text-muted)',
+                          borderRadius: 999,
+                          border: '1px solid var(--border-primary)',
+                          background: 'var(--bg-secondary)',
+                          padding: '2px 6px',
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {agent.kind ?? 'agent'}
+                      </span>
                     </div>
                   </div>
                 ))
@@ -341,7 +393,6 @@ export function ComponentLibrary() {
           </div>
         )}
 
-        {/* Flows tab */}
         {activeTab === 'flows' && (
           <div style={{ display: 'grid', gap: 6 }}>
             {state.flows.length === 0 ? (
@@ -433,7 +484,6 @@ export function ComponentLibrary() {
         )}
       </div>
 
-      {/* footer hint */}
       <div
         style={{
           padding: '8px 14px',
@@ -444,8 +494,41 @@ export function ComponentLibrary() {
           background: 'var(--shell-chip-bg)',
         }}
       >
-        {activeTab === 'components' ? 'Drag nodes onto the canvas' : 'Click to inspect'}
+        {activeTab === 'components'
+          ? 'Drag blocks onto the canvas. Selection syncs to the inspector automatically.'
+          : activeTab === 'agents'
+            ? 'Workspace agent catalog. Use the studio context bar to switch the active build target.'
+            : 'Available workspace flows and trigger sources.'}
       </div>
+    </div>
+  );
+}
+
+function MiniPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        borderRadius: 'var(--radius-full)',
+        border: '1px solid var(--shell-chip-border)',
+        background: 'var(--shell-panel-bg)',
+        padding: '5px 9px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 9,
+          fontWeight: 900,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: 'var(--text-muted)',
+        }}
+      >
+        {label}
+      </span>
+      <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)' }}>{value}</span>
     </div>
   );
 }
