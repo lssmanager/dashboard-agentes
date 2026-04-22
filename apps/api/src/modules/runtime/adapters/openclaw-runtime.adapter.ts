@@ -164,7 +164,20 @@ export class OpenClawRuntimeAdapter implements RuntimeAdapter {
     payload: Omit<TopologyActionRequest, 'action'>,
   ): Promise<TopologyActionResult> {
     const requestedAt = new Date().toISOString();
-    const capabilities = await this.getCapabilities();
+    let capabilities: RuntimeCapabilityMatrix;
+    try {
+      capabilities = await this.getCapabilities();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load runtime capabilities';
+      return topologyActionResultSchema.parse({
+        action,
+        status: 'rejected',
+        runtimeSupported: false,
+        message: `Runtime capabilities unavailable for action "${action}": ${message}`,
+        requestedAt,
+        errorCode: 'RUNTIME_CAPABILITIES_UNAVAILABLE',
+      });
+    }
     const isSupported = capabilities.topology[action];
 
     if (!isSupported) {
@@ -179,12 +192,25 @@ export class OpenClawRuntimeAdapter implements RuntimeAdapter {
     }
 
     const runtimeMethod = RUNTIME_METHOD_BY_ACTION[action];
-    const runtimeResult = await this.gateway.call(runtimeMethod, {
-      from: payload.from,
-      to: payload.to,
-      reason: payload.reason,
-      metadata: payload.metadata,
-    });
+    let runtimeResult: unknown;
+    try {
+      runtimeResult = await this.gateway.call(runtimeMethod, {
+        from: payload.from,
+        to: payload.to,
+        reason: payload.reason,
+        metadata: payload.metadata,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gateway call failed';
+      return topologyActionResultSchema.parse({
+        action,
+        status: 'rejected',
+        runtimeSupported: true,
+        message: `Runtime call failed for action "${action}": ${message}`,
+        requestedAt,
+        errorCode: 'RUNTIME_CALL_FAILED',
+      });
+    }
     const runtimeRecord = asRecord(runtimeResult);
     const runtimeMessage = extractRuntimeMessage(runtimeRecord);
     const explicitStatus =

@@ -235,6 +235,35 @@ describe('OpenClawRuntimeAdapter – rejected state', () => {
     expect(result.message).toContain('Primary message');
     expect(result.message).not.toContain('Secondary reason');
   });
+
+  it('returns rejected with explicit code when gateway call throws', async () => {
+    const gateway = makeGateway({
+      call: jest.fn().mockRejectedValue(new Error('socket timeout')),
+    });
+    const adapter = new OpenClawRuntimeAdapter(gateway as any);
+
+    const result = await adapter.executeTopologyAction('connect', SAMPLE_PAYLOAD);
+
+    expect(result.status).toBe('rejected');
+    expect(result.runtimeSupported).toBe(true);
+    expect(result.errorCode).toBe('RUNTIME_CALL_FAILED');
+    expect(result.message).toContain('socket timeout');
+  });
+
+  it('returns rejected with explicit code when capability lookup fails', async () => {
+    const gateway = makeGateway({
+      getRuntimeCapabilityMatrix: jest.fn().mockRejectedValue(new Error('gateway offline')),
+    });
+    const adapter = new OpenClawRuntimeAdapter(gateway as any);
+
+    const result = await adapter.executeTopologyAction('connect', SAMPLE_PAYLOAD);
+
+    expect(result.status).toBe('rejected');
+    expect(result.runtimeSupported).toBe(false);
+    expect(result.errorCode).toBe('RUNTIME_CAPABILITIES_UNAVAILABLE');
+    expect(result.message).toContain('gateway offline');
+    expect(gateway.call).not.toHaveBeenCalled();
+  });
 });
 
 describe('OpenClawRuntimeAdapter – unsupported_by_runtime state', () => {
