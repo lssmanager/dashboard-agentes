@@ -59,15 +59,15 @@ export class DashboardScopeResolver {
         ? canonical.departments.find((item) => item.id === scope.id)
         : canonical.departments.find((item) => item.workspaceIds.includes(this.workspaceFromScope(canonical, scope)?.id ?? ''));
 
-    const departmentItem = department
-      ? { level: 'department', id: department.id, name: department.name as string }
+    const departmentItem: LineageItemDto | null = department
+      ? { level: 'department' as CanonicalNodeLevel, id: department.id, name: department.name as string }
       : null;
 
     if (scope.level === 'department') return departmentItem ? [agency, departmentItem] : [agency];
 
     const workspace = this.workspaceFromScope(canonical, scope);
-    const workspaceItem = workspace
-      ? { level: 'workspace', id: workspace.id, name: workspace.name as string }
+    const workspaceItem: LineageItemDto | null = workspace
+      ? { level: 'workspace' as CanonicalNodeLevel, id: workspace.id, name: workspace.name as string }
       : null;
 
     if (scope.level === 'workspace') return [agency, departmentItem, workspaceItem].filter(Boolean) as LineageItemDto[];
@@ -78,8 +78,8 @@ export class DashboardScopeResolver {
         : canonical.subagents.find((item) => item.id === scope.id);
 
     const agentLevel: CanonicalNodeLevel = scope.level === 'subagent' ? 'subagent' : 'agent';
-    const agentItem = agent
-      ? { level: agentLevel, id: agent.id, name: agent.name as string }
+    const agentItem: LineageItemDto | null = agent
+      ? { level: agentLevel as CanonicalNodeLevel, id: agent.id, name: agent.name as string }
       : null;
 
     return [agency, departmentItem, workspaceItem, agentItem].filter(Boolean) as LineageItemDto[];

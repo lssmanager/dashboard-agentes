@@ -116,7 +116,13 @@ export class DashboardService {
       lineage: resolved.lineage,
       nodes: Array.from(nodeMap.values()),
       edges,
-      routingRules: routing.rules,
+      routingRules: routing.rules.map((r: any) => ({
+        id: r.id,
+        from: r.from,
+        to: r.to,
+        when: r.when,
+        priority: typeof r.priority === 'number' ? r.priority : 0,
+      })),
       channelBindings: this.filterChannelBindings(canonical, resolved.workspaceIds, resolved.agentIds),
       hookBindings: hooks.map((item) => ({
         id: item.id,
