@@ -12,6 +12,9 @@ import type {
   ConnectionsRoutingDecisionFlowDto,
   ConnectionsOrgChartDto,
   ConnectionsHierarchyDto,
+  ConnectionsEdgeReliabilityDto,
+  ConnectionsHookBlastRadiusDto,
+  ConnectionsRoutingDriftDto,
 } from '../../../../lib/types';
 import {
   getConnectionsMetering,
@@ -22,11 +25,13 @@ import {
   getConnectionsRoutingDecisionFlow,
   getConnectionsOrgChart,
   getConnectionsHierarchy,
+  getConnectionsEdgeReliability,
+  getConnectionsHookBlastRadius,
+  getConnectionsRoutingDrift,
 } from '../../../../lib/api';
 import { RadialGauge, TopologyGraph, FlowSankey } from '../../../../components/ui/Charts';
 import { AnalyticsStateBoundary } from '../../../analytics/components/AnalyticsStateBoundary';
 import { TimeWindowSelector } from '../../../analytics/components/TimeWindowSelector';
-import { PlannedVisualQueue } from '../../../analytics/components/PlannedVisualQueue';
 import type { AnalyticsWindow } from '../../../analytics/types';
 
 const EDGE_STATE_CONFIG = {
@@ -51,6 +56,9 @@ export function ConnectionsSurface({ data }: { data: DashboardConnectionsDto }) 
   const [orgChart, setOrgChart] = useState<ConnectionsOrgChartDto | null>(null);
   const [hierarchySunburst, setHierarchySunburst] = useState<ConnectionsHierarchyDto | null>(null);
   const [hierarchyTreemap, setHierarchyTreemap] = useState<ConnectionsHierarchyDto | null>(null);
+  const [edgeReliability, setEdgeReliability] = useState<ConnectionsEdgeReliabilityDto | null>(null);
+  const [hookBlastRadius, setHookBlastRadius] = useState<ConnectionsHookBlastRadiusDto | null>(null);
+  const [routingDrift, setRoutingDrift] = useState<ConnectionsRoutingDriftDto | null>(null);
 
   useEffect(() => {
     void getConnectionsMetering(level, id, window).then(setMetering).catch(() => null);
@@ -62,6 +70,9 @@ export function ConnectionsSurface({ data }: { data: DashboardConnectionsDto }) 
     void getConnectionsOrgChart(level, id, window).then(setOrgChart).catch(() => null);
     void getConnectionsHierarchy(level, id, 'sunburst', window).then(setHierarchySunburst).catch(() => null);
     void getConnectionsHierarchy(level, id, 'treemap', window).then(setHierarchyTreemap).catch(() => null);
+    void getConnectionsEdgeReliability(level, id, window).then(setEdgeReliability).catch(() => null);
+    void getConnectionsHookBlastRadius(level, id, window).then(setHookBlastRadius).catch(() => null);
+    void getConnectionsRoutingDrift(level, id, window).then(setRoutingDrift).catch(() => null);
   }, [level, id, window]);
 
   return (
@@ -357,14 +368,50 @@ export function ConnectionsSurface({ data }: { data: DashboardConnectionsDto }) 
         </div>
       )}
 
-      <PlannedVisualQueue
-        title="P2 Refinements"
-        items={[
-          { id: 'cn-p2-1', label: 'Edge Reliability Confidence Map', note: 'Needs historical edge success/failure rollups by link.' },
-          { id: 'cn-p2-2', label: 'Hook Blast-Radius Overlay', note: 'Needs dependency impact index for hook-trigger cascades.' },
-          { id: 'cn-p2-3', label: 'Routing Drift Detector', note: 'Needs baseline-vs-current routing decision snapshots.' },
-        ]}
-      />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Edge Reliability (P2)</div>
+          <AnalyticsStateBoundary state={edgeReliability?.state ?? 'loading'} title="Edge reliability">
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(edgeReliability?.edges ?? []).slice(0, 6).map((item, idx) => (
+                <div key={`${item.from}-${item.to}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{item.from} → {item.to}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{item.successPct}%</span>
+                  <span style={{ color: 'var(--text-muted)' }}>c:{item.confidencePct}%</span>
+                </div>
+              ))}
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Hook Blast Radius (P2)</div>
+          <AnalyticsStateBoundary state={hookBlastRadius?.state ?? 'loading'} title="Hook blast radius">
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(hookBlastRadius?.hooks ?? []).slice(0, 6).map((item) => (
+                <div key={item.hookId} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{item.event}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>n:{item.impactedNodes}</span>
+                  <span style={{ color: item.riskScore > 70 ? 'var(--tone-danger-text, #ef4444)' : 'var(--text-muted)' }}>r:{item.riskScore}</span>
+                </div>
+              ))}
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Routing Drift (P2)</div>
+          <AnalyticsStateBoundary state={routingDrift?.state ?? 'loading'} title="Routing drift">
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(routingDrift?.rules ?? []).slice(0, 6).map((rule) => (
+                <div key={rule.ruleId} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{rule.ruleId}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{rule.baselineTarget}</span>
+                  <span style={{ color: rule.drifted ? 'var(--tone-warning-text, #f59e0b)' : 'var(--tone-success-text, #10b981)' }}>{rule.drifted ? 'drift' : 'stable'}</span>
+                </div>
+              ))}
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+      </div>
     </section>
   );
 }

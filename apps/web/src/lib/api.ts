@@ -4,11 +4,14 @@ import {
   CanonicalNodeLevel,
   CanonicalStudioStateResponse,
   ConnectionsDependencyGraphDto,
+  ConnectionsEdgeReliabilityDto,
   ConnectionsFlowGraphDto,
   ConnectionsHierarchyDto,
+  ConnectionsHookBlastRadiusDto,
   ConnectionsMeteringDto,
   ConnectionsOrgChartDto,
   ConnectionsRadialDto,
+  ConnectionsRoutingDriftDto,
   ConnectionsRoutingDecisionFlowDto,
   ConnectionsTopologyDto,
   CoreFilesDiffResponse,
@@ -32,11 +35,17 @@ import {
   MetricsSessionsHeatmapDto,
   MetricsRunsTokenCorrelationDto,
   MetricsBudgetForecastDto,
+  MetricsBudgetGuardrailSimulationDto,
+  MetricsCostAnomalyBandsDto,
+  MetricsFallbackTransitionsDto,
   MetricsModelMixDto,
   MetricsRunsDto,
   MetricsSessionsDto,
   MetricsTokensDto,
   OperationsActionsHeatmapDto,
+  OperationsApprovalForecastDto,
+  OperationsPolicyConflictsDto,
+  OperationsRuntimeRecoverySimulationDto,
   ReplayMetadataResponse,
   RuntimeCapabilityMatrix,
   SessionState,
@@ -52,6 +61,9 @@ import {
   WorkspaceSpec,
   EditorReadinessByWorkspaceDto,
   EditorDependenciesDto,
+  EditorPromptGraphDto,
+  EditorSectionDependencyImpactDto,
+  EditorRollbackRiskDto,
 } from './types';
 import type { AnalyticsGranularity, AnalyticsWindow } from '../features/analytics/types';
 
@@ -793,6 +805,24 @@ export async function getMetricsBudgetForecast(level: CanonicalNodeLevel, id: st
   return parseJson<MetricsBudgetForecastDto>(response);
 }
 
+export async function getMetricsCostAnomalyBands(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/metrics/cost-anomaly-bands?${params.toString()}`);
+  return parseJson<MetricsCostAnomalyBandsDto>(response);
+}
+
+export async function getMetricsFallbackTransitions(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/metrics/fallback-transitions?${params.toString()}`);
+  return parseJson<MetricsFallbackTransitionsDto>(response);
+}
+
+export async function getMetricsBudgetGuardrailSimulation(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/metrics/budget-guardrail-simulation?${params.toString()}`);
+  return parseJson<MetricsBudgetGuardrailSimulationDto>(response);
+}
+
 // ── Connections Visuals ───────────────────────────────────────────────────
 
 export async function getConnectionsMetering(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
@@ -843,10 +873,46 @@ export async function getConnectionsHierarchy(level: CanonicalNodeLevel, id: str
   return parseJson<ConnectionsHierarchyDto>(response);
 }
 
+export async function getConnectionsEdgeReliability(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/connections/edge-reliability?${params.toString()}`);
+  return parseJson<ConnectionsEdgeReliabilityDto>(response);
+}
+
+export async function getConnectionsHookBlastRadius(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/connections/hook-blast-radius?${params.toString()}`);
+  return parseJson<ConnectionsHookBlastRadiusDto>(response);
+}
+
+export async function getConnectionsRoutingDrift(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/connections/routing-drift?${params.toString()}`);
+  return parseJson<ConnectionsRoutingDriftDto>(response);
+}
+
 export async function getDashboardOperationsActionsHeatmap(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
   const params = new URLSearchParams({ level, id, window });
   const response = await fetch(`${API_BASE}/dashboard/operations/actions-heatmap?${params.toString()}`);
   return parseJson<OperationsActionsHeatmapDto>(response);
+}
+
+export async function getDashboardOperationsApprovalForecast(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/operations/approval-forecast?${params.toString()}`);
+  return parseJson<OperationsApprovalForecastDto>(response);
+}
+
+export async function getDashboardOperationsPolicyConflicts(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/operations/policy-conflicts?${params.toString()}`);
+  return parseJson<OperationsPolicyConflictsDto>(response);
+}
+
+export async function getDashboardOperationsRuntimeRecoverySimulation(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/operations/runtime-recovery-simulation?${params.toString()}`);
+  return parseJson<OperationsRuntimeRecoverySimulationDto>(response);
 }
 
 export async function getDashboardOperationsPendingActions(level: CanonicalNodeLevel, id: string) {
@@ -907,4 +973,21 @@ export async function getEditorDependencies(level: CanonicalNodeLevel, id: strin
   const response = await fetch(`${API_BASE}/editor/dependencies?${params.toString()}`);
   return parseJson<EditorDependenciesDto>(response);
 }
-  OperationsActionsHeatmapDto,
+
+export async function getEditorPromptGraph(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/editor/prompt-graph?${params.toString()}`);
+  return parseJson<EditorPromptGraphDto>(response);
+}
+
+export async function getEditorSectionDependencyImpact(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/editor/section-dependency-impact?${params.toString()}`);
+  return parseJson<EditorSectionDependencyImpactDto>(response);
+}
+
+export async function getEditorRollbackRisk(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/editor/rollback-risk?${params.toString()}`);
+  return parseJson<EditorRollbackRiskDto>(response);
+}

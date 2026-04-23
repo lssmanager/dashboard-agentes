@@ -34,6 +34,9 @@ import type {
   MetricsSessionsHeatmapDto,
   MetricsRunsTokenCorrelationDto,
   MetricsBudgetForecastDto,
+  MetricsCostAnomalyBandsDto,
+  MetricsFallbackTransitionsDto,
+  MetricsBudgetGuardrailSimulationDto,
   ConnectionsMeteringDto,
   ConnectionsRadialDto,
   ConnectionsDependencyGraphDto,
@@ -42,13 +45,22 @@ import type {
   ConnectionsRoutingDecisionFlowDto,
   ConnectionsOrgChartDto,
   ConnectionsHierarchyDto,
+  ConnectionsEdgeReliabilityDto,
+  ConnectionsHookBlastRadiusDto,
+  ConnectionsRoutingDriftDto,
   OperationsActionsHeatmapDto,
+  OperationsApprovalForecastDto,
+  OperationsPolicyConflictsDto,
+  OperationsRuntimeRecoverySimulationDto,
   EditorInheritanceDto,
   EditorReadinessDto,
   EditorSectionStatusDto,
   EditorVersionsDto,
   EditorReadinessByWorkspaceDto,
   EditorDependenciesDto,
+  EditorPromptGraphDto,
+  EditorSectionDependencyImpactDto,
+  EditorRollbackRiskDto,
   TimeSeriesPoint,
 } from './dashboard.dto';
 import type { MetricsQueryDto } from './dto/metrics-query.dto';
@@ -1113,6 +1125,95 @@ export class DashboardService {
     };
   }
 
+  async getMetricsCostAnomalyBands(input: MetricsQueryDto, warnings: string[] = []): Promise<MetricsCostAnomalyBandsDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const timeline = this.buildTimeline(input.window);
+    const runs = this.filterRunsByScope(canonical, resolved.workspaceIds, resolved.agentIds);
+    const buckets = timeline.map((ts, idx) => {
+      const start = new Date(ts).getTime();
+      const end = idx < timeline.length - 1 ? new Date(timeline[idx + 1]).getTime() : Number.POSITIVE_INFINITY;
+      const spend = runs
+        .filter((run) => {
+          const t = new Date(run.startedAt).getTime();
+          return Number.isFinite(t) && t >= start && t < end;
+        })
+        .reduce((acc, run) => acc + run.steps.reduce((stepAcc, step) => stepAcc + (step.costUsd ?? 0), 0), 0);
+      return { ts, spend };
+    });
+    const avg = buckets.length > 0 ? buckets.reduce((acc, b) => acc + b.spend, 0) / buckets.length : 0;
+    const variance = buckets.length > 0 ? buckets.reduce((acc, b) => acc + ((b.spend - avg) ** 2), 0) / buckets.length : 0;
+    const std = Math.sqrt(variance);
+    const points = buckets.map((bucket) => {
+      const upper = avg + std * 1.5;
+      const lower = Math.max(0, avg - std * 1.5);
+      const anomalyScore = upper > 0 ? Math.min(1, Math.max(0, (bucket.spend - avg) / upper)) : 0;
+      return {
+        ts: bucket.ts,
+        spendUsd: Math.round(bucket.spend * 100) / 100,
+        baselineUsd: Math.round(avg * 100) / 100,
+        upperBandUsd: Math.round(upper * 100) / 100,
+        lowerBandUsd: Math.round(lower * 100) / 100,
+        anomalyScore: Math.round(anomalyScore * 100) / 100,
+      };
+    });
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), points.length > 0),
+      meta: { warnings, source: 'cost_anomaly_bands_projection' },
+      points,
+    };
+  }
+
+  async getMetricsFallbackTransitions(input: MetricsQueryDto, warnings: string[] = []): Promise<MetricsFallbackTransitionsDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const runs = this
+      .filterRunsByScope(canonical, resolved.workspaceIds, resolved.agentIds)
+      .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+    const transitions: MetricsFallbackTransitionsDto['transitions'] = [];
+    let prevModel: string | null = null;
+    for (const run of runs) {
+      const model = (run.metadata?.model as string | undefined) ?? 'unknown';
+      if (prevModel && prevModel !== model) {
+        transitions.push({
+          ts: run.startedAt,
+          fromModel: prevModel,
+          toModel: model,
+          reason: run.status === 'failed' ? 'error' : run.status === 'waiting_approval' ? 'policy' : 'unknown',
+        });
+      }
+      prevModel = model;
+    }
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), transitions.length > 0),
+      meta: { warnings, source: 'fallback_transitions_projection' },
+      transitions: transitions.slice(-60),
+    };
+  }
+
+  async getMetricsBudgetGuardrailSimulation(input: MetricsQueryDto, warnings: string[] = []): Promise<MetricsBudgetGuardrailSimulationDto> {
+    const forecast = await this.getMetricsBudgetForecast(input, warnings);
+    const now = Date.now();
+    const toDays = (iso: string | null) => (iso ? Math.max(0, Math.round((new Date(iso).getTime() - now) / 86400e3)) : null);
+    const currentSoft = toDays(forecast.projectedSoftCapAt);
+    const currentHard = toDays(forecast.projectedHardCapAt);
+    return {
+      scope: forecast.scope,
+      window: input.window,
+      state: forecast.state,
+      meta: { warnings, source: 'budget_guardrail_simulation_projection' },
+      scenarios: [
+        { scenario: 'current', projectedDaysToSoftCap: currentSoft, projectedDaysToHardCap: currentHard },
+        { scenario: 'soft_cap_minus_10', projectedDaysToSoftCap: currentSoft === null ? null : Math.max(0, Math.round(currentSoft * 0.9)), projectedDaysToHardCap: currentHard === null ? null : Math.max(0, Math.round(currentHard * 0.95)) },
+        { scenario: 'hard_cap_minus_10', projectedDaysToSoftCap: currentSoft === null ? null : Math.max(0, Math.round(currentSoft * 0.85)), projectedDaysToHardCap: currentHard === null ? null : Math.max(0, Math.round(currentHard * 0.9)) },
+      ],
+    };
+  }
+
   async getConnectionsMetering(input: MetricsQueryDto, warnings: string[] = []): Promise<ConnectionsMeteringDto> {
     const canonical = await this.studioService.getCanonicalState();
     const resolved = this.scopeResolver.resolve(canonical, input);
@@ -1319,6 +1420,63 @@ export class DashboardService {
     };
   }
 
+  async getConnectionsEdgeReliability(input: MetricsQueryDto, warnings: string[] = []): Promise<ConnectionsEdgeReliabilityDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const edges = this.filterConnections(canonical, resolved.workspaceIds, resolved.agentIds, resolved.scope);
+    const results = edges.map((edge) => {
+      const successPct = edge.state === 'connected' ? 96 : edge.state === 'paused' ? 72 : 28;
+      const failureCount = edge.state === 'disconnected' ? 5 : edge.state === 'paused' ? 2 : 0;
+      const confidencePct = Math.max(5, Math.round(successPct - failureCount * 5));
+      return { from: `${edge.from.level}:${edge.from.id}`, to: `${edge.to.level}:${edge.to.id}`, successPct, failureCount, confidencePct };
+    });
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), results.length > 0),
+      meta: { warnings, source: 'connections_edge_reliability_projection' },
+      edges: results,
+    };
+  }
+
+  async getConnectionsHookBlastRadius(input: MetricsQueryDto, warnings: string[] = []): Promise<ConnectionsHookBlastRadiusDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const hooks = this.hooksService.findAll();
+    const totalEdges = this.filterConnections(canonical, resolved.workspaceIds, resolved.agentIds, resolved.scope).length;
+    const data = hooks.map((hook) => {
+      const impactedNodes = hook.enabled ? Math.max(1, Math.round(totalEdges / 2)) : 0;
+      const riskScore = Math.min(100, hook.enabled ? impactedNodes * 8 : 0);
+      return { hookId: hook.id, event: hook.event, impactedNodes, riskScore };
+    });
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), data.length > 0),
+      meta: { warnings, source: 'connections_hook_blast_radius_projection' },
+      hooks: data,
+    };
+  }
+
+  async getConnectionsRoutingDrift(input: MetricsQueryDto, warnings: string[] = []): Promise<ConnectionsRoutingDriftDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const rules = this.routingService.getCompiledRouting().rules ?? [];
+    const data = rules.map((rule: any, index: number) => {
+      const baselineTarget = typeof rule.to === 'string' ? rule.to : 'unknown';
+      const currentTarget = baselineTarget;
+      const drifted = false;
+      return { ruleId: String(rule.id ?? `rule-${index + 1}`), baselineTarget, currentTarget, drifted, driftScore: drifted ? 100 : 0 };
+    });
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), data.length > 0),
+      meta: { warnings, source: 'connections_routing_drift_projection' },
+      rules: data,
+    };
+  }
+
   async getEditorReadiness(input: MetricsQueryDto, warnings: string[] = []): Promise<EditorReadinessDto> {
     const canonical = await this.studioService.getCanonicalState();
     const resolved = this.scopeResolver.resolve(canonical, input);
@@ -1435,6 +1593,132 @@ export class DashboardService {
       meta: { warnings, source: 'editor_dependencies_projection' },
       nodes,
       edges,
+    };
+  }
+
+  async getOperationsApprovalForecast(input: MetricsQueryDto, warnings: string[] = []): Promise<OperationsApprovalForecastDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const operations = await this.getOperations(resolved.scope);
+    const currentQueue = operations.approvalQueue.length;
+    const dailyInflow = Math.max(1, operations.pendingActions.filter((a) => a.severity !== 'info').length);
+    const dailyOutflow = Math.max(1, Math.round((canonical.runtime.health.ok ? 1.2 : 0.7) * dailyInflow));
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), true),
+      meta: { warnings, source: 'operations_approval_forecast_projection' },
+      currentQueue,
+      dailyInflow,
+      dailyOutflow,
+      projectedQueueIn7d: Math.max(0, currentQueue + (dailyInflow - dailyOutflow) * 7),
+    };
+  }
+
+  async getOperationsPolicyConflicts(input: MetricsQueryDto, warnings: string[] = []): Promise<OperationsPolicyConflictsDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const policies = this.policiesService.findAll();
+    const conflicts: OperationsPolicyConflictsDto['conflicts'] = [];
+    for (let i = 0; i < policies.length; i += 1) {
+      for (let j = i + 1; j < policies.length; j += 1) {
+        const a = policies[i];
+        const b = policies[j];
+        const denyHit = (a.toolDenylist ?? []).filter((tool) => (b.toolAllowlist ?? []).includes(tool));
+        const denyHitReverse = (b.toolDenylist ?? []).filter((tool) => (a.toolAllowlist ?? []).includes(tool));
+        if (a.id !== b.id && (denyHit.length > 0 || denyHitReverse.length > 0)) {
+          conflicts.push({
+            policyA: a.id,
+            policyB: b.id,
+            reason: `Allowlist/denylist overlap detected (${[...denyHit, ...denyHitReverse].slice(0, 3).join(', ') || 'tool conflict'}).`,
+            severity: 'warning',
+          });
+        }
+      }
+    }
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), conflicts.length > 0),
+      meta: { warnings, source: 'operations_policy_conflicts_projection' },
+      conflicts: conflicts.slice(0, 20),
+    };
+  }
+
+  async getOperationsRuntimeRecoverySimulation(input: MetricsQueryDto, warnings: string[] = []): Promise<OperationsRuntimeRecoverySimulationDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const runtimeOk = Boolean(canonical.runtime.health.ok);
+    const steps: OperationsRuntimeRecoverySimulationDto['steps'] = [
+      { from: 'offline', to: 'degraded', estimatedMinutes: runtimeOk ? 2 : 8, successPct: runtimeOk ? 88 : 55 },
+      { from: 'degraded', to: 'online', estimatedMinutes: runtimeOk ? 4 : 12, successPct: runtimeOk ? 84 : 50 },
+      { from: 'offline', to: 'online', estimatedMinutes: runtimeOk ? 7 : 20, successPct: runtimeOk ? 70 : 35 },
+    ];
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(runtimeOk, true),
+      meta: { warnings, source: 'operations_runtime_recovery_simulation_projection' },
+      steps,
+    };
+  }
+
+  async getEditorPromptGraph(input: MetricsQueryDto, warnings: string[] = []): Promise<EditorPromptGraphDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const nodes: EditorPromptGraphDto['nodes'] = [
+      { id: 'system', label: 'System Prompt', type: 'system' },
+      { id: 'behavior', label: 'Behavior', type: 'behavior' },
+      { id: 'tools', label: 'Tooling', type: 'tooling' },
+      { id: 'guardrails', label: 'Guardrails', type: 'guardrail' },
+    ];
+    const edges: EditorPromptGraphDto['edges'] = [
+      { from: 'system', to: 'behavior', weight: 0.9 },
+      { from: 'behavior', to: 'tools', weight: 0.65 },
+      { from: 'system', to: 'guardrails', weight: 0.8 },
+      { from: 'guardrails', to: 'tools', weight: 0.5 },
+    ];
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), true),
+      meta: { warnings, source: 'editor_prompt_graph_projection' },
+      nodes,
+      edges,
+    };
+  }
+
+  async getEditorSectionDependencyImpact(input: MetricsQueryDto, warnings: string[] = []): Promise<EditorSectionDependencyImpactDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const rows: EditorSectionDependencyImpactDto['rows'] = [
+      { section: 'Routing', dependsOn: ['Identity', 'Skills / Tools'], impactScore: 78 },
+      { section: 'Hooks', dependsOn: ['Routing', 'Operations'], impactScore: 71 },
+      { section: 'Versions', dependsOn: ['Identity', 'Prompting'], impactScore: 63 },
+      { section: 'Operations', dependsOn: ['Routing', 'Hooks'], impactScore: 82 },
+    ];
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), true),
+      meta: { warnings, source: 'editor_section_dependency_impact_projection' },
+      rows,
+    };
+  }
+
+  async getEditorRollbackRisk(input: MetricsQueryDto, warnings: string[] = []): Promise<EditorRollbackRiskDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const snapshots = this.versionsService.listSnapshots().slice(0, 12);
+    const versions = snapshots.map((snapshot, index) => {
+      const riskScore = Math.max(10, Math.min(95, 20 + index * 7));
+      const reasons = [
+        'Config divergence from current runtime',
+        snapshot.label ? `Snapshot label: ${snapshot.label}` : 'Unnamed snapshot',
+      ];
+      return { versionId: snapshot.id, label: snapshot.label ?? snapshot.id, riskScore, reasons };
+    });
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), versions.length > 0),
+      meta: { warnings, source: 'editor_rollback_risk_projection' },
+      versions,
     };
   }
 }

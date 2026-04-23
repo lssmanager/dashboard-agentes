@@ -740,6 +740,30 @@ export interface MetricsBudgetForecastDto {
   projectedHardCapAt: string | null;
 }
 
+export interface MetricsCostAnomalyBandsDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  points: Array<{ ts: string; spendUsd: number; baselineUsd: number; upperBandUsd: number; lowerBandUsd: number; anomalyScore: number }>;
+}
+
+export interface MetricsFallbackTransitionsDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  transitions: Array<{ ts: string; fromModel: string; toModel: string; reason: 'latency' | 'error' | 'policy' | 'manual' | 'unknown' }>;
+}
+
+export interface MetricsBudgetGuardrailSimulationDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  scenarios: Array<{ scenario: 'current' | 'soft_cap_minus_10' | 'hard_cap_minus_10'; projectedDaysToSoftCap: number | null; projectedDaysToHardCap: number | null }>;
+}
+
 export interface ConnectionsMeteringDto {
   scope: DashboardScope;
   window: string;
@@ -814,12 +838,61 @@ export interface ConnectionsHierarchyDto {
   nodes: Array<{ id: string; parentId: string | null; label: string; level: CanonicalNodeLevel; value: number }>;
 }
 
+export interface ConnectionsEdgeReliabilityDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  edges: Array<{ from: string; to: string; successPct: number; failureCount: number; confidencePct: number }>;
+}
+
+export interface ConnectionsHookBlastRadiusDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  hooks: Array<{ hookId: string; event: string; impactedNodes: number; riskScore: number }>;
+}
+
+export interface ConnectionsRoutingDriftDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  rules: Array<{ ruleId: string; baselineTarget: string; currentTarget: string; drifted: boolean; driftScore: number }>;
+}
+
 export interface OperationsActionsHeatmapDto {
   scope: DashboardScope;
   window: string;
   state?: AnalyticsState;
   meta?: { warnings?: string[]; source?: string };
   rows: Array<{ scopeLabel: string; connect: number; disconnect: number; pause: number; reactivate: number; redirect: number; continue: number }>;
+}
+
+export interface OperationsApprovalForecastDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  currentQueue: number;
+  dailyInflow: number;
+  dailyOutflow: number;
+  projectedQueueIn7d: number;
+}
+
+export interface OperationsPolicyConflictsDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  conflicts: Array<{ policyA: string; policyB: string; reason: string; severity: 'warning' | 'critical' }>;
+}
+
+export interface OperationsRuntimeRecoverySimulationDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  steps: Array<{ from: 'offline' | 'degraded' | 'online'; to: 'offline' | 'degraded' | 'online'; estimatedMinutes: number; successPct: number }>;
 }
 
 export interface EditorReadinessByWorkspaceDto {
@@ -835,4 +908,26 @@ export interface EditorDependenciesDto {
   meta?: { warnings?: string[]; source?: string };
   nodes: Array<{ id: string; label: string; type: 'agent' | 'subagent' | 'workspace' | 'skill' | 'tool' }>;
   edges: Array<{ from: string; to: string; kind: 'depends_on' | 'uses' | 'inherits' }>;
+}
+
+export interface EditorPromptGraphDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  nodes: Array<{ id: string; label: string; type: 'system' | 'behavior' | 'tooling' | 'guardrail' }>;
+  edges: Array<{ from: string; to: string; weight: number }>;
+}
+
+export interface EditorSectionDependencyImpactDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  rows: Array<{ section: string; dependsOn: string[]; impactScore: number }>;
+}
+
+export interface EditorRollbackRiskDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  versions: Array<{ versionId: string; label: string; riskScore: number; reasons: string[] }>;
 }

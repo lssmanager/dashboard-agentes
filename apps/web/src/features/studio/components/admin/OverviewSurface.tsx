@@ -14,6 +14,9 @@ import type {
   MetricsSessionsHeatmapDto,
   MetricsRunsTokenCorrelationDto,
   MetricsBudgetForecastDto,
+  MetricsCostAnomalyBandsDto,
+  MetricsFallbackTransitionsDto,
+  MetricsBudgetGuardrailSimulationDto,
 } from '../../../../lib/types';
 import {
   getMetricsKpis,
@@ -26,11 +29,13 @@ import {
   getMetricsSessionsHeatmap,
   getMetricsRunsTokenCorrelation,
   getMetricsBudgetForecast,
+  getMetricsCostAnomalyBands,
+  getMetricsFallbackTransitions,
+  getMetricsBudgetGuardrailSimulation,
 } from '../../../../lib/api';
 import { Sparkline, AreaChart, BarChart, DonutChart, BulletGauge, LatencyBar } from '../../../../components/ui/Charts';
 import { AnalyticsStateBoundary } from '../../../analytics/components/AnalyticsStateBoundary';
 import { TimeWindowSelector } from '../../../analytics/components/TimeWindowSelector';
-import { PlannedVisualQueue } from '../../../analytics/components/PlannedVisualQueue';
 import type { AnalyticsWindow } from '../../../analytics/types';
 
 export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
@@ -50,6 +55,9 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
   const [sessionsHeatmap, setSessionsHeatmap] = useState<MetricsSessionsHeatmapDto | null>(null);
   const [runsTokenCorrelation, setRunsTokenCorrelation] = useState<MetricsRunsTokenCorrelationDto | null>(null);
   const [budgetForecast, setBudgetForecast] = useState<MetricsBudgetForecastDto | null>(null);
+  const [costAnomalyBands, setCostAnomalyBands] = useState<MetricsCostAnomalyBandsDto | null>(null);
+  const [fallbackTransitions, setFallbackTransitions] = useState<MetricsFallbackTransitionsDto | null>(null);
+  const [budgetGuardrailSimulation, setBudgetGuardrailSimulation] = useState<MetricsBudgetGuardrailSimulationDto | null>(null);
 
   useEffect(() => {
     void getMetricsKpis(level, id, window).then(setKpis).catch(() => null);
@@ -62,6 +70,9 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
     void getMetricsSessionsHeatmap(level, id, window).then(setSessionsHeatmap).catch(() => null);
     void getMetricsRunsTokenCorrelation(level, id, window).then(setRunsTokenCorrelation).catch(() => null);
     void getMetricsBudgetForecast(level, id, window).then(setBudgetForecast).catch(() => null);
+    void getMetricsCostAnomalyBands(level, id, window).then(setCostAnomalyBands).catch(() => null);
+    void getMetricsFallbackTransitions(level, id, window).then(setFallbackTransitions).catch(() => null);
+    void getMetricsBudgetGuardrailSimulation(level, id, window).then(setBudgetGuardrailSimulation).catch(() => null);
   }, [level, id, window]);
 
   const runsTrend = kpis?.runs.trend.map((p) => p.value) ?? [];
@@ -446,14 +457,49 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
         </div>
       )}
 
-      <PlannedVisualQueue
-        title="P2 Refinements"
-        items={[
-          { id: 'ov-p2-1', label: 'Cost Anomaly Bands', note: 'Requires anomaly scoring contract per model/time bucket.' },
-          { id: 'ov-p2-2', label: 'Fallback Transition Timeline', note: 'Requires model fallback transition events in runtime telemetry.' },
-          { id: 'ov-p2-3', label: 'Budget Guardrail Simulation', note: 'Requires scenario simulation endpoint with policy snapshots.' },
-        ]}
-      />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Cost Anomaly Bands (P2)</div>
+          <AnalyticsStateBoundary state={costAnomalyBands?.state ?? 'loading'} title="Cost anomaly bands">
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(costAnomalyBands?.points ?? []).slice(-6).map((point) => (
+                <div key={point.ts} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{new Date(point.ts).toLocaleTimeString()}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>${point.spendUsd.toFixed(2)}</span>
+                  <span style={{ color: point.anomalyScore > 0.6 ? 'var(--tone-danger-text, #ef4444)' : 'var(--text-muted)' }}>{point.anomalyScore.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Fallback Transition Timeline (P2)</div>
+          <AnalyticsStateBoundary state={fallbackTransitions?.state ?? 'loading'} title="Fallback transitions">
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(fallbackTransitions?.transitions ?? []).slice(-6).map((item, idx) => (
+                <div key={`${item.ts}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{item.fromModel} → {item.toModel}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{item.reason}</span>
+                </div>
+              ))}
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Budget Guardrail Simulation (P2)</div>
+          <AnalyticsStateBoundary state={budgetGuardrailSimulation?.state ?? 'loading'} title="Budget guardrail simulation">
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(budgetGuardrailSimulation?.scenarios ?? []).map((scenario) => (
+                <div key={scenario.scenario} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{scenario.scenario}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>soft: {scenario.projectedDaysToSoftCap ?? '-'}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>hard: {scenario.projectedDaysToHardCap ?? '-'}</span>
+                </div>
+              ))}
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+      </div>
     </section>
   );
 }

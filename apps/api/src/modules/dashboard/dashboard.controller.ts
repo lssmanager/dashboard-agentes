@@ -205,6 +205,24 @@ export function registerDashboardRoutes(router: Router) {
     res.json(await service.getMetricsBudgetForecast(query.value, query.warnings));
   });
 
+  router.get('/dashboard/metrics/cost-anomaly-bands', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getMetricsCostAnomalyBands(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/metrics/fallback-transitions', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getMetricsFallbackTransitions(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/metrics/budget-guardrail-simulation', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getMetricsBudgetGuardrailSimulation(query.value, query.warnings));
+  });
+
   // ── Connections Visuals ────────────────────────────────────────────────────
   router.get('/dashboard/connections/metering', async (req, res) => {
     const query = parseMetricInput(req as any, { allowGranularity: false });
@@ -274,6 +292,24 @@ export function registerDashboardRoutes(router: Router) {
     res.json(await service.getConnectionsHierarchy(query.value, mode, query.warnings));
   });
 
+  router.get('/dashboard/connections/edge-reliability', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getConnectionsEdgeReliability(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/connections/hook-blast-radius', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getConnectionsHookBlastRadius(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/connections/routing-drift', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getConnectionsRoutingDrift(query.value, query.warnings));
+  });
+
   router.get('/editor/readiness', async (req, res) => {
     const query = parseMetricInput(req as any, { allowGranularity: false });
     if (!query.ok || !query.value) {
@@ -320,6 +356,42 @@ export function registerDashboardRoutes(router: Router) {
       return sendMetricValidationError(res, query.errors);
     }
     res.json(await service.getEditorDependencies(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/operations/approval-forecast', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getOperationsApprovalForecast(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/operations/policy-conflicts', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getOperationsPolicyConflicts(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/operations/runtime-recovery-simulation', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getOperationsRuntimeRecoverySimulation(query.value, query.warnings));
+  });
+
+  router.get('/editor/prompt-graph', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getEditorPromptGraph(query.value, query.warnings));
+  });
+
+  router.get('/editor/section-dependency-impact', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getEditorSectionDependencyImpact(query.value, query.warnings));
+  });
+
+  router.get('/editor/rollback-risk', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) return sendMetricValidationError(res, query.errors);
+    res.json(await service.getEditorRollbackRisk(query.value, query.warnings));
   });
 
   router.post('/dashboard/profile/bind', (req, res) => {

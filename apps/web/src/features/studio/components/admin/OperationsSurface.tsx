@@ -4,10 +4,13 @@ import { AlertCircle, AlertTriangle, CheckCircle, Clock, DollarSign, PlayCircle,
 import {
   getDashboardOperationsAlerts,
   getDashboardOperationsActionsHeatmap,
+  getDashboardOperationsApprovalForecast,
   getDashboardOperationsBudgets,
   getDashboardOperationsCostProfile,
   getDashboardOperationsPendingActions,
+  getDashboardOperationsPolicyConflicts,
   getDashboardOperationsPolicies,
+  getDashboardOperationsRuntimeRecoverySimulation,
   getDashboardOperationsRuntimeState,
 } from '../../../../lib/api';
 import type {
@@ -16,11 +19,13 @@ import type {
   DashboardOperationsDto,
   DashboardOperationsRuntimeStateDto,
   OperationsActionsHeatmapDto,
+  OperationsApprovalForecastDto,
+  OperationsPolicyConflictsDto,
+  OperationsRuntimeRecoverySimulationDto,
   DashboardScopeCapabilities,
   TopologyRuntimeAction,
 } from '../../../../lib/types';
 import { AnalyticsStateBoundary } from '../../../analytics/components/AnalyticsStateBoundary';
-import { PlannedVisualQueue } from '../../../analytics/components/PlannedVisualQueue';
 import { TimeWindowSelector } from '../../../analytics/components/TimeWindowSelector';
 import { useAnalyticsMetric } from '../../../analytics/hooks/useAnalyticsMetric';
 import type { AnalyticsWindow } from '../../../analytics/types';
@@ -78,6 +83,9 @@ export function OperationsSurface({
   const [policies, setPolicies] = useState<PolicyEntry[]>([]);
   const [actionsHeatmap, setActionsHeatmap] = useState<OperationsActionsHeatmapDto | null>(null);
   const [pendingActions, setPendingActions] = useState<Array<{ id: string; type: string; message: string; severity: 'info' | 'warning' | 'critical' }>>([]);
+  const [approvalForecast, setApprovalForecast] = useState<OperationsApprovalForecastDto | null>(null);
+  const [policyConflicts, setPolicyConflicts] = useState<OperationsPolicyConflictsDto | null>(null);
+  const [recoverySimulation, setRecoverySimulation] = useState<OperationsRuntimeRecoverySimulationDto | null>(null);
 
   const alertsMetric = useAnalyticsMetric({
     level: nodeLevel,
@@ -163,6 +171,30 @@ export function OperationsSurface({
         if (!cancelled) {
           setPendingActions([]);
         }
+      });
+
+    void getDashboardOperationsApprovalForecast(nodeLevel, nodeId, window)
+      .then((payload) => {
+        if (!cancelled) setApprovalForecast(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setApprovalForecast(null);
+      });
+
+    void getDashboardOperationsPolicyConflicts(nodeLevel, nodeId, window)
+      .then((payload) => {
+        if (!cancelled) setPolicyConflicts(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setPolicyConflicts(null);
+      });
+
+    void getDashboardOperationsRuntimeRecoverySimulation(nodeLevel, nodeId, window)
+      .then((payload) => {
+        if (!cancelled) setRecoverySimulation(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setRecoverySimulation(null);
       });
 
     return () => {
@@ -389,14 +421,45 @@ export function OperationsSurface({
         </div>
       )}
 
-      <PlannedVisualQueue
-        title="P2 Refinements"
-        items={[
-          { id: 'op-p2-1', label: 'Approval Queue Forecast', note: 'Needs queue age distribution + expected service rate contracts.' },
-          { id: 'op-p2-2', label: 'Policy Conflict Explorer', note: 'Needs policy rule graph and override conflict metadata.' },
-          { id: 'op-p2-3', label: 'Runtime Recovery Simulation', note: 'Needs state transition simulation endpoint.' },
-        ]}
-      />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        <div style={sectionCardStyle}>
+          <div style={sectionHeaderStyle}>Approval Forecast (P2)</div>
+          <AnalyticsStateBoundary state={approvalForecast?.state ?? 'loading'} title="Approval forecast">
+            <div style={{ display: 'grid', gap: 4, fontSize: 11 }}>
+              <div style={{ color: 'var(--text-muted)' }}>Queue: <strong style={{ color: 'var(--text-primary)' }}>{approvalForecast?.currentQueue ?? 0}</strong></div>
+              <div style={{ color: 'var(--text-muted)' }}>Inflow/day: {approvalForecast?.dailyInflow ?? 0}</div>
+              <div style={{ color: 'var(--text-muted)' }}>Outflow/day: {approvalForecast?.dailyOutflow ?? 0}</div>
+              <div style={{ color: 'var(--text-muted)' }}>Queue in 7d: {approvalForecast?.projectedQueueIn7d ?? 0}</div>
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+        <div style={sectionCardStyle}>
+          <div style={sectionHeaderStyle}>Policy Conflicts (P2)</div>
+          <AnalyticsStateBoundary state={policyConflicts?.state ?? 'loading'} title="Policy conflicts">
+            <div style={{ display: 'grid', gap: 4 }}>
+              {(policyConflicts?.conflicts ?? []).slice(0, 6).map((item, idx) => (
+                <div key={`${item.policyA}-${item.policyB}-${idx}`} style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>{item.policyA}</strong> vs <strong style={{ color: 'var(--text-primary)' }}>{item.policyB}</strong>: {item.reason}
+                </div>
+              ))}
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+        <div style={sectionCardStyle}>
+          <div style={sectionHeaderStyle}>Runtime Recovery Simulation (P2)</div>
+          <AnalyticsStateBoundary state={recoverySimulation?.state ?? 'loading'} title="Recovery simulation">
+            <div style={{ display: 'grid', gap: 4 }}>
+              {(recoverySimulation?.steps ?? []).map((step, idx) => (
+                <div key={`${step.from}-${step.to}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{step.from} → {step.to}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{step.estimatedMinutes}m</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{step.successPct}%</span>
+                </div>
+              ))}
+            </div>
+          </AnalyticsStateBoundary>
+        </div>
+      </div>
     </section>
   );
 }

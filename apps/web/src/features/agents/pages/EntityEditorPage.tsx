@@ -15,11 +15,13 @@ import {
   getEditorVersions,
   getEditorReadinessByWorkspace,
   getEditorDependencies,
+  getEditorPromptGraph,
+  getEditorSectionDependencyImpact,
+  getEditorRollbackRisk,
 } from '../../../lib/api';
 import type { AgentSpec, HookSpec, RunSpec, WorkspaceSpec } from '../../../lib/types';
 import { RadarChart } from '../../../components/ui/Charts';
 import { AnalyticsStateBoundary } from '../../analytics/components/AnalyticsStateBoundary';
-import { PlannedVisualQueue } from '../../analytics/components/PlannedVisualQueue';
 import { TimeWindowSelector } from '../../analytics/components/TimeWindowSelector';
 import { useAnalyticsMetric } from '../../analytics/hooks/useAnalyticsMetric';
 import type { AnalyticsWindow } from '../../analytics/types';
@@ -993,6 +995,30 @@ function ReadinessSection({
     getState: (payload) => payload.state as any,
   });
 
+  const promptGraphMetric = useAnalyticsMetric({
+    level,
+    id: entityId,
+    window,
+    fetcher: (lvl, scopeId, selectedWindow) => getEditorPromptGraph(lvl, scopeId, selectedWindow),
+    getState: (payload) => payload.state as any,
+  });
+
+  const sectionImpactMetric = useAnalyticsMetric({
+    level,
+    id: entityId,
+    window,
+    fetcher: (lvl, scopeId, selectedWindow) => getEditorSectionDependencyImpact(lvl, scopeId, selectedWindow),
+    getState: (payload) => payload.state as any,
+  });
+
+  const rollbackRiskMetric = useAnalyticsMetric({
+    level,
+    id: entityId,
+    window,
+    fetcher: (lvl, scopeId, selectedWindow) => getEditorRollbackRisk(lvl, scopeId, selectedWindow),
+    getState: (payload) => payload.state as any,
+  });
+
   const axes = useMemo(
     () =>
       (readinessMetric.data?.data ?? []).map((item) => ({
@@ -1184,14 +1210,49 @@ function ReadinessSection({
         </p>
       )}
 
-      <PlannedVisualQueue
-        title="P2 Refinements"
-        items={[
-          { id: 'ed-p2-1', label: 'Prompt Graph Map', note: 'Requires prompt fragment graph projection and lineage metadata.' },
-          { id: 'ed-p2-2', label: 'Section Dependency Impact', note: 'Requires section dependency DAG and impact scoring.' },
-          { id: 'ed-p2-3', label: 'Rollback Risk Analyzer', note: 'Requires version diff semantic classifier contract.' },
-        ]}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <AnalyticsStateBoundary state={promptGraphMetric.state} title="Prompt graph (P2)">
+          <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Prompt Graph (P2)</div>
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(promptGraphMetric.data?.edges ?? []).map((edge, idx) => (
+                <div key={`${edge.from}-${edge.to}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{edge.from} → {edge.to}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{edge.weight.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnalyticsStateBoundary>
+
+        <AnalyticsStateBoundary state={sectionImpactMetric.state} title="Section dependency impact (P2)">
+          <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Section Dependency Impact (P2)</div>
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(sectionImpactMetric.data?.rows ?? []).map((row, idx) => (
+                <div key={`${row.section}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{row.section}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{row.impactScore}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnalyticsStateBoundary>
+
+        <AnalyticsStateBoundary state={rollbackRiskMetric.state} title="Rollback risk (P2)">
+          <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Rollback Risk (P2)</div>
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {(rollbackRiskMetric.data?.versions ?? []).slice(0, 6).map((row) => (
+                <div key={row.versionId} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{row.label}</span>
+                  <span style={{ color: row.riskScore > 70 ? 'var(--tone-danger-text, #ef4444)' : 'var(--text-muted)' }}>{row.riskScore}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnalyticsStateBoundary>
+      </div>
     </div>
   );
 }
