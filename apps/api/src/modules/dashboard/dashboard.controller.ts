@@ -80,6 +80,65 @@ export function registerDashboardRoutes(router: Router) {
     res.json(await service.getEffectiveProfile(parseScope(req as any)));
   });
 
+  // ── Analytics Metrics ──────────────────────────────────────────────────────
+  function parseMetricInput(req: { query: Record<string, unknown> }) {
+    return {
+      level: typeof req.query.level === 'string' ? req.query.level : undefined,
+      id: typeof req.query.id === 'string' ? req.query.id : undefined,
+      window: typeof req.query.window === 'string' ? req.query.window : '24h',
+      granularity: typeof req.query.granularity === 'string' ? req.query.granularity : '1h',
+    };
+  }
+
+  router.get('/dashboard/metrics/kpis', async (req, res) => {
+    res.json(await service.getMetricsKpis(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/metrics/runs', async (req, res) => {
+    res.json(await service.getMetricsRuns(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/metrics/tokens', async (req, res) => {
+    res.json(await service.getMetricsTokens(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/metrics/sessions', async (req, res) => {
+    res.json(await service.getMetricsSessions(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/metrics/budget', async (req, res) => {
+    res.json(await service.getMetricsBudget(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/metrics/model-mix', async (req, res) => {
+    res.json(await service.getMetricsModelMix(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/metrics/latency', async (req, res) => {
+    res.json(await service.getMetricsLatency(parseMetricInput(req as any)));
+  });
+
+  // ── Connections Visuals ────────────────────────────────────────────────────
+  router.get('/dashboard/connections/metering', async (req, res) => {
+    res.json(await service.getConnectionsMetering(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/connections/radial', async (req, res) => {
+    res.json(await service.getConnectionsRadial(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/connections/dependency-graph', async (req, res) => {
+    res.json(await service.getConnectionsDependencyGraph(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/connections/topology', async (req, res) => {
+    res.json(await service.getConnectionsTopology(parseMetricInput(req as any)));
+  });
+
+  router.get('/dashboard/connections/flow-graph', async (req, res) => {
+    res.json(await service.getConnectionsFlowGraph(parseMetricInput(req as any)));
+  });
+
   router.post('/dashboard/profile/bind', (req, res) => {
     const payload = req.body as BindProfileRequestDto;
     if (!payload?.level || !payload?.id || !payload?.profileId) {

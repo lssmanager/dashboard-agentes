@@ -586,3 +586,114 @@ export interface SelectionState {
   selectedSurface: SurfaceId;
   selectedBuilderTab: AgencyBuilderTab;
 }
+
+// ── Analytics Metrics DTOs ─────────────────────────────────────────────────
+
+export interface TimeSeriesPoint { ts: string; value: number }
+
+export interface MetricsKpisDto {
+  scope: DashboardScope;
+  window: string;
+  agents:   { current: number; delta: number; trend: TimeSeriesPoint[] };
+  sessions: { current: number; delta: number; trend: TimeSeriesPoint[] };
+  runs:     { current: number; delta: number; trend: TimeSeriesPoint[] };
+  channels: { current: number; delta: number; trend: TimeSeriesPoint[] };
+  running:          number;
+  awaitingApproval: number;
+  paused:           number;
+  snapshots:        number;
+}
+
+export interface MetricsRunsDto {
+  scope: DashboardScope;
+  window: string;
+  granularity: string;
+  series: Array<{ ts: string; total: number; failed: number; errorRate: number }>;
+  totals: { total: number; failed: number; errorRate: number };
+}
+
+export interface MetricsTokensDto {
+  scope: DashboardScope;
+  window: string;
+  granularity: string;
+  series: Array<{ ts: string; prompt: number; completion: number }>;
+  totals: { prompt: number; completion: number };
+}
+
+export interface MetricsSessionsDto {
+  scope: DashboardScope;
+  window: string;
+  granularity: string;
+  series: Array<{ ts: string; active: number; completed: number }>;
+  totals: { active: number; completed: number };
+}
+
+export interface MetricsBudgetDto {
+  scope: DashboardScope;
+  window: string;
+  budgets: Array<{
+    id: string;
+    name: string;
+    limitUsd: number;
+    usedUsd: number;
+    softCapUsd: number | null;
+    hardCapUsd: number | null;
+    pctUsed: number;
+    status: 'ok' | 'warning' | 'critical';
+    periodDays: number;
+  }>;
+  totalLimitUsd: number;
+  totalUsedUsd: number;
+}
+
+export interface MetricsModelMixDto {
+  scope: DashboardScope;
+  window: string;
+  models: Array<{ model: string; count: number; pct: number; costUsd: number }>;
+}
+
+export interface MetricsLatencyDto {
+  scope: DashboardScope;
+  window: string;
+  models: Array<{ model: string; p50ms: number; p95ms: number }>;
+}
+
+export interface ConnectionsMeteringDto {
+  scope: DashboardScope;
+  window: string;
+  meters: {
+    supportedEdges:   { value: number; max: number; pct: number };
+    hookCoverage:     { value: number; max: number; pct: number };
+    routingStability: { value: number; max: number; pct: number };
+    handoffPressure:  { value: number; max: number; pct: number };
+  };
+}
+
+export interface ConnectionsRadialDto {
+  scope: DashboardScope;
+  window: string;
+  edges:    { total: number; connected: number; paused: number; disconnected: number };
+  hooks:    { total: number; enabled: number };
+  channels: { total: number; enabled: number };
+}
+
+export interface GraphNode { id: string; label: string; type: string; x?: number; y?: number; meta?: string }
+export interface GraphEdge { from: string; to: string; label?: string; weight?: number }
+
+export interface ConnectionsDependencyGraphDto {
+  scope: DashboardScope;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface ConnectionsTopologyDto {
+  scope: DashboardScope;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface ConnectionsFlowGraphDto {
+  scope: DashboardScope;
+  nodes: Array<{ id: string; label: string; value: number }>;
+  links: Array<{ source: string; target: string; value: number }>;
+}

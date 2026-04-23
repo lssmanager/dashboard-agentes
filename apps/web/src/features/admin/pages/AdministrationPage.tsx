@@ -419,6 +419,8 @@ export default function AdministrationPage() {
                 busyAction={runtimeActionBusy}
                 capabilities={overview?.capabilities}
                 onRuntimeAction={(action) => void handleRuntimeAction(action)}
+                level={entityLevel}
+                id={entityId}
               />
             ) : !isInitialLoading && !error && <SurfaceStateCard title="No operations available" description="Operations data is not ready for the current scope." />
           )}

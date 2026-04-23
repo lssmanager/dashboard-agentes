@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { SquarePen, Save, Lock, Users, BookOpen, Wrench, GitBranch, Zap, History, Activity, ChevronRight } from 'lucide-react';
+import { SquarePen, Save, Lock, Users, BookOpen, Wrench, GitBranch, Zap, History, Activity, ChevronRight, Target } from 'lucide-react';
 
 import { PageHeader } from '../../../components';
 import { useHierarchy } from '../../../lib/HierarchyContext';
 import { useStudioState } from '../../../lib/StudioStateContext';
-import { saveAgent, updateWorkspace, getHooks, getVersions, getRuns } from '../../../lib/api';
-import type { AgentSpec, HookSpec, RunSpec, VersionSnapshot, WorkspaceSpec } from '../../../lib/types';
+import { saveAgent, updateWorkspace, getHooks, getVersions, getRuns, getEffectiveProfile } from '../../../lib/api';
+import type { AgentSpec, CanonicalNodeLevel, EffectiveProfileDto, HookSpec, RunSpec, VersionSnapshot, WorkspaceSpec } from '../../../lib/types';
+import { RadarChart } from '../../../components/ui/Charts';
 
 type EntitySection =
   | 'identity'
@@ -16,7 +17,8 @@ type EntitySection =
   | 'handoffs'
   | 'hooks'
   | 'versions'
-  | 'operations';
+  | 'operations'
+  | 'readiness';
 
 type EntityLevel = 'agency' | 'department' | 'workspace' | 'agent' | 'subagent';
 
@@ -30,6 +32,7 @@ const SECTION_LABEL: Record<EntitySection, string> = {
   hooks: 'Hooks',
   versions: 'Versions',
   operations: 'Operations',
+  readiness: 'Readiness',
 };
 
 const SECTION_ICON: Record<EntitySection, typeof SquarePen> = {
@@ -42,14 +45,15 @@ const SECTION_ICON: Record<EntitySection, typeof SquarePen> = {
   hooks: Zap,
   versions: History,
   operations: Activity,
+  readiness: Target,
 };
 
 const MATRIX: Record<EntityLevel, EntitySection[]> = {
-  agency: ['identity', 'catalog', 'routing-channels', 'hooks', 'versions', 'operations'],
+  agency:     ['identity', 'catalog', 'routing-channels', 'hooks', 'versions', 'operations', 'readiness'],
   department: ['identity', 'routing-channels', 'hooks', 'versions', 'operations'],
-  workspace: ['identity', 'prompts-behavior', 'skills-tools', 'routing-channels', 'hooks', 'versions', 'operations'],
-  agent: ['identity', 'prompts-behavior', 'skills-tools', 'handoffs', 'routing-channels', 'hooks', 'versions', 'operations'],
-  subagent: ['identity', 'prompts-behavior', 'skills-tools', 'handoffs', 'hooks', 'versions', 'operations'],
+  workspace:  ['identity', 'prompts-behavior', 'skills-tools', 'routing-channels', 'hooks', 'versions', 'operations', 'readiness'],
+  agent:      ['identity', 'prompts-behavior', 'skills-tools', 'handoffs', 'routing-channels', 'hooks', 'versions', 'operations', 'readiness'],
+  subagent:   ['identity', 'prompts-behavior', 'skills-tools', 'handoffs', 'hooks', 'versions', 'operations', 'readiness'],
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -736,24 +740,48 @@ function VersionsSection() {
           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Create a version snapshot to capture the current state</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {versions.slice(0, 8).map((v) => (
-            <div
-              key={v.id}
-              className="rounded-lg border p-3"
-              style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{v.label ?? 'Snapshot'}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {new Date(v.createdAt).toLocaleString()}
-                  </p>
+        <div style={{ position: 'relative' }}>
+          {/* Timeline spine */}
+          <div style={{ position: 'absolute', left: 10, top: 0, bottom: 0, width: 2, background: 'var(--border-primary)' }} />
+          <div className="space-y-2" style={{ paddingLeft: 28 }}>
+            {versions.slice(0, 8).map((v, idx) => (
+              <div
+                key={v.id}
+                style={{
+                  position: 'relative',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-primary)',
+                  background: idx === 0 ? 'var(--color-primary-soft)' : 'var(--bg-secondary)',
+                  padding: '8px 12px',
+                }}
+              >
+                {/* Timeline dot */}
+                <div style={{
+                  position: 'absolute',
+                  left: -24,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: idx === 0 ? 'var(--color-primary)' : 'var(--border-primary)',
+                  border: '2px solid var(--bg-primary)',
+                }} />
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: idx === 0 ? 'var(--color-primary)' : 'var(--text-primary)' }}>
+                      {v.label ?? 'Snapshot'}
+                      {idx === 0 && <span style={{ fontSize: 9, marginLeft: 6, fontWeight: 700, textTransform: 'uppercase', background: 'var(--color-primary)', color: '#fff', padding: '1px 5px', borderRadius: 999 }}>latest</span>}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {new Date(v.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <code className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{v.id.substring(0, 8)}</code>
                 </div>
-                <code className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{v.id.substring(0, 8)}</code>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -876,6 +904,184 @@ function CatalogSection() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Readiness Section ─────────────────────────────────────────────────────
+
+function ReadinessSection({
+  level,
+  agent,
+  workspace,
+  entityId,
+}: {
+  level: EntityLevel;
+  agent: AgentSpec | null;
+  workspace: WorkspaceSpec | null;
+  entityId: string;
+}) {
+  const { state } = useStudioState();
+  const [profile, setProfile] = useState<EffectiveProfileDto | null>(null);
+
+  useEffect(() => {
+    if (level === 'workspace' || level === 'agent' || level === 'subagent') {
+      getEffectiveProfile(level as CanonicalNodeLevel, entityId).then(setProfile).catch(() => null);
+    }
+  }, [level, entityId]);
+
+  // Compute per-section readiness (0–1)
+  const axes = useMemo(() => {
+    if (level === 'agent' || level === 'subagent') {
+      const a = agent;
+      return [
+        { label: 'Identity',      value: a ? (a.name ? 0.5 : 0) + (a.role ? 0.25 : 0) + (a.description ? 0.25 : 0) : 0 },
+        { label: 'Instructions',  value: a?.instructions ? Math.min(1, a.instructions.length / 200) : 0 },
+        { label: 'Skills',        value: a?.skillRefs?.length ? Math.min(1, a.skillRefs.length / 5) : 0 },
+        { label: 'Routing',       value: a?.channelBindings?.length ? Math.min(1, a.channelBindings.filter((b) => b.enabled).length / Math.max(1, a.channelBindings.length)) : 0 },
+        { label: 'Handoffs',      value: a?.handoffRules?.length ? Math.min(1, a.handoffRules.length / 3) : 0 },
+        { label: 'Profile',       value: profile?.catalogProfile ? 1 : 0 },
+      ];
+    }
+    if (level === 'workspace') {
+      const w = workspace;
+      return [
+        { label: 'Identity',   value: w ? (w.name ? 0.5 : 0) + (w.defaultModel ? 0.5 : 0) : 0 },
+        { label: 'Agents',     value: Math.min(1, (w?.agentIds?.length ?? 0) / 5) },
+        { label: 'Skills',     value: Math.min(1, (w?.skillIds?.length ?? 0) / 5) },
+        { label: 'Profiles',   value: Math.min(1, (w?.profileIds?.length ?? 0) / 2) },
+        { label: 'Policies',   value: Math.min(1, (w?.policyRefs?.length ?? 0) / 3) },
+        { label: 'Routing',    value: Math.min(1, (w?.routingRules?.length ?? 0) / 4) },
+      ];
+    }
+    if (level === 'agency') {
+      const skills = state.skills ?? [];
+      const agents = state.agents ?? [];
+      return [
+        { label: 'Agents',     value: Math.min(1, agents.length / 5) },
+        { label: 'Skills',     value: Math.min(1, skills.length / 5) },
+        { label: 'Flows',      value: Math.min(1, (state.flows?.length ?? 0) / 3) },
+        { label: 'Profiles',   value: Math.min(1, (state.profiles?.length ?? 0) / 3) },
+        { label: 'Runtime',    value: state.runtime?.health?.ok ? 1 : 0 },
+      ];
+    }
+    return [];
+  }, [level, agent, workspace, profile, state]);
+
+  const overallPct = axes.length > 0 ? Math.round((axes.reduce((sum, a) => sum + a.value, 0) / axes.length) * 100) : 0;
+
+  // Inheritance matrix (profile-scoped only)
+  const showInheritance = level === 'agent' || level === 'subagent' || level === 'workspace';
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Config Readiness</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {overallPct}% complete across {axes.length} dimensions
+          </p>
+        </div>
+        <div
+          style={{
+            fontSize: 20,
+            fontWeight: 800,
+            color: overallPct >= 80 ? 'var(--tone-success-text, #10b981)' : overallPct >= 50 ? 'var(--tone-warning-text, #f59e0b)' : 'var(--tone-danger-text, #ef4444)',
+          }}
+        >
+          {overallPct}%
+        </div>
+      </div>
+
+      {/* Radar chart + per-axis bars */}
+      {axes.length >= 3 && (
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+          <RadarChart axes={axes} size={160} color="var(--color-primary)" />
+          <div style={{ flex: 1, minWidth: 120, display: 'grid', gap: 8 }}>
+            {axes.map((axis) => {
+              const pct = Math.round(axis.value * 100);
+              const color = pct >= 80 ? 'var(--tone-success-text, #10b981)' : pct >= 40 ? 'var(--tone-warning-text, #f59e0b)' : 'var(--tone-danger-text, #ef4444)';
+              return (
+                <div key={axis.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{axis.label}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color }}>{pct}%</span>
+                  </div>
+                  <div style={{ height: 3, background: 'var(--border-primary)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Inheritance/override matrix */}
+      {showInheritance && profile && (
+        <div
+          className="rounded-lg border overflow-hidden"
+          style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
+        >
+          <div
+            style={{
+              padding: '8px 12px',
+              borderBottom: '1px solid var(--border-primary)',
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.07em',
+              color: 'var(--text-muted)',
+            }}
+          >
+            Inheritance &amp; Override Matrix
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead>
+              <tr>
+                {['Property', 'Effective Value', 'Source', 'Overridden?'].map((h) => (
+                  <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', borderBottom: '1px solid var(--border-primary)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { prop: 'Model',    effective: profile.effectiveModel ?? '—',                   source: profile.appliedAtLevel ?? 'none',   overridden: Boolean(profile.overrides?.model) },
+                { prop: 'Skills',   effective: profile.effectiveSkills.slice(0, 3).join(', ') || '—', source: profile.appliedAtLevel ?? 'none',   overridden: Boolean(profile.overrides?.skills?.length) },
+                { prop: 'Routines', effective: profile.effectiveRoutines.slice(0, 2).join(', ') || '—', source: profile.appliedAtLevel ?? 'none', overridden: Boolean(profile.overrides?.routines?.length) },
+                { prop: 'Tags',     effective: profile.effectiveTags.slice(0, 3).join(', ') || '—',    source: profile.appliedAtLevel ?? 'none', overridden: Boolean(profile.overrides?.tags?.length) },
+              ].map((row, i) => (
+                <tr key={row.prop} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-primary)' }}>
+                  <td style={{ padding: '5px 10px', color: 'var(--text-muted)', fontWeight: 600 }}>{row.prop}</td>
+                  <td style={{ padding: '5px 10px', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{row.effective}</td>
+                  <td style={{ padding: '5px 10px', color: 'var(--text-muted)' }}>{String(row.source)}</td>
+                  <td style={{ padding: '5px 10px' }}>
+                    <span style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      borderRadius: 999,
+                      padding: '1px 6px',
+                      background: row.overridden ? 'var(--tone-warning-bg, rgba(245,158,11,0.08))' : 'var(--bg-tertiary)',
+                      color: row.overridden ? 'var(--tone-warning-text, #f59e0b)' : 'var(--text-muted)',
+                    }}>
+                      {row.overridden ? 'overridden' : 'inherited'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showInheritance && !profile && (
+        <div className="py-4 text-center rounded-lg border border-dashed" style={{ borderColor: 'var(--border-primary)' }}>
+          <Target size={20} className="mx-auto mb-1" style={{ color: 'var(--text-muted)' }} />
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No profile bound. Bind a profile to see the inheritance matrix.</p>
         </div>
       )}
     </div>
@@ -1070,6 +1276,14 @@ export default function EntityEditorPage() {
           {activeSection === 'hooks' && <HooksSection />}
           {activeSection === 'versions' && <VersionsSection />}
           {activeSection === 'operations' && <OperationsSection />}
+          {activeSection === 'readiness' && (
+            <ReadinessSection
+              level={entityLevel}
+              agent={activeAgent}
+              workspace={workspace}
+              entityId={selectedNode?.id ?? ''}
+            />
+          )}
         </div>
       </div>
     </div>

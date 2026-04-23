@@ -1,7 +1,18 @@
-import type { CSSProperties } from 'react';
-import { Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, PlayCircle } from 'lucide-react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, PlayCircle, DollarSign, Shield } from 'lucide-react';
 
 import type { DashboardOperationsDto, DashboardScopeCapabilities, TopologyRuntimeAction } from '../../../../lib/types';
+import { getDashboardOperationsBudgets, getDashboardOperationsPolicies } from '../../../../lib/api';
+
+interface BudgetEntry {
+  id: string; name: string; scope: string; limitUsd: number;
+  periodDays: number; currentUsageUsd: number; enabled: boolean;
+  createdAt: string; updatedAt: string;
+}
+
+interface PolicyEntry {
+  id: string; name: string; [key: string]: unknown;
+}
 
 const ACTION_META: Record<TopologyRuntimeAction, { label: string; description: string }> = {
   pause:      { label: 'Pause',      description: 'Suspend active processing' },
@@ -19,14 +30,28 @@ export function OperationsSurface({
   busyAction,
   capabilities,
   onRuntimeAction,
+  level,
+  id,
 }: {
   data: DashboardOperationsDto;
   busyAction: TopologyRuntimeAction | null;
   capabilities?: DashboardScopeCapabilities;
   onRuntimeAction: (action: TopologyRuntimeAction) => void;
+  level?: string;
+  id?: string;
 }) {
   const supportedActions = capabilities?.topologyActions ?? [];
   const hasCapabilities = supportedActions.length > 0;
+
+  const [budgets, setBudgets] = useState<BudgetEntry[]>([]);
+  const [policies, setPolicies] = useState<PolicyEntry[]>([]);
+
+  useEffect(() => {
+    if (!level || !id) return;
+    const lvl = level as import('../../../../lib/types').CanonicalNodeLevel;
+    void getDashboardOperationsBudgets(lvl, id).then((r) => setBudgets(r.budgets)).catch(() => null);
+    void getDashboardOperationsPolicies(lvl, id).then((r) => setPolicies(r.policies)).catch(() => null);
+  }, [level, id]);
 
   return (
     <section style={panelStyle}>
@@ -164,6 +189,56 @@ export function OperationsSurface({
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Governance: Budgets ───────────────────────────────────────── */}
+      {budgets.length > 0 && (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <DollarSign size={11} style={{ color: 'var(--text-muted)' }} />
+            <div style={sectionLabelStyle}>Budgets</div>
+          </div>
+          {budgets.slice(0, 5).map((b) => {
+            const pct = b.limitUsd > 0 ? Math.min(100, (b.currentUsageUsd / b.limitUsd) * 100) : 0;
+            const tone = pct > 90 ? 'var(--tone-danger-text, #ef4444)' : pct > 75 ? 'var(--tone-warning-text, #f59e0b)' : 'var(--tone-success-text, #10b981)';
+            return (
+              <div key={b.id} style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', padding: '8px 10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>{b.name}</span>
+                    <span style={{ fontSize: 9, color: 'var(--text-muted)', marginLeft: 6, textTransform: 'uppercase' }}>{b.scope} · {b.periodDays}d</span>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: tone }}>
+                    ${b.currentUsageUsd.toFixed(2)} / ${b.limitUsd.toFixed(2)}
+                  </span>
+                </div>
+                <div style={{ height: 4, borderRadius: 99, background: 'var(--border-primary)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: tone, borderRadius: 99, transition: 'width 0.4s' }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Governance: Policies ─────────────────────────────────────── */}
+      {policies.length > 0 && (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Shield size={11} style={{ color: 'var(--text-muted)' }} />
+            <div style={sectionLabelStyle}>Policies ({policies.length})</div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {policies.slice(0, 8).map((p) => (
+              <span key={p.id} style={{ fontSize: 10, fontWeight: 600, borderRadius: 999, padding: '2px 8px', background: 'var(--color-primary-soft)', color: 'var(--color-primary)', border: '1px solid var(--color-primary)' }}>
+                {String(p.name)}
+              </span>
+            ))}
+            {policies.length > 8 && (
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>+{policies.length - 8} more</span>
+            )}
+          </div>
         </div>
       )}
     </section>
