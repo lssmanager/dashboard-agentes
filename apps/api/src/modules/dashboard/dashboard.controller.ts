@@ -173,6 +173,30 @@ export function registerDashboardRoutes(router: Router) {
     res.json(await service.getMetricsLatency(query.value, query.warnings));
   });
 
+  router.get('/dashboard/metrics/sessions-heatmap', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getMetricsSessionsHeatmap(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/metrics/runs-token-correlation', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getMetricsRunsTokenCorrelation(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/metrics/budget-forecast', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getMetricsBudgetForecast(query.value, query.warnings));
+  });
+
   // ── Connections Visuals ────────────────────────────────────────────────────
   router.get('/dashboard/connections/metering', async (req, res) => {
     const query = parseMetricInput(req as any, { allowGranularity: false });

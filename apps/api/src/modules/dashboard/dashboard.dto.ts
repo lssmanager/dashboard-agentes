@@ -397,6 +397,34 @@ export interface MetricsLatencyDto {
   models: Array<{ model: string; p50ms: number; p95ms: number }>;
 }
 
+export interface MetricsSessionsHeatmapDto {
+  scope: ScopeDto;
+  window: string;
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  cells: Array<{ weekday: number; hour: number; sessions: number }>;
+}
+
+export interface MetricsRunsTokenCorrelationDto {
+  scope: ScopeDto;
+  window: string;
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  points: Array<{ hourBucket: string; runs: number; tokens: number }>;
+}
+
+export interface MetricsBudgetForecastDto {
+  scope: ScopeDto;
+  window: string;
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  currentSpendUsd: number;
+  softCapUsd: number;
+  hardCapUsd: number;
+  projectedSoftCapAt: string | null;
+  projectedHardCapAt: string | null;
+}
+
 export interface ConnectionsMeteringDto {
   scope: ScopeDto;
   window: string;

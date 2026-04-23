@@ -26,6 +26,9 @@ import {
   MetricsBudgetDto,
   MetricsKpisDto,
   MetricsLatencyDto,
+  MetricsSessionsHeatmapDto,
+  MetricsRunsTokenCorrelationDto,
+  MetricsBudgetForecastDto,
   MetricsModelMixDto,
   MetricsRunsDto,
   MetricsSessionsDto,
@@ -764,6 +767,24 @@ export async function getMetricsLatency(level: CanonicalNodeLevel, id: string, w
   const params = new URLSearchParams({ level, id, window });
   const response = await fetch(`${API_BASE}/dashboard/metrics/latency?${params.toString()}`);
   return parseJson<MetricsLatencyDto>(response);
+}
+
+export async function getMetricsSessionsHeatmap(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/metrics/sessions-heatmap?${params.toString()}`);
+  return parseJson<MetricsSessionsHeatmapDto>(response);
+}
+
+export async function getMetricsRunsTokenCorrelation(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/metrics/runs-token-correlation?${params.toString()}`);
+  return parseJson<MetricsRunsTokenCorrelationDto>(response);
+}
+
+export async function getMetricsBudgetForecast(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/metrics/budget-forecast?${params.toString()}`);
+  return parseJson<MetricsBudgetForecastDto>(response);
 }
 
 // ── Connections Visuals ───────────────────────────────────────────────────

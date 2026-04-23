@@ -712,6 +712,34 @@ export interface MetricsLatencyDto {
   models: Array<{ model: string; p50ms: number; p95ms: number }>;
 }
 
+export interface MetricsSessionsHeatmapDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  cells: Array<{ weekday: number; hour: number; sessions: number }>;
+}
+
+export interface MetricsRunsTokenCorrelationDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  points: Array<{ hourBucket: string; runs: number; tokens: number }>;
+}
+
+export interface MetricsBudgetForecastDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  currentSpendUsd: number;
+  softCapUsd: number;
+  hardCapUsd: number;
+  projectedSoftCapAt: string | null;
+  projectedHardCapAt: string | null;
+}
+
 export interface ConnectionsMeteringDto {
   scope: DashboardScope;
   window: string;

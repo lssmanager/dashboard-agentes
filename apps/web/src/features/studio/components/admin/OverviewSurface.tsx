@@ -1,7 +1,20 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Activity, Zap, BookOpen, GitBranch, Anchor, Radio, CheckCircle, XCircle } from 'lucide-react';
 
-import type { CanonicalNodeLevel, DashboardOverviewDto, MetricsKpisDto, MetricsRunsDto, MetricsTokensDto, MetricsSessionsDto, MetricsBudgetDto, MetricsModelMixDto, MetricsLatencyDto } from '../../../../lib/types';
+import type {
+  CanonicalNodeLevel,
+  DashboardOverviewDto,
+  MetricsKpisDto,
+  MetricsRunsDto,
+  MetricsTokensDto,
+  MetricsSessionsDto,
+  MetricsBudgetDto,
+  MetricsModelMixDto,
+  MetricsLatencyDto,
+  MetricsSessionsHeatmapDto,
+  MetricsRunsTokenCorrelationDto,
+  MetricsBudgetForecastDto,
+} from '../../../../lib/types';
 import {
   getMetricsKpis,
   getMetricsRuns,
@@ -10,6 +23,9 @@ import {
   getMetricsBudget,
   getMetricsModelMix,
   getMetricsLatency,
+  getMetricsSessionsHeatmap,
+  getMetricsRunsTokenCorrelation,
+  getMetricsBudgetForecast,
 } from '../../../../lib/api';
 import { Sparkline, AreaChart, BarChart, DonutChart, BulletGauge, LatencyBar } from '../../../../components/ui/Charts';
 import { AnalyticsStateBoundary } from '../../../analytics/components/AnalyticsStateBoundary';
@@ -30,6 +46,9 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
   const [budget, setBudget] = useState<MetricsBudgetDto | null>(null);
   const [modelMix, setModelMix] = useState<MetricsModelMixDto | null>(null);
   const [latency, setLatency] = useState<MetricsLatencyDto | null>(null);
+  const [sessionsHeatmap, setSessionsHeatmap] = useState<MetricsSessionsHeatmapDto | null>(null);
+  const [runsTokenCorrelation, setRunsTokenCorrelation] = useState<MetricsRunsTokenCorrelationDto | null>(null);
+  const [budgetForecast, setBudgetForecast] = useState<MetricsBudgetForecastDto | null>(null);
 
   useEffect(() => {
     void getMetricsKpis(level, id, window).then(setKpis).catch(() => null);
@@ -39,6 +58,9 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
     void getMetricsBudget(level, id, window).then(setBudget).catch(() => null);
     void getMetricsModelMix(level, id, window).then(setModelMix).catch(() => null);
     void getMetricsLatency(level, id, window).then(setLatency).catch(() => null);
+    void getMetricsSessionsHeatmap(level, id, window).then(setSessionsHeatmap).catch(() => null);
+    void getMetricsRunsTokenCorrelation(level, id, window).then(setRunsTokenCorrelation).catch(() => null);
+    void getMetricsBudgetForecast(level, id, window).then(setBudgetForecast).catch(() => null);
   }, [level, id, window]);
 
   const runsTrend = kpis?.runs.trend.map((p) => p.value) ?? [];
@@ -356,6 +378,62 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
       )}
 
       {/* ── Version footer ───────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Sessions Heatmap (P1)</div>
+          {sessionsHeatmap ? (
+            <AnalyticsStateBoundary state={sessionsHeatmap.state ?? 'ready'} title="Sessions heatmap">
+              <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: 2 }}>
+                {sessionsHeatmap.cells.filter((cell) => cell.hour % 4 === 0).slice(0, 84).map((cell, idx) => {
+                  const intensity = Math.min(1, cell.sessions / 6);
+                  return <div key={`${cell.weekday}-${cell.hour}-${idx}`} title={`d${cell.weekday} h${cell.hour}: ${cell.sessions}`} style={{ height: 10, borderRadius: 2, background: `rgba(59,130,246,${0.12 + intensity * 0.75})`, border: '1px solid var(--border-primary)' }} />;
+                })}
+              </div>
+            </AnalyticsStateBoundary>
+          ) : (
+            <AnalyticsStateBoundary state="planned_not_operational" title="Sessions heatmap">
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Planned or unavailable.</div>
+            </AnalyticsStateBoundary>
+          )}
+        </div>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Runs ↔ Tokens Correlation (P1)</div>
+          {runsTokenCorrelation ? (
+            <AnalyticsStateBoundary state={runsTokenCorrelation.state ?? 'ready'} title="Runs-token correlation">
+              <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                {runsTokenCorrelation.points.slice(-8).map((point) => (
+                  <div key={point.hourBucket} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>{new Date(point.hourBucket).toLocaleTimeString()}</span>
+                    <span style={{ color: 'var(--text-primary)' }}>{point.runs} runs</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{fmt(point.tokens)} tok</span>
+                  </div>
+                ))}
+              </div>
+            </AnalyticsStateBoundary>
+          ) : (
+            <AnalyticsStateBoundary state="planned_not_operational" title="Runs-token correlation">
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Planned or unavailable.</div>
+            </AnalyticsStateBoundary>
+          )}
+        </div>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Budget Forecast (P1)</div>
+          {budgetForecast ? (
+            <AnalyticsStateBoundary state={budgetForecast.state ?? 'ready'} title="Budget forecast">
+              <div style={{ marginTop: 8, display: 'grid', gap: 6, fontSize: 11 }}>
+                <div style={{ color: 'var(--text-muted)' }}>Current: <strong style={{ color: 'var(--text-primary)' }}>${budgetForecast.currentSpendUsd.toFixed(2)}</strong></div>
+                <div style={{ color: 'var(--text-muted)' }}>Soft cap: ${budgetForecast.softCapUsd.toFixed(2)} {budgetForecast.projectedSoftCapAt ? `→ ${new Date(budgetForecast.projectedSoftCapAt).toLocaleDateString()}` : ''}</div>
+                <div style={{ color: 'var(--text-muted)' }}>Hard cap: ${budgetForecast.hardCapUsd.toFixed(2)} {budgetForecast.projectedHardCapAt ? `→ ${new Date(budgetForecast.projectedHardCapAt).toLocaleDateString()}` : ''}</div>
+              </div>
+            </AnalyticsStateBoundary>
+          ) : (
+            <AnalyticsStateBoundary state="planned_not_operational" title="Budget forecast">
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Planned or unavailable.</div>
+            </AnalyticsStateBoundary>
+          )}
+        </div>
+      </div>
+
       {data.versionSummary.latestSnapshotAt && (
         <div style={{ fontSize: 11, color: 'var(--text-muted)', paddingTop: 8, borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

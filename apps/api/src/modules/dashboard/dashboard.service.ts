@@ -31,6 +31,9 @@ import type {
   MetricsBudgetDto,
   MetricsModelMixDto,
   MetricsLatencyDto,
+  MetricsSessionsHeatmapDto,
+  MetricsRunsTokenCorrelationDto,
+  MetricsBudgetForecastDto,
   ConnectionsMeteringDto,
   ConnectionsRadialDto,
   ConnectionsDependencyGraphDto,
@@ -634,7 +637,7 @@ export class DashboardService {
   // ── Analytics Metrics ─────────────────────────────────────────────────────
 
   private windowPoints(window: string): number {
-    const map: Record<string, number> = { '1H': 12, '4H': 16, '6H': 12, '8H': 16, '12H': 12, '24H': 24, '3D': 18, '7D': 28, '15D': 30, '1M': 30, '2M': 24, '3M': 36, '1Y': 52 };
+    const map: Record<string, number> = { '1H': 12, '4H': 16, '6H': 12, '8H': 16, '12H': 12, '24H': 24, '3D': 18, '7D': 28, '15D': 30, '1M': 30, '2M': 24, '3M': 36, '6M': 36, '1Y': 52 };
     return map[window] ?? 24;
   }
 
@@ -652,6 +655,7 @@ export class DashboardService {
       '1M': 30 * 86400e3,
       '2M': 60 * 86400e3,
       '3M': 90 * 86400e3,
+      '6M': 180 * 86400e3,
       '1Y': 365 * 86400e3,
     };
     return map[window] ?? 24 * 3600e3;
@@ -953,6 +957,111 @@ export class DashboardService {
       state: this.analyticsState(Boolean(canonical.runtime.health.ok), models.length > 0),
       meta: { warnings, source: 'run_durations' },
       models,
+    };
+  }
+
+  async getMetricsSessionsHeatmap(input: MetricsQueryDto, warnings: string[] = []): Promise<MetricsSessionsHeatmapDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const cellsMap = new Map<string, number>();
+    for (const session of resolved.sessions) {
+      if (!session.lastEventAt) {
+        continue;
+      }
+      const date = new Date(session.lastEventAt);
+      if (!Number.isFinite(date.getTime())) {
+        continue;
+      }
+      const weekday = date.getUTCDay();
+      const hour = date.getUTCHours();
+      const key = `${weekday}-${hour}`;
+      cellsMap.set(key, (cellsMap.get(key) ?? 0) + 1);
+    }
+
+    const cells: MetricsSessionsHeatmapDto['cells'] = [];
+    for (let weekday = 0; weekday < 7; weekday += 1) {
+      for (let hour = 0; hour < 24; hour += 1) {
+        const key = `${weekday}-${hour}`;
+        cells.push({ weekday, hour, sessions: cellsMap.get(key) ?? 0 });
+      }
+    }
+
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), resolved.sessions.length > 0),
+      meta: { warnings, source: 'sessions_heatmap_projection' },
+      cells,
+    };
+  }
+
+  async getMetricsRunsTokenCorrelation(input: MetricsQueryDto, warnings: string[] = []): Promise<MetricsRunsTokenCorrelationDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const timeline = this.buildTimeline(input.window);
+    const starts = timeline.map((ts) => new Date(ts).getTime());
+    const runs = this.filterRunsByScope(canonical, resolved.workspaceIds, resolved.agentIds);
+    const runsByBucket = Array.from({ length: timeline.length }, () => 0);
+    const tokensByBucket = Array.from({ length: timeline.length }, () => 0);
+
+    for (const run of runs) {
+      const time = new Date(run.startedAt).getTime();
+      if (!Number.isFinite(time)) {
+        continue;
+      }
+      let idx = starts.findIndex((bucket, i) => time >= bucket && (i === starts.length - 1 || time < starts[i + 1]));
+      if (idx === -1 && time >= starts[starts.length - 1]) {
+        idx = starts.length - 1;
+      }
+      if (idx < 0) {
+        continue;
+      }
+      runsByBucket[idx] += 1;
+      tokensByBucket[idx] += run.steps.reduce((acc, step) => acc + (step.tokenUsage?.input ?? 0) + (step.tokenUsage?.output ?? 0), 0);
+    }
+
+    const points = timeline.map((ts, idx) => ({
+      hourBucket: ts,
+      runs: runsByBucket[idx] ?? 0,
+      tokens: tokensByBucket[idx] ?? 0,
+    }));
+
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), points.some((point) => point.runs > 0)),
+      meta: { warnings, source: 'runs_tokens_correlation_projection' },
+      points,
+    };
+  }
+
+  async getMetricsBudgetForecast(input: MetricsQueryDto, warnings: string[] = []): Promise<MetricsBudgetForecastDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const budgets = this.budgetsService.findAll();
+    const currentSpendUsd = budgets.reduce((acc, item) => acc + (item.currentUsageUsd ?? 0), 0);
+    const hardCapUsd = budgets.reduce((acc, item) => acc + (item.limitUsd ?? 0), 0);
+    const softCapUsd = hardCapUsd * 0.75;
+
+    const runs = this.filterRunsByScope(canonical, resolved.workspaceIds, resolved.agentIds);
+    const totalRunCost = runs.reduce((acc, run) => acc + run.steps.reduce((stepAcc, step) => stepAcc + (step.costUsd ?? 0), 0), 0);
+    const dailyBurn = Math.max(totalRunCost / 30, 0.01);
+
+    const now = Date.now();
+    const toIso = (days: number) => new Date(now + days * 86400e3).toISOString();
+    const projectedSoftCapAt = currentSpendUsd >= softCapUsd ? new Date(now).toISOString() : toIso((softCapUsd - currentSpendUsd) / dailyBurn);
+    const projectedHardCapAt = currentSpendUsd >= hardCapUsd ? new Date(now).toISOString() : toIso((hardCapUsd - currentSpendUsd) / dailyBurn);
+
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), hardCapUsd > 0),
+      meta: { warnings, source: 'budget_forecast_projection' },
+      currentSpendUsd: Math.round(currentSpendUsd * 100) / 100,
+      softCapUsd: Math.round(softCapUsd * 100) / 100,
+      hardCapUsd: Math.round(hardCapUsd * 100) / 100,
+      projectedSoftCapAt: Number.isFinite(new Date(projectedSoftCapAt).getTime()) ? projectedSoftCapAt : null,
+      projectedHardCapAt: Number.isFinite(new Date(projectedHardCapAt).getTime()) ? projectedHardCapAt : null,
     };
   }
 
