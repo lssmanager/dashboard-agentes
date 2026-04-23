@@ -5,7 +5,9 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NavRail } from '../components/NavRail';
 import { ContextPanel } from '../components/ContextPanel';
 import { Header } from '../components/Header';
+import { KeyboardShortcutsHelp } from '../components/ui/KeyboardShortcutsHelp';
 import { useHierarchy } from '../lib/HierarchyContext';
+import { usePreferences } from '../lib/usePreferences';
 import { SCOPE_VIEW_REGISTRY } from '../lib/ScopeViewRegistry';
 import {
   buildStudioHref,
@@ -40,7 +42,9 @@ export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const { setSurface, setBuilderTab, selectByKey, tree, selectedKey, selectedBuilderTab, selectedLevel } = useHierarchy();
+  const { layoutMode } = usePreferences();
 
   const isDesktop = useMediaQuery('(min-width: 1120px)');
   const isMobile = !useMediaQuery('(min-width: 769px)');
@@ -82,14 +86,36 @@ export function MainLayout() {
   // ── Keyboard shortcut Alt+[ to toggle hierarchy ────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Ignore when focus is inside an input / textarea
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
       if (e.altKey && e.key === '[') {
         e.preventDefault();
         setPanelCollapsed((v) => !v);
       }
+      // Navigation shortcuts
+      if (e.altKey && e.key === '1') {
+        e.preventDefault();
+        navigate(buildStudioHref({ surface: 'agency-builder', tab: selectedBuilderTab, nodeKey: selectedKey }));
+      }
+      if (e.altKey && e.key === '2') {
+        e.preventDefault();
+        navigate(buildStudioHref({ surface: 'workspace-studio', nodeKey: selectedKey }));
+      }
+      if (e.altKey && e.key === '3') {
+        e.preventDefault();
+        navigate(buildStudioHref({ surface: 'entity-editor', nodeKey: selectedKey }));
+      }
+      // Shortcuts help
+      if (e.key === '?' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [navigate, selectedBuilderTab, selectedKey]);
 
   // ── Drag-to-resize ─────────────────────────────────────────────────────
   const isDragging = useRef(false);
@@ -133,7 +159,10 @@ export function MainLayout() {
   const contentCol = isMobile ? '1' : showContext ? '4' : '2';
   const headerCol = contentCol;
 
-  const mainPadding = isStudioEnvironment ? '0' : isStudioSurface ? '14px 14px 18px' : '20px 22px 28px';
+  const isCompact = layoutMode === 'compact';
+  const mainPadding = isStudioEnvironment ? '0' : isStudioSurface
+    ? (isCompact ? '10px 10px 14px' : '14px 14px 18px')
+    : (isCompact ? '14px 16px 20px' : '20px 22px 28px');
 
   useEffect(() => {
     setSurface(activeSurface);
@@ -306,7 +335,7 @@ export function MainLayout() {
         )}
 
         <div style={{ flex: 1 }} />
-        <Header onToggleSidebar={() => setMobileOpen((open) => !open)} showHamburger={isMobile} />
+        <Header onToggleSidebar={() => setMobileOpen((open) => !open)} showHamburger={isMobile} onOpenShortcuts={() => setShortcutsOpen((v) => !v)} />
       </header>
 
       {/* Main content area */}
@@ -335,6 +364,9 @@ export function MainLayout() {
           </div>
         </>
       )}
+
+      {/* Keyboard shortcuts help overlay */}
+      <KeyboardShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }

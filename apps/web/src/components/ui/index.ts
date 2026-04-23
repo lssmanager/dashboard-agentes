@@ -46,3 +46,4 @@ export { DataGridCard } from './DataGridCard';
 export { SplitPaneShell } from './SplitPaneShell';
 export { EntityHero } from './EntityHero';
 export { CommandBar } from './CommandBar';
+export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';

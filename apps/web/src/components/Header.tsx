@@ -1,24 +1,27 @@
-import { Menu, Moon, Plus, RotateCw, Sun } from 'lucide-react';
+import { Keyboard, Menu, Moon, Plus, RotateCw, Sun, Columns2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 import { useHierarchy } from '../lib/HierarchyContext';
 import { useOnboarding } from '../lib/OnboardingContext';
 import { useStudioState } from '../lib/StudioStateContext';
 import { useTheme } from '../lib/ThemeProvider';
+import { usePreferences } from '../lib/usePreferences';
 import { getSurfaceLabel, surfaceFromPath } from '../lib/studioRouting';
 import { RuntimeBadge } from './ui/RuntimeBadge';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
   showHamburger?: boolean;
+  onOpenShortcuts?: () => void;
 }
 
-export function Header({ onToggleSidebar, showHamburger = false }: HeaderProps) {
+export function Header({ onToggleSidebar, showHamburger = false, onOpenShortcuts }: HeaderProps) {
   const location = useLocation();
   const { state, refresh } = useStudioState();
   const { selectedLineage } = useHierarchy();
   const { theme, toggleTheme } = useTheme();
   const { openOnboarding } = useOnboarding();
+  const { layoutMode, setLayoutMode } = usePreferences();
 
   const workspace = state.workspace;
   const surfaceLabel = getSurfaceLabel(surfaceFromPath(location.pathname));
@@ -153,6 +156,34 @@ export function Header({ onToggleSidebar, showHamburger = false }: HeaderProps) 
         >
           <RotateCw size={15} />
         </button>
+
+        <button
+          onClick={() => setLayoutMode(layoutMode === 'compact' ? 'normal' : 'compact')}
+          style={{ ...iconButton, background: layoutMode === 'compact' ? 'var(--color-primary-soft)' : undefined, color: layoutMode === 'compact' ? 'var(--color-primary)' : undefined }}
+          title={layoutMode === 'compact' ? 'Switch to normal density' : 'Switch to compact density'}
+        >
+          <Columns2 size={15} />
+        </button>
+
+        {onOpenShortcuts && (
+          <button
+            onClick={onOpenShortcuts}
+            style={iconButton}
+            onMouseEnter={(event) => {
+              const current = event.currentTarget as HTMLElement;
+              current.style.background = 'var(--card-hover)';
+              current.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(event) => {
+              const current = event.currentTarget as HTMLElement;
+              current.style.background = 'var(--shell-chip-bg)';
+              current.style.color = 'var(--text-muted)';
+            }}
+            title="Keyboard shortcuts (?)"
+          >
+            <Keyboard size={15} />
+          </button>
+        )}
 
         <button
           onClick={toggleTheme}
