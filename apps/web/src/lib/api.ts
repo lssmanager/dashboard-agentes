@@ -12,7 +12,10 @@ import {
   CoreFilesPreviewResponse,
   DashboardConnectionsDto,
   DashboardInspectorDto,
+  DashboardOperationsAlertsDto,
+  DashboardOperationsCostProfileDto,
   DashboardOperationsDto,
+  DashboardOperationsRuntimeStateDto,
   DashboardOverviewDto,
   DashboardRunsDto,
   DeployPreview,
@@ -156,6 +159,31 @@ export async function getDashboardInspector(level: CanonicalNodeLevel, id: strin
 export async function getDashboardOperations(level: CanonicalNodeLevel, id: string) {
   const response = await fetch(`${API_BASE}/dashboard/operations?${toScopeQuery(level, id)}`);
   return parseJson<DashboardOperationsDto>(response);
+}
+
+export async function getDashboardOperationsRuntimeState(level: CanonicalNodeLevel, id: string) {
+  const response = await fetch(`${API_BASE}/dashboard/operations/runtime-state?${toScopeQuery(level, id)}`);
+  return parseJson<DashboardOperationsRuntimeStateDto>(response);
+}
+
+export async function getDashboardOperationsAlerts(
+  level: CanonicalNodeLevel,
+  id: string,
+  window: AnalyticsWindow = '24H',
+) {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/operations/alerts?${params.toString()}`);
+  return parseJson<DashboardOperationsAlertsDto>(response);
+}
+
+export async function getDashboardOperationsCostProfile(
+  level: CanonicalNodeLevel,
+  id: string,
+  window: AnalyticsWindow = '24H',
+) {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/operations/cost-profile?${params.toString()}`);
+  return parseJson<DashboardOperationsCostProfileDto>(response);
 }
 
 export async function getDashboardOperationsBudgets(level: CanonicalNodeLevel, id: string) {

@@ -154,32 +154,38 @@ export function ConnectionsSurface({ data }: { data: DashboardConnectionsDto }) 
 
       {/* ── Topology graph ────────────────────────────────────────── */}
       {topology && topology.nodes.length > 0 && (
+        <AnalyticsStateBoundary state={topology.state ?? 'ready'} title="Topology graph">
         <div style={sectionCard}>
           <div style={cardLabel}>Topology</div>
           <div style={{ marginTop: 8 }}>
             <TopologyGraph nodes={topology.nodes} edges={topology.edges} height={220} />
           </div>
         </div>
+        </AnalyticsStateBoundary>
       )}
 
       {/* ── Dependency graph ──────────────────────────────────────── */}
       {depGraph && depGraph.nodes.length > 1 && !topology?.nodes.length && (
+        <AnalyticsStateBoundary state={depGraph.state ?? 'ready'} title="Dependency graph">
         <div style={sectionCard}>
           <div style={cardLabel}>Dependency Graph</div>
           <div style={{ marginTop: 8 }}>
             <TopologyGraph nodes={depGraph.nodes} edges={depGraph.edges} height={200} />
           </div>
         </div>
+        </AnalyticsStateBoundary>
       )}
 
       {/* ── Flow graph (Sankey) ───────────────────────────────────── */}
       {flowGraph && flowGraph.links.length > 0 && (
+        <AnalyticsStateBoundary state={flowGraph.state ?? 'ready'} title="Flow graph">
         <div style={sectionCard}>
           <div style={cardLabel}>Agent Flow</div>
           <div style={{ marginTop: 8 }}>
             <FlowSankey nodes={flowGraph.nodes} links={flowGraph.links} height={160} />
           </div>
         </div>
+        </AnalyticsStateBoundary>
       )}
 
       {/* ── Edge list ──────────────────────────────────────────────── */}

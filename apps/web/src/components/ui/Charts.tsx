@@ -338,6 +338,15 @@ const NODE_COLOR: Record<string, string> = {
   subagent:   '#06b6d4',
 };
 
+const HEALTH_COLOR: Record<string, string> = {
+  ok: 'var(--tone-success-text, #10b981)',
+  warning: 'var(--tone-warning-text, #f59e0b)',
+  critical: 'var(--tone-danger-text, #ef4444)',
+  connected: 'var(--tone-success-text, #10b981)',
+  paused: 'var(--tone-warning-text, #f59e0b)',
+  disconnected: 'var(--tone-danger-text, #ef4444)',
+};
+
 export function TopologyGraph({ nodes, edges, height = 220 }: TopologyGraphProps) {
   const width = 360;
 
@@ -378,14 +387,15 @@ export function TopologyGraph({ nodes, edges, height = 220 }: TopologyGraphProps
         const src = nodeMap.get(e.from);
         const tgt = nodeMap.get(e.to);
         if (!src || !tgt) return null;
+        const edgeTone = (e.label ?? '').toLowerCase();
         return (
           <line
             key={i}
             x1={src.cx} y1={src.cy}
             x2={tgt.cx} y2={tgt.cy}
-            stroke="var(--text-muted)"
-            strokeWidth={e.weight ? Math.min(3, e.weight / 2) : 1}
-            opacity={0.35}
+            stroke={HEALTH_COLOR[edgeTone] ?? 'var(--text-muted)'}
+            strokeWidth={e.weight ? Math.min(4, 1 + e.weight / 4) : 1}
+            opacity={0.5}
             markerEnd="url(#arrow)"
           />
         );
@@ -393,7 +403,8 @@ export function TopologyGraph({ nodes, edges, height = 220 }: TopologyGraphProps
 
       {/* nodes */}
       {positioned.map((n) => {
-        const color = NODE_COLOR[n.type] ?? '#94a3b8';
+        const nodeHealth = (n.meta ?? '').toLowerCase();
+        const color = HEALTH_COLOR[nodeHealth] ?? NODE_COLOR[n.type] ?? '#94a3b8';
         const label = n.label.length > 10 ? n.label.slice(0, 9) + '…' : n.label;
         return (
           <g key={n.id}>

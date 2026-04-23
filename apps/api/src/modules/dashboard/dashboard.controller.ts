@@ -50,12 +50,28 @@ export function registerDashboardRoutes(router: Router) {
     res.json(await service.getOperationsRecentRuns(parseScope(req as any)));
   });
 
+  router.get('/dashboard/operations/alerts', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getOperationsAlerts(query.value, query.warnings));
+  });
+
   router.get('/dashboard/operations/pending-actions', async (req, res) => {
     res.json(await service.getOperationsPendingActions(parseScope(req as any)));
   });
 
   router.get('/dashboard/operations/budgets', async (req, res) => {
     res.json(await service.getOperationsBudgets(parseScope(req as any)));
+  });
+
+  router.get('/dashboard/operations/cost-profile', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getOperationsCostProfile(query.value, query.warnings));
   });
 
   router.get('/dashboard/operations/policies', async (req, res) => {

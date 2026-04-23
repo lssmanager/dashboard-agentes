@@ -147,6 +147,9 @@ export interface DashboardOperationsDto {
 export interface DashboardOperationsRuntimeStateDto {
   scope: ScopeDto;
   lineage: LineageItemDto[];
+  runtimeState: 'online' | 'degraded' | 'offline';
+  availableActions: TopologyRuntimeAction[];
+  supportedByRuntime: boolean;
   recentSessions: DashboardOperationsDto['recentSessions'];
 }
 
@@ -154,6 +157,29 @@ export interface DashboardOperationsRecentRunsDto {
   scope: ScopeDto;
   lineage: LineageItemDto[];
   recentRuns: DashboardOperationsDto['recentRuns'];
+}
+
+export interface DashboardOperationsAlertsDto {
+  scope: ScopeDto;
+  window: string;
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  series: Array<{ ts: string; info: number; warning: number; critical: number }>;
+  totals: { info: number; warning: number; critical: number };
+}
+
+export interface DashboardOperationsCostProfileDto {
+  scope: ScopeDto;
+  window: string;
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  rows: Array<{
+    model: string;
+    role: 'primary' | 'fallback' | 'tool-overhead' | 'long-context' | 'other';
+    spendUsd: number;
+    sharePct: number;
+  }>;
+  totalSpendUsd: number;
 }
 
 export interface DashboardOperationsPendingActionsDto {
@@ -449,4 +475,3 @@ export interface EditorVersionsDto {
   data: Array<{ id: string; label: string; at: string; status: 'current' | 'draft' | 'snapshot' }>;
   meta?: AnalyticsMetaDto;
 }
-

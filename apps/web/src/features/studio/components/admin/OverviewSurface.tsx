@@ -11,7 +11,7 @@ import {
   getMetricsModelMix,
   getMetricsLatency,
 } from '../../../../lib/api';
-import { Sparkline, AreaChart, DonutChart, BulletGauge, LatencyBar } from '../../../../components/ui/Charts';
+import { Sparkline, AreaChart, BarChart, DonutChart, BulletGauge, LatencyBar } from '../../../../components/ui/Charts';
 import { AnalyticsStateBoundary } from '../../../analytics/components/AnalyticsStateBoundary';
 import { TimeWindowSelector } from '../../../analytics/components/TimeWindowSelector';
 import type { AnalyticsWindow } from '../../../analytics/types';
@@ -149,6 +149,7 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {/* Tokens */}
         {tokensMetric && (
+          <AnalyticsStateBoundary state={tokensMetric.state ?? 'ready'} title="Tokens metric">
           <div style={sectionCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={cardLabel}>Tokens – 24h</span>
@@ -169,10 +170,12 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
               <Stat label="Completion" value={fmt(tokensMetric.totals.completion)} />
             </div>
           </div>
+          </AnalyticsStateBoundary>
         )}
 
         {/* Sessions */}
         {sessionsMetric && (
+          <AnalyticsStateBoundary state={sessionsMetric.state ?? 'ready'} title="Sessions metric">
           <div style={sectionCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={cardLabel}>Sessions – 24h</span>
@@ -193,6 +196,7 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
               <Stat label="Completed" value={sessionsMetric.totals.completed} />
             </div>
           </div>
+          </AnalyticsStateBoundary>
         )}
 
         {/* Fallback if no metrics yet */}
@@ -244,7 +248,9 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
       {(modelMix || latency) && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {/* Model mix donut */}
-          {modelMix && modelMix.models.length > 0 && (
+          {modelMix && (
+            <AnalyticsStateBoundary state={modelMix.state ?? 'ready'} title="Model mix metric">
+            {modelMix.models.length > 0 && (
             <div style={sectionCard}>
               <div style={cardLabel}>Model Mix</div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8 }}>
@@ -275,9 +281,13 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
               </div>
             </div>
           )}
+            </AnalyticsStateBoundary>
+          )}
 
           {/* Latency bars */}
-          {latency && latency.models.length > 0 && (
+          {latency && (
+            <AnalyticsStateBoundary state={latency.state ?? 'ready'} title="Latency metric">
+            {latency.models.length > 0 && (
             <div style={sectionCard}>
               <div style={cardLabel}>Latency (p50 / p95)</div>
               <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
@@ -287,10 +297,32 @@ export function OverviewSurface({ data }: { data: DashboardOverviewDto }) {
               </div>
             </div>
           )}
+            </AnalyticsStateBoundary>
+          )}
         </div>
       )}
 
       {/* ── Structure + Coverage (always shown) ─────────────────── */}
+      {modelMix && modelMix.models.length > 0 && (
+        <div style={sectionCard}>
+          <div style={cardLabel}>Model Spend Ranked</div>
+          <div style={{ marginTop: 8 }}>
+            <BarChart
+              data={modelMix.models
+                .slice()
+                .sort((a, b) => b.costUsd - a.costUsd)
+                .slice(0, 8)
+                .map((item, index) => ({
+                  label: item.model,
+                  value: Math.max(0, Math.round(item.costUsd * 100)),
+                  color: PALETTE[index % PALETTE.length],
+                }))}
+              height={90}
+            />
+          </div>
+        </div>
+      )}
+
       {(tokensMetric || sessionsMetric) && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={sectionCard}>
@@ -519,3 +551,4 @@ const channelChip: CSSProperties = {
   border: '1px solid var(--border-primary)',
   color: 'var(--text-muted)',
 };
+

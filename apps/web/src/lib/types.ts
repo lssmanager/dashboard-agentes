@@ -530,6 +530,38 @@ export interface DashboardOperationsDto {
   };
 }
 
+export interface DashboardOperationsRuntimeStateDto {
+  scope: DashboardScope;
+  lineage: DashboardLineageItem[];
+  runtimeState: 'online' | 'degraded' | 'offline';
+  availableActions: TopologyRuntimeAction[];
+  supportedByRuntime: boolean;
+  recentSessions: DashboardOperationsDto['recentSessions'];
+}
+
+export interface DashboardOperationsAlertsDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  series: Array<{ ts: string; info: number; warning: number; critical: number }>;
+  totals: { info: number; warning: number; critical: number };
+}
+
+export interface DashboardOperationsCostProfileDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  rows: Array<{
+    model: string;
+    role: 'primary' | 'fallback' | 'tool-overhead' | 'long-context' | 'other';
+    spendUsd: number;
+    sharePct: number;
+  }>;
+  totalSpendUsd: number;
+}
+
 export interface DashboardRunsDto {
   scope: DashboardScope;
   lineage: DashboardLineageItem[];

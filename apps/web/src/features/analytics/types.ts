@@ -11,6 +11,7 @@ export const ANALYTICS_WINDOWS = [
   '1M',
   '2M',
   '3M',
+  '6M',
   '1Y',
 ] as const;
 

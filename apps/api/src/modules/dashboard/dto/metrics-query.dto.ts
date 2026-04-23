@@ -13,6 +13,7 @@ export const SUPPORTED_METRIC_WINDOWS = [
   '1M',
   '2M',
   '3M',
+  '6M',
   '1Y',
 ] as const;
 
@@ -32,6 +33,7 @@ const WINDOW_NORMALIZATION: Record<string, (typeof SUPPORTED_METRIC_WINDOWS)[num
   '1m': '1M',
   '2m': '2M',
   '3m': '3M',
+  '6m': '6M',
   '1y': '1Y',
 };
 

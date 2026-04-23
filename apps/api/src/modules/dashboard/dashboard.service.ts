@@ -18,6 +18,8 @@ import type {
   DashboardOperationsGovernanceStateDto,
   DashboardOperationsRecentRunsDto,
   DashboardOperationsRuntimeStateDto,
+  DashboardOperationsAlertsDto,
+  DashboardOperationsCostProfileDto,
   DashboardOverviewDto,
   DashboardRunsDto,
   RuntimeCommandRequestDto,
@@ -286,9 +288,15 @@ export class DashboardService {
 
   async getOperationsRuntimeState(input: { level?: string; id?: string }): Promise<DashboardOperationsRuntimeStateDto> {
     const operations = await this.getOperations(input);
+    const canonical = await this.studioService.getCanonicalState();
+    const runtimeOk = Boolean(canonical.runtime.health.ok);
+    const availableActions = canonical.topology.supportedActions ?? [];
     return {
       scope: operations.scope,
       lineage: operations.lineage,
+      runtimeState: runtimeOk ? (operations.pendingActions.length > 0 ? 'degraded' : 'online') : 'offline',
+      availableActions,
+      supportedByRuntime: runtimeOk && availableActions.length > 0,
       recentSessions: operations.recentSessions,
     };
   }
@@ -299,6 +307,100 @@ export class DashboardService {
       scope: operations.scope,
       lineage: operations.lineage,
       recentRuns: operations.recentRuns,
+    };
+  }
+
+  async getOperationsAlerts(input: MetricsQueryDto, warnings: string[] = []): Promise<DashboardOperationsAlertsDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const timeline = this.buildTimeline(input.window);
+    const starts = timeline.map((ts) => new Date(ts).getTime());
+    const runs = this.filterRunsByScope(canonical, resolved.workspaceIds, resolved.agentIds);
+    const info = Array.from({ length: timeline.length }, () => 0);
+    const warning = Array.from({ length: timeline.length }, () => 0);
+    const critical = Array.from({ length: timeline.length }, () => 0);
+
+    for (const run of runs) {
+      const time = new Date(run.startedAt).getTime();
+      if (!Number.isFinite(time)) {
+        continue;
+      }
+      let idx = starts.findIndex((bucket, i) => time >= bucket && (i === starts.length - 1 || time < starts[i + 1]));
+      if (idx === -1 && time >= starts[starts.length - 1]) {
+        idx = starts.length - 1;
+      }
+      if (idx < 0) {
+        continue;
+      }
+
+      if (run.status === 'failed') {
+        critical[idx] += 1;
+      } else if (run.status === 'waiting_approval') {
+        warning[idx] += 1;
+      } else {
+        info[idx] += 1;
+      }
+    }
+
+    const series = timeline.map((ts, idx) => ({
+      ts,
+      info: info[idx] ?? 0,
+      warning: warning[idx] ?? 0,
+      critical: critical[idx] ?? 0,
+    }));
+
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), series.some((row) => row.info + row.warning + row.critical > 0)),
+      meta: { warnings, source: 'operations_runs_alert_projection' },
+      series,
+      totals: {
+        info: series.reduce((acc, row) => acc + row.info, 0),
+        warning: series.reduce((acc, row) => acc + row.warning, 0),
+        critical: series.reduce((acc, row) => acc + row.critical, 0),
+      },
+    };
+  }
+
+  async getOperationsCostProfile(input: MetricsQueryDto, warnings: string[] = []): Promise<DashboardOperationsCostProfileDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const runs = this.filterRunsByScope(canonical, resolved.workspaceIds, resolved.agentIds);
+    const spendByModel = new Map<string, number>();
+
+    for (const run of runs) {
+      const model = (run.metadata?.model as string | undefined) ?? 'unknown';
+      const spend = run.steps.reduce((acc, step) => acc + (step.costUsd ?? 0), 0);
+      spendByModel.set(model, (spendByModel.get(model) ?? 0) + spend);
+    }
+
+    const totalSpendUsd = [...spendByModel.values()].reduce((acc, value) => acc + value, 0);
+    const rows = [...spendByModel.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([model, spendUsd], index) => ({
+        model,
+        role:
+          index === 0
+            ? ('primary' as const)
+            : index === 1
+              ? ('fallback' as const)
+              : model.toLowerCase().includes('tool')
+                ? ('tool-overhead' as const)
+                : model.toLowerCase().includes('long')
+                  ? ('long-context' as const)
+                  : ('other' as const),
+        spendUsd: Math.round(spendUsd * 100) / 100,
+        sharePct: totalSpendUsd > 0 ? Math.round((spendUsd / totalSpendUsd) * 100) : 0,
+      }));
+
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), rows.length > 0),
+      meta: { warnings, source: 'operations_cost_profile_projection' },
+      rows,
+      totalSpendUsd: Math.round(totalSpendUsd * 100) / 100,
     };
   }
 
@@ -903,12 +1005,16 @@ export class DashboardService {
     const nodes: ConnectionsDependencyGraphDto['nodes'] = [];
     const edges: ConnectionsDependencyGraphDto['edges'] = [];
     for (const agent of agents.slice(0, 12)) {
-      nodes.push({ id: `agent:${agent.id}`, label: agent.name, type: 'agent' });
+      const runCount = this
+        .filterRunsByScope(canonical, resolved.workspaceIds, [agent.id])
+        .length;
+      const health = runCount > 20 ? 'critical' : runCount > 5 ? 'warning' : 'ok';
+      nodes.push({ id: `agent:${agent.id}`, label: agent.name, type: 'agent', meta: health });
       for (const skillRef of (agent.skillRefs ?? []).slice(0, 4)) {
         const skill = skills.find(s => s.id === skillRef);
         const skillNodeId = `skill:${skillRef}`;
-        if (!nodes.find(n => n.id === skillNodeId)) nodes.push({ id: skillNodeId, label: skill?.name ?? skillRef, type: 'skill' });
-        edges.push({ from: `agent:${agent.id}`, to: skillNodeId, label: 'uses' });
+        if (!nodes.find(n => n.id === skillNodeId)) nodes.push({ id: skillNodeId, label: skill?.name ?? skillRef, type: 'skill', meta: 'ok' });
+        edges.push({ from: `agent:${agent.id}`, to: skillNodeId, label: health, weight: Math.max(1, runCount) });
       }
     }
     return {
@@ -927,18 +1033,28 @@ export class DashboardService {
     const agents = canonical.agents.filter(a => agentSet.has(a.id));
     const nodes: ConnectionsTopologyDto['nodes'] = [];
     const edges: ConnectionsTopologyDto['edges'] = [];
-    nodes.push({ id: 'workspace', label: canonical.workspace?.name ?? 'Workspace', type: 'workspace', x: 400, y: 280 });
+    nodes.push({ id: 'workspace', label: canonical.workspace?.name ?? 'Workspace', type: 'workspace', x: 400, y: 280, meta: canonical.runtime.health.ok ? 'ok' : 'critical' });
     agents.slice(0, 16).forEach((agent, i) => {
       const angle = (2 * Math.PI * i) / Math.max(agents.length, 1);
       const r = Math.min(200, 80 + agents.length * 12);
-      nodes.push({ id: agent.id, label: agent.name, type: agent.kind ?? 'agent', x: Math.round(400 + r * Math.cos(angle)), y: Math.round(280 + r * Math.sin(angle)), meta: agent.model });
-      edges.push({ from: 'workspace', to: agent.id });
+      const sessionsForAgentWorkspace = resolved.sessions.filter((session) => session.ref.workspaceId === agent.workspaceId).length;
+      const health = sessionsForAgentWorkspace > 10 ? 'critical' : sessionsForAgentWorkspace > 3 ? 'warning' : 'ok';
+      nodes.push({
+        id: agent.id,
+        label: agent.name,
+        type: agent.kind ?? 'agent',
+        x: Math.round(400 + r * Math.cos(angle)),
+        y: Math.round(280 + r * Math.sin(angle)),
+        meta: health,
+      });
+      edges.push({ from: 'workspace', to: agent.id, label: health, weight: Math.max(1, sessionsForAgentWorkspace) });
     });
     const links = canonical.topology.links.slice(0, 20);
     for (const link of links) {
       const conn = canonical.topology.connections.find(c => c.id === link.linkId);
       if (conn && nodes.find(n => n.id === conn.from.id) && nodes.find(n => n.id === conn.to.id)) {
-        edges.push({ from: conn.from.id, to: conn.to.id, label: link.runtimeState });
+        const weight = resolved.sessions.filter((session) => session.ref.workspaceId && (session.ref.workspaceId === conn.from.id || session.ref.workspaceId === conn.to.id)).length;
+        edges.push({ from: conn.from.id, to: conn.to.id, label: link.runtimeState, weight: Math.max(1, weight) });
       }
     }
     return {
