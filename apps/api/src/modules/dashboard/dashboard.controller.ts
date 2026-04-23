@@ -58,6 +58,14 @@ export function registerDashboardRoutes(router: Router) {
     res.json(await service.getOperationsAlerts(query.value, query.warnings));
   });
 
+  router.get('/dashboard/operations/actions-heatmap', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getOperationsActionsHeatmap(query.value, query.warnings));
+  });
+
   router.get('/dashboard/operations/pending-actions', async (req, res) => {
     res.json(await service.getOperationsPendingActions(parseScope(req as any)));
   });
@@ -238,6 +246,34 @@ export function registerDashboardRoutes(router: Router) {
     res.json(await service.getConnectionsFlowGraph(query.value, query.warnings));
   });
 
+  router.get('/dashboard/connections/routing-decision-flow', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getConnectionsRoutingDecisionFlow(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/connections/org-chart', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getConnectionsOrgChart(query.value, query.warnings));
+  });
+
+  router.get('/dashboard/connections/hierarchy', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    const mode = req.query.mode === 'treemap' ? 'treemap' : req.query.mode === 'sunburst' ? 'sunburst' : null;
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    if (!mode) {
+      return res.status(422).json({ ok: false, error: 'mode must be sunburst or treemap' });
+    }
+    res.json(await service.getConnectionsHierarchy(query.value, mode, query.warnings));
+  });
+
   router.get('/editor/readiness', async (req, res) => {
     const query = parseMetricInput(req as any, { allowGranularity: false });
     if (!query.ok || !query.value) {
@@ -268,6 +304,22 @@ export function registerDashboardRoutes(router: Router) {
       return sendMetricValidationError(res, query.errors);
     }
     res.json(await service.getEditorVersions(query.value, query.warnings) as EditorVersionsDto);
+  });
+
+  router.get('/editor/readiness-by-workspace', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getEditorReadinessByWorkspace(query.value, query.warnings));
+  });
+
+  router.get('/editor/dependencies', async (req, res) => {
+    const query = parseMetricInput(req as any, { allowGranularity: false });
+    if (!query.ok || !query.value) {
+      return sendMetricValidationError(res, query.errors);
+    }
+    res.json(await service.getEditorDependencies(query.value, query.warnings));
   });
 
   router.post('/dashboard/profile/bind', (req, res) => {

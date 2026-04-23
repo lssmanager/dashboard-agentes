@@ -39,10 +39,16 @@ import type {
   ConnectionsDependencyGraphDto,
   ConnectionsTopologyDto,
   ConnectionsFlowGraphDto,
+  ConnectionsRoutingDecisionFlowDto,
+  ConnectionsOrgChartDto,
+  ConnectionsHierarchyDto,
+  OperationsActionsHeatmapDto,
   EditorInheritanceDto,
   EditorReadinessDto,
   EditorSectionStatusDto,
   EditorVersionsDto,
+  EditorReadinessByWorkspaceDto,
+  EditorDependenciesDto,
   TimeSeriesPoint,
 } from './dashboard.dto';
 import type { MetricsQueryDto } from './dto/metrics-query.dto';
@@ -404,6 +410,48 @@ export class DashboardService {
       meta: { warnings, source: 'operations_cost_profile_projection' },
       rows,
       totalSpendUsd: Math.round(totalSpendUsd * 100) / 100,
+    };
+  }
+
+  async getOperationsActionsHeatmap(input: MetricsQueryDto, warnings: string[] = []): Promise<OperationsActionsHeatmapDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const runs = this.filterRunsByScope(canonical, resolved.workspaceIds, resolved.agentIds);
+    const rowsMap = new Map<string, OperationsActionsHeatmapDto['rows'][number]>();
+
+    for (const run of runs) {
+      const label = run.ref.workspaceId ?? 'unknown';
+      const row = rowsMap.get(label) ?? { scopeLabel: label, connect: 0, disconnect: 0, pause: 0, reactivate: 0, redirect: 0, continue: 0 };
+      const action = String(run.metadata?.runtimeAction ?? '').toLowerCase();
+      switch (action) {
+        case 'connect':
+          row.connect += 1;
+          break;
+        case 'disconnect':
+          row.disconnect += 1;
+          break;
+        case 'pause':
+          row.pause += 1;
+          break;
+        case 'reactivate':
+          row.reactivate += 1;
+          break;
+        case 'redirect':
+          row.redirect += 1;
+          break;
+        default:
+          row.continue += 1;
+      }
+      rowsMap.set(label, row);
+    }
+
+    const rows = [...rowsMap.values()].slice(0, 12);
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), rows.length > 0),
+      meta: { warnings, source: 'operations_actions_heatmap_projection' },
+      rows,
     };
   }
 
@@ -1202,6 +1250,75 @@ export class DashboardService {
     };
   }
 
+  async getConnectionsRoutingDecisionFlow(input: MetricsQueryDto, warnings: string[] = []): Promise<ConnectionsRoutingDecisionFlowDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const routingRules = this.routingService.getCompiledRouting().rules.length;
+    const channels = this.filterChannelBindings(canonical, resolved.workspaceIds, resolved.agentIds).length;
+    const hooks = this.hooksService.findAll().length;
+    const steps: ConnectionsRoutingDecisionFlowDto['steps'] = [
+      { id: 'ingress', label: 'Ingress', outcome: 'ok', volume: resolved.sessions.length },
+      { id: 'routing', label: 'Routing Rules', outcome: routingRules > 0 ? 'ok' : 'warning', volume: routingRules },
+      { id: 'channels', label: 'Channels', outcome: channels > 0 ? 'ok' : 'warning', volume: channels },
+      { id: 'hooks', label: 'Hooks', outcome: hooks > 0 ? 'ok' : 'warning', volume: hooks },
+      { id: 'handoff', label: 'Handoff', outcome: resolved.scope.level === 'subagent' ? 'critical' : 'ok', volume: resolved.agentIds.length },
+    ];
+    const links: ConnectionsRoutingDecisionFlowDto['links'] = [
+      { from: 'ingress', to: 'routing', condition: 'message_received' },
+      { from: 'routing', to: 'channels', condition: 'rule_match' },
+      { from: 'channels', to: 'hooks', condition: 'channel_enabled' },
+      { from: 'hooks', to: 'handoff', condition: 'handoff_required' },
+    ];
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), true),
+      meta: { warnings, source: 'connections_routing_decision_projection' },
+      steps,
+      links,
+    };
+  }
+
+  async getConnectionsOrgChart(input: MetricsQueryDto, warnings: string[] = []): Promise<ConnectionsOrgChartDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const nodes: ConnectionsOrgChartDto['nodes'] = [];
+    nodes.push({ id: canonical.agency.id, parentId: null, level: 'agency', label: canonical.agency.name, activity: resolved.sessions.length });
+    for (const department of canonical.departments) {
+      nodes.push({ id: department.id, parentId: canonical.agency.id, level: 'department', label: department.name, activity: department.workspaceIds.length });
+    }
+    for (const workspace of canonical.workspaces) {
+      nodes.push({ id: workspace.id, parentId: workspace.departmentId, level: 'workspace', label: workspace.name, activity: workspace.agentIds.length });
+    }
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), nodes.length > 1),
+      meta: { warnings, source: 'connections_org_chart_projection' },
+      nodes,
+    };
+  }
+
+  async getConnectionsHierarchy(input: MetricsQueryDto, mode: 'sunburst' | 'treemap', warnings: string[] = []): Promise<ConnectionsHierarchyDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const nodes: ConnectionsHierarchyDto['nodes'] = [];
+    nodes.push({ id: canonical.agency.id, parentId: null, label: canonical.agency.name, level: 'agency', value: Math.max(1, canonical.departments.length) });
+    for (const department of canonical.departments) {
+      nodes.push({ id: department.id, parentId: canonical.agency.id, label: department.name, level: 'department', value: Math.max(1, department.workspaceIds.length) });
+    }
+    for (const workspace of canonical.workspaces) {
+      const sessions = canonical.sessions.filter((session) => session.ref.workspaceId === workspace.id).length;
+      nodes.push({ id: workspace.id, parentId: workspace.departmentId, label: workspace.name, level: 'workspace', value: Math.max(1, sessions) });
+    }
+    return {
+      scope: resolved.scope,
+      window: input.window,
+      mode,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), nodes.length > 1),
+      meta: { warnings, source: mode === 'sunburst' ? 'connections_hierarchy_sunburst_projection' : 'connections_hierarchy_treemap_projection' },
+      nodes,
+    };
+  }
+
   async getEditorReadiness(input: MetricsQueryDto, warnings: string[] = []): Promise<EditorReadinessDto> {
     const canonical = await this.studioService.getCanonicalState();
     const resolved = this.scopeResolver.resolve(canonical, input);
@@ -1270,6 +1387,54 @@ export class DashboardService {
       state: this.analyticsState(Boolean(canonical.runtime.health.ok), data.length > 0),
       data,
       meta: { warnings, source: 'versions_service' },
+    };
+  }
+
+  async getEditorReadinessByWorkspace(input: MetricsQueryDto, warnings: string[] = []): Promise<EditorReadinessByWorkspaceDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const data = canonical.workspaces.map((workspace) => {
+      const sessions = canonical.sessions.filter((session) => session.ref.workspaceId === workspace.id).length;
+      const agents = canonical.agents.filter((agent) => agent.workspaceId === workspace.id).length;
+      const readinessPct = Math.min(100, Math.round((sessions * 5 + agents * 10 + (workspace.profileIds?.length ?? 0) * 12)));
+      return {
+        workspaceId: workspace.id,
+        workspaceName: workspace.name,
+        readinessPct,
+        missingSections: Math.max(0, 8 - Math.round(readinessPct / 12.5)),
+      };
+    });
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), data.length > 0),
+      meta: { warnings, source: 'editor_readiness_by_workspace_projection' },
+      data,
+    };
+  }
+
+  async getEditorDependencies(input: MetricsQueryDto, warnings: string[] = []): Promise<EditorDependenciesDto> {
+    const canonical = await this.studioService.getCanonicalState();
+    const resolved = this.scopeResolver.resolve(canonical, input);
+    const nodes: EditorDependenciesDto['nodes'] = [];
+    const edges: EditorDependenciesDto['edges'] = [];
+    const workspace = canonical.workspaces.find((item) => item.id === resolved.scope.id) ?? canonical.workspaces.find((item) => resolved.workspaceIds.includes(item.id));
+    if (workspace) {
+      nodes.push({ id: workspace.id, label: workspace.name, type: 'workspace' });
+      for (const agent of canonical.agents.filter((item) => item.workspaceId === workspace.id).slice(0, 8)) {
+        nodes.push({ id: agent.id, label: agent.name, type: 'agent' });
+        edges.push({ from: workspace.id, to: agent.id, kind: 'inherits' });
+        for (const skillId of (agent.skillRefs ?? []).slice(0, 3)) {
+          nodes.push({ id: skillId, label: skillId, type: 'skill' });
+          edges.push({ from: agent.id, to: skillId, kind: 'uses' });
+        }
+      }
+    }
+    return {
+      scope: resolved.scope,
+      state: this.analyticsState(Boolean(canonical.runtime.health.ok), edges.length > 0),
+      meta: { warnings, source: 'editor_dependencies_projection' },
+      nodes,
+      edges,
     };
   }
 }

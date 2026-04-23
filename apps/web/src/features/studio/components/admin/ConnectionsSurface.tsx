@@ -1,13 +1,27 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Network, Route, Radio, Anchor, CheckCircle, XCircle, PauseCircle } from 'lucide-react';
 
-import type { CanonicalNodeLevel, DashboardConnectionsDto, ConnectionsMeteringDto, ConnectionsRadialDto, ConnectionsDependencyGraphDto, ConnectionsTopologyDto, ConnectionsFlowGraphDto } from '../../../../lib/types';
+import type {
+  CanonicalNodeLevel,
+  DashboardConnectionsDto,
+  ConnectionsMeteringDto,
+  ConnectionsRadialDto,
+  ConnectionsDependencyGraphDto,
+  ConnectionsTopologyDto,
+  ConnectionsFlowGraphDto,
+  ConnectionsRoutingDecisionFlowDto,
+  ConnectionsOrgChartDto,
+  ConnectionsHierarchyDto,
+} from '../../../../lib/types';
 import {
   getConnectionsMetering,
   getConnectionsRadial,
   getConnectionsDependencyGraph,
   getConnectionsTopology,
   getConnectionsFlowGraph,
+  getConnectionsRoutingDecisionFlow,
+  getConnectionsOrgChart,
+  getConnectionsHierarchy,
 } from '../../../../lib/api';
 import { RadialGauge, TopologyGraph, FlowSankey } from '../../../../components/ui/Charts';
 import { AnalyticsStateBoundary } from '../../../analytics/components/AnalyticsStateBoundary';
@@ -32,6 +46,10 @@ export function ConnectionsSurface({ data }: { data: DashboardConnectionsDto }) 
   const [depGraph, setDepGraph] = useState<ConnectionsDependencyGraphDto | null>(null);
   const [topology, setTopology] = useState<ConnectionsTopologyDto | null>(null);
   const [flowGraph, setFlowGraph] = useState<ConnectionsFlowGraphDto | null>(null);
+  const [routingFlow, setRoutingFlow] = useState<ConnectionsRoutingDecisionFlowDto | null>(null);
+  const [orgChart, setOrgChart] = useState<ConnectionsOrgChartDto | null>(null);
+  const [hierarchySunburst, setHierarchySunburst] = useState<ConnectionsHierarchyDto | null>(null);
+  const [hierarchyTreemap, setHierarchyTreemap] = useState<ConnectionsHierarchyDto | null>(null);
 
   useEffect(() => {
     void getConnectionsMetering(level, id, window).then(setMetering).catch(() => null);
@@ -39,6 +57,10 @@ export function ConnectionsSurface({ data }: { data: DashboardConnectionsDto }) 
     void getConnectionsDependencyGraph(level, id, window).then(setDepGraph).catch(() => null);
     void getConnectionsTopology(level, id, window).then(setTopology).catch(() => null);
     void getConnectionsFlowGraph(level, id, window).then(setFlowGraph).catch(() => null);
+    void getConnectionsRoutingDecisionFlow(level, id, window).then(setRoutingFlow).catch(() => null);
+    void getConnectionsOrgChart(level, id, window).then(setOrgChart).catch(() => null);
+    void getConnectionsHierarchy(level, id, 'sunburst', window).then(setHierarchySunburst).catch(() => null);
+    void getConnectionsHierarchy(level, id, 'treemap', window).then(setHierarchyTreemap).catch(() => null);
   }, [level, id, window]);
 
   return (
@@ -187,6 +209,76 @@ export function ConnectionsSurface({ data }: { data: DashboardConnectionsDto }) 
         </div>
         </AnalyticsStateBoundary>
       )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Routing Decision Flow (P1)</div>
+          {routingFlow ? (
+            <AnalyticsStateBoundary state={routingFlow.state ?? 'ready'} title="Routing decision flow">
+              <div style={{ marginTop: 8, display: 'grid', gap: 5 }}>
+                {routingFlow.steps.map((step) => (
+                  <div key={step.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ color: 'var(--text-primary)' }}>{step.label}</span>
+                    <span style={{ color: step.outcome === 'critical' ? 'var(--tone-danger-text, #ef4444)' : step.outcome === 'warning' ? 'var(--tone-warning-text, #f59e0b)' : 'var(--tone-success-text, #10b981)' }}>
+                      {step.volume}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </AnalyticsStateBoundary>
+          ) : <AnalyticsStateBoundary state="planned_not_operational" title="Routing decision flow" />}
+        </div>
+
+        <div style={sectionCard}>
+          <div style={cardLabel}>Org Chart (P1)</div>
+          {orgChart ? (
+            <AnalyticsStateBoundary state={orgChart.state ?? 'ready'} title="Org chart">
+              <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                {orgChart.nodes.slice(0, 10).map((node) => (
+                  <div key={node.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                    <span style={{ color: 'var(--text-primary)' }}>{node.level}: {node.label}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{node.activity}</span>
+                  </div>
+                ))}
+              </div>
+            </AnalyticsStateBoundary>
+          ) : <AnalyticsStateBoundary state="planned_not_operational" title="Org chart" />}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div style={sectionCard}>
+          <div style={cardLabel}>Hierarchy Sunburst (P1)</div>
+          {hierarchySunburst ? (
+            <AnalyticsStateBoundary state={hierarchySunburst.state ?? 'ready'} title="Hierarchy sunburst">
+              <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                {hierarchySunburst.nodes.slice(0, 8).map((node) => (
+                  <div key={node.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                    <span style={{ color: 'var(--text-primary)' }}>{node.label}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{node.value}</span>
+                  </div>
+                ))}
+              </div>
+            </AnalyticsStateBoundary>
+          ) : <AnalyticsStateBoundary state="planned_not_operational" title="Hierarchy sunburst" />}
+        </div>
+
+        <div style={sectionCard}>
+          <div style={cardLabel}>Hierarchy Treemap (P1)</div>
+          {hierarchyTreemap ? (
+            <AnalyticsStateBoundary state={hierarchyTreemap.state ?? 'ready'} title="Hierarchy treemap">
+              <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                {hierarchyTreemap.nodes.slice(0, 8).map((node) => (
+                  <div key={node.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                    <span style={{ color: 'var(--text-primary)' }}>{node.label}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{node.value}</span>
+                  </div>
+                ))}
+              </div>
+            </AnalyticsStateBoundary>
+          ) : <AnalyticsStateBoundary state="planned_not_operational" title="Hierarchy treemap" />}
+        </div>
+      </div>
 
       {/* ── Edge list ──────────────────────────────────────────────── */}
       {data.edges.length > 0 && (

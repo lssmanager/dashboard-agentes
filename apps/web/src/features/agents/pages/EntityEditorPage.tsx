@@ -13,6 +13,8 @@ import {
   getEditorSectionStatus,
   getEditorInheritance,
   getEditorVersions,
+  getEditorReadinessByWorkspace,
+  getEditorDependencies,
 } from '../../../lib/api';
 import type { AgentSpec, HookSpec, RunSpec, WorkspaceSpec } from '../../../lib/types';
 import { RadarChart } from '../../../components/ui/Charts';
@@ -974,6 +976,22 @@ function ReadinessSection({
     getState: (payload) => payload.state as any,
   });
 
+  const readinessByWorkspaceMetric = useAnalyticsMetric({
+    level,
+    id: entityId,
+    window,
+    fetcher: (lvl, scopeId, selectedWindow) => getEditorReadinessByWorkspace(lvl, scopeId, selectedWindow),
+    getState: (payload) => payload.state as any,
+  });
+
+  const dependenciesMetric = useAnalyticsMetric({
+    level,
+    id: entityId,
+    window,
+    fetcher: (lvl, scopeId, selectedWindow) => getEditorDependencies(lvl, scopeId, selectedWindow),
+    getState: (payload) => payload.state as any,
+  });
+
   const axes = useMemo(
     () =>
       (readinessMetric.data?.data ?? []).map((item) => ({
@@ -1114,9 +1132,54 @@ function ReadinessSection({
         </div>
       </AnalyticsStateBoundary>
 
-      {(readinessMetric.error || sectionStatusMetric.error || inheritanceMetric.error) && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <AnalyticsStateBoundary state={readinessByWorkspaceMetric.state} title="Workspace readiness (P1)">
+          <div
+            className="rounded-lg border overflow-hidden"
+            style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
+          >
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-primary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>
+              Workspace Readiness Bars (P1)
+            </div>
+            <div style={{ padding: 10, display: 'grid', gap: 8 }}>
+              {(readinessByWorkspaceMetric.data?.data ?? []).slice(0, 8).map((row) => (
+                <div key={row.workspaceId}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-primary)' }}>{row.workspaceName}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{row.readinessPct}%</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 99, background: 'var(--border-primary)', overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.max(0, Math.min(100, row.readinessPct))}%`, height: '100%', background: 'var(--color-primary)' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnalyticsStateBoundary>
+
+        <AnalyticsStateBoundary state={dependenciesMetric.state} title="Dependency tree (P1)">
+          <div
+            className="rounded-lg border overflow-hidden"
+            style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}
+          >
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-primary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>
+              Dependency Tree (P1)
+            </div>
+            <div style={{ padding: 10, display: 'grid', gap: 6 }}>
+              {(dependenciesMetric.data?.edges ?? []).slice(0, 10).map((edge, idx) => (
+                <div key={`${edge.from}-${edge.to}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{edge.from} → {edge.to}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{edge.kind}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnalyticsStateBoundary>
+      </div>
+
+      {(readinessMetric.error || sectionStatusMetric.error || inheritanceMetric.error || readinessByWorkspaceMetric.error || dependenciesMetric.error) && (
         <p className="text-xs" style={{ color: 'var(--tone-danger-text)' }}>
-          {readinessMetric.error ?? sectionStatusMetric.error ?? inheritanceMetric.error}
+          {readinessMetric.error ?? sectionStatusMetric.error ?? inheritanceMetric.error ?? readinessByWorkspaceMetric.error ?? dependenciesMetric.error}
         </p>
       )}
     </div>

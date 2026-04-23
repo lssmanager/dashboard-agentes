@@ -789,3 +789,50 @@ export interface ConnectionsFlowGraphDto {
   nodes: Array<{ id: string; label: string; value: number }>;
   links: Array<{ source: string; target: string; value: number }>;
 }
+
+export interface ConnectionsRoutingDecisionFlowDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  steps: Array<{ id: string; label: string; outcome: 'ok' | 'warning' | 'critical'; volume: number }>;
+  links: Array<{ from: string; to: string; condition: string }>;
+}
+
+export interface ConnectionsOrgChartDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  nodes: Array<{ id: string; parentId: string | null; level: CanonicalNodeLevel; label: string; activity: number }>;
+}
+
+export interface ConnectionsHierarchyDto {
+  scope: DashboardScope;
+  window: string;
+  mode: 'sunburst' | 'treemap';
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  nodes: Array<{ id: string; parentId: string | null; label: string; level: CanonicalNodeLevel; value: number }>;
+}
+
+export interface OperationsActionsHeatmapDto {
+  scope: DashboardScope;
+  window: string;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  rows: Array<{ scopeLabel: string; connect: number; disconnect: number; pause: number; reactivate: number; redirect: number; continue: number }>;
+}
+
+export interface EditorReadinessByWorkspaceDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  data: Array<{ workspaceId: string; workspaceName: string; readinessPct: number; missingSections: number }>;
+}
+
+export interface EditorDependenciesDto {
+  scope: DashboardScope;
+  state?: AnalyticsState;
+  meta?: { warnings?: string[]; source?: string };
+  nodes: Array<{ id: string; label: string; type: 'agent' | 'subagent' | 'workspace' | 'skill' | 'tool' }>;
+  edges: Array<{ from: string; to: string; kind: 'depends_on' | 'uses' | 'inherits' }>;
+}

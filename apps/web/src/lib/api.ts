@@ -5,8 +5,11 @@ import {
   CanonicalStudioStateResponse,
   ConnectionsDependencyGraphDto,
   ConnectionsFlowGraphDto,
+  ConnectionsHierarchyDto,
   ConnectionsMeteringDto,
+  ConnectionsOrgChartDto,
   ConnectionsRadialDto,
+  ConnectionsRoutingDecisionFlowDto,
   ConnectionsTopologyDto,
   CoreFilesDiffResponse,
   CoreFilesPreviewResponse,
@@ -33,6 +36,7 @@ import {
   MetricsRunsDto,
   MetricsSessionsDto,
   MetricsTokensDto,
+  OperationsActionsHeatmapDto,
   ReplayMetadataResponse,
   RuntimeCapabilityMatrix,
   SessionState,
@@ -46,6 +50,8 @@ import {
   TopologyRuntimeAction,
   VersionSnapshot,
   WorkspaceSpec,
+  EditorReadinessByWorkspaceDto,
+  EditorDependenciesDto,
 } from './types';
 import type { AnalyticsGranularity, AnalyticsWindow } from '../features/analytics/types';
 
@@ -819,6 +825,36 @@ export async function getConnectionsFlowGraph(level: CanonicalNodeLevel, id: str
   return parseJson<ConnectionsFlowGraphDto>(response);
 }
 
+export async function getConnectionsRoutingDecisionFlow(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/connections/routing-decision-flow?${params.toString()}`);
+  return parseJson<ConnectionsRoutingDecisionFlowDto>(response);
+}
+
+export async function getConnectionsOrgChart(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/connections/org-chart?${params.toString()}`);
+  return parseJson<ConnectionsOrgChartDto>(response);
+}
+
+export async function getConnectionsHierarchy(level: CanonicalNodeLevel, id: string, mode: 'sunburst' | 'treemap', window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window, mode });
+  const response = await fetch(`${API_BASE}/dashboard/connections/hierarchy?${params.toString()}`);
+  return parseJson<ConnectionsHierarchyDto>(response);
+}
+
+export async function getDashboardOperationsActionsHeatmap(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/dashboard/operations/actions-heatmap?${params.toString()}`);
+  return parseJson<OperationsActionsHeatmapDto>(response);
+}
+
+export async function getDashboardOperationsPendingActions(level: CanonicalNodeLevel, id: string) {
+  const params = new URLSearchParams({ level, id });
+  const response = await fetch(`${API_BASE}/dashboard/operations/pending-actions?${params.toString()}`);
+  return parseJson<{ pendingActions: Array<{ id: string; type: string; message: string; severity: 'info' | 'warning' | 'critical' }> }>(response);
+}
+
 export async function getEditorReadiness(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
   const params = new URLSearchParams({ level, id, window });
   const response = await fetch(`${API_BASE}/editor/readiness?${params.toString()}`);
@@ -859,3 +895,16 @@ export async function getEditorVersions(level: CanonicalNodeLevel, id: string, w
     data: Array<{ id: string; label: string; at: string; status: string }>;
   }>(response);
 }
+
+export async function getEditorReadinessByWorkspace(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/editor/readiness-by-workspace?${params.toString()}`);
+  return parseJson<EditorReadinessByWorkspaceDto>(response);
+}
+
+export async function getEditorDependencies(level: CanonicalNodeLevel, id: string, window: AnalyticsWindow = '24H') {
+  const params = new URLSearchParams({ level, id, window });
+  const response = await fetch(`${API_BASE}/editor/dependencies?${params.toString()}`);
+  return parseJson<EditorDependenciesDto>(response);
+}
+  OperationsActionsHeatmapDto,

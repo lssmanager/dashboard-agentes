@@ -475,6 +475,38 @@ export interface ConnectionsFlowGraphDto {
   links: Array<{ source: string; target: string; value: number }>;
 }
 
+export interface ConnectionsRoutingDecisionFlowDto {
+  scope: ScopeDto;
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  steps: Array<{ id: string; label: string; outcome: 'ok' | 'warning' | 'critical'; volume: number }>;
+  links: Array<{ from: string; to: string; condition: string }>;
+}
+
+export interface ConnectionsOrgChartDto {
+  scope: ScopeDto;
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  nodes: Array<{ id: string; parentId: string | null; level: ScopeLevel; label: string; activity: number }>;
+}
+
+export interface ConnectionsHierarchyDto {
+  scope: ScopeDto;
+  window: string;
+  mode: 'sunburst' | 'treemap';
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  nodes: Array<{ id: string; parentId: string | null; label: string; level: ScopeLevel; value: number }>;
+}
+
+export interface OperationsActionsHeatmapDto {
+  scope: ScopeDto;
+  window: string;
+  state?: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  rows: Array<{ scopeLabel: string; connect: number; disconnect: number; pause: number; reactivate: number; redirect: number; continue: number }>;
+}
+
 export interface EditorReadinessDto {
   scope: ScopeDto;
   state: AnalyticsState;
@@ -502,4 +534,19 @@ export interface EditorVersionsDto {
   state: AnalyticsState;
   data: Array<{ id: string; label: string; at: string; status: 'current' | 'draft' | 'snapshot' }>;
   meta?: AnalyticsMetaDto;
+}
+
+export interface EditorReadinessByWorkspaceDto {
+  scope: ScopeDto;
+  state: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  data: Array<{ workspaceId: string; workspaceName: string; readinessPct: number; missingSections: number }>;
+}
+
+export interface EditorDependenciesDto {
+  scope: ScopeDto;
+  state: AnalyticsState;
+  meta?: AnalyticsMetaDto;
+  nodes: Array<{ id: string; label: string; type: 'agent' | 'subagent' | 'workspace' | 'skill' | 'tool' }>;
+  edges: Array<{ from: string; to: string; kind: 'depends_on' | 'uses' | 'inherits' }>;
 }

@@ -3,8 +3,10 @@ import { AlertCircle, AlertTriangle, CheckCircle, Clock, DollarSign, PlayCircle,
 
 import {
   getDashboardOperationsAlerts,
+  getDashboardOperationsActionsHeatmap,
   getDashboardOperationsBudgets,
   getDashboardOperationsCostProfile,
+  getDashboardOperationsPendingActions,
   getDashboardOperationsPolicies,
   getDashboardOperationsRuntimeState,
 } from '../../../../lib/api';
@@ -13,6 +15,7 @@ import type {
   CanonicalNodeLevel,
   DashboardOperationsDto,
   DashboardOperationsRuntimeStateDto,
+  OperationsActionsHeatmapDto,
   DashboardScopeCapabilities,
   TopologyRuntimeAction,
 } from '../../../../lib/types';
@@ -72,6 +75,8 @@ export function OperationsSurface({
   const [runtimeStateView, setRuntimeStateView] = useState<AnalyticsState>('loading');
   const [budgets, setBudgets] = useState<BudgetEntry[]>([]);
   const [policies, setPolicies] = useState<PolicyEntry[]>([]);
+  const [actionsHeatmap, setActionsHeatmap] = useState<OperationsActionsHeatmapDto | null>(null);
+  const [pendingActions, setPendingActions] = useState<Array<{ id: string; type: string; message: string; severity: 'info' | 'warning' | 'critical' }>>([]);
 
   const alertsMetric = useAnalyticsMetric({
     level: nodeLevel,
@@ -135,10 +140,34 @@ export function OperationsSurface({
         }
       });
 
+    void getDashboardOperationsActionsHeatmap(nodeLevel, nodeId, window)
+      .then((payload) => {
+        if (!cancelled) {
+          setActionsHeatmap(payload);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActionsHeatmap(null);
+        }
+      });
+
+    void getDashboardOperationsPendingActions(nodeLevel, nodeId)
+      .then((payload) => {
+        if (!cancelled) {
+          setPendingActions(payload.pendingActions ?? []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPendingActions([]);
+        }
+      });
+
     return () => {
       cancelled = true;
     };
-  }, [nodeLevel, nodeId]);
+  }, [nodeLevel, nodeId, window]);
 
   const runsByStatus = useMemo(() => {
     const counters = new Map<string, number>();
@@ -290,6 +319,41 @@ export function OperationsSurface({
               height={120}
             />
           ) : null}
+        </AnalyticsStateBoundary>
+      </div>
+
+      <div style={sectionCardStyle}>
+        <div style={sectionHeaderStyle}>Operational Actions Heatmap (P1)</div>
+        <AnalyticsStateBoundary state={actionsHeatmap?.state ?? 'planned_not_operational'} title="Actions heatmap">
+          {actionsHeatmap ? (
+            <div style={{ display: 'grid', gap: 6 }}>
+              {actionsHeatmap.rows.slice(0, 8).map((row) => (
+                <div key={row.scopeLabel} style={{ display: 'grid', gridTemplateColumns: '1fr repeat(6, minmax(0,1fr))', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{row.scopeLabel}</span>
+                  {[row.connect, row.disconnect, row.pause, row.reactivate, row.redirect, row.continue].map((value, idx) => (
+                    <span key={`${row.scopeLabel}-${idx}`} style={{ color: value > 0 ? 'var(--color-primary)' : 'var(--text-muted)' }}>{value}</span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </AnalyticsStateBoundary>
+      </div>
+
+      <div style={sectionCardStyle}>
+        <div style={sectionHeaderStyle}>Pending Actions (P1)</div>
+        <AnalyticsStateBoundary state={pendingActions.length > 0 ? 'ready' : 'empty'} title="Pending actions">
+          {pendingActions.length > 0 ? (
+            <BarChart
+              data={Object.entries(pendingActions.reduce<Record<string, number>>((acc, item) => {
+                acc[item.type] = (acc[item.type] ?? 0) + 1;
+                return acc;
+              }, {})).map(([label, value]) => ({ label, value }))}
+              height={110}
+            />
+          ) : (
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No pending actions.</div>
+          )}
         </AnalyticsStateBoundary>
       </div>
 
