@@ -511,7 +511,7 @@ export interface ConnectionsOrgChartDto {
   scope: ScopeDto;
   state?: AnalyticsState;
   meta?: AnalyticsMetaDto;
-  nodes: Array<{ id: string; parentId: string | null; level: ScopeLevel; label: string; activity: number }>;
+  nodes: Array<{ id: string; parentId: string | null; level: CanonicalNodeLevel; label: string; activity: number }>;
 }
 
 export interface ConnectionsHierarchyDto {
@@ -520,7 +520,7 @@ export interface ConnectionsHierarchyDto {
   mode: 'sunburst' | 'treemap';
   state?: AnalyticsState;
   meta?: AnalyticsMetaDto;
-  nodes: Array<{ id: string; parentId: string | null; label: string; level: ScopeLevel; value: number }>;
+  nodes: Array<{ id: string; parentId: string | null; label: string; level: CanonicalNodeLevel; value: number }>;
 }
 
 export interface ConnectionsEdgeReliabilityDto {
