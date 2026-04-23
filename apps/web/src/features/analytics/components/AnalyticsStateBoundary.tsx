@@ -5,7 +5,7 @@ import { ANALYTICS_STATE_LABELS, type AnalyticsState } from '../types';
 interface AnalyticsStateBoundaryProps {
   state: AnalyticsState;
   title?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 const toneByState: Record<Exclude<AnalyticsState, 'ready' | 'loading' | 'empty'>, { color: string; bg: string }> = {

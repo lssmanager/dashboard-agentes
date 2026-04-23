@@ -2,6 +2,10 @@
 
 Use this checklist to confirm the frontend surfaces stay coherent after scope or routing changes.
 
+Execution note:
+- Last QA pass in this branch: 2026-04-22.
+- Environment limitation: `npm`/`node` were not available in PATH, so automated build/test commands could not be executed from this session.
+
 ## Smoke Scope
 
 - [ ] Switch scope between agency, department, workspace, agent, and subagent.
@@ -36,3 +40,22 @@ Use this checklist to confirm the frontend surfaces stay coherent after scope or
 ## Build Check
 
 - [ ] Run `npm run build:web` and confirm the build completes without errors.
+
+## Contract Coverage (P2)
+
+- [x] Overview P2 contracts exist and are wired:
+  - `/dashboard/metrics/cost-anomaly-bands`
+  - `/dashboard/metrics/fallback-transitions`
+  - `/dashboard/metrics/budget-guardrail-simulation`
+- [x] Connections P2 contracts exist and are wired:
+  - `/dashboard/connections/edge-reliability`
+  - `/dashboard/connections/hook-blast-radius`
+  - `/dashboard/connections/routing-drift`
+- [x] Operations P2 contracts exist and are wired:
+  - `/dashboard/operations/approval-forecast`
+  - `/dashboard/operations/policy-conflicts`
+  - `/dashboard/operations/runtime-recovery-simulation`
+- [x] Editor P2 contracts exist and are wired:
+  - `/editor/prompt-graph`
+  - `/editor/section-dependency-impact`
+  - `/editor/rollback-risk`
