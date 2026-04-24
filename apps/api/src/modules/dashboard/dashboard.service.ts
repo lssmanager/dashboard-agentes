@@ -1305,6 +1305,8 @@ export class DashboardService {
       nodes.push({
         id: agent.id,
         label: agent.name ?? agent.id,
+        type: agent.kind ?? 'agent',
+        x: Math.round(400 + r * Math.cos(angle)),
         y: Math.round(280 + r * Math.sin(angle)),
         meta: health,
       });
