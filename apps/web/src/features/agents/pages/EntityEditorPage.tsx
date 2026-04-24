@@ -178,6 +178,19 @@ function secondaryTabStyle(active: boolean): React.CSSProperties {
   };
 }
 
+function buildFallbackEffectiveProfile(): EffectiveProfileDto {
+  return {
+    catalogProfile: null,
+    appliedAtLevel: null,
+    inheritedFrom: [],
+    overrides: {},
+    effectiveModel: null,
+    effectiveSkills: [],
+    effectiveRoutines: [],
+    effectiveTags: [],
+  };
+}
+
 // â”€â”€ Identity Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function IdentitySection({
@@ -1459,7 +1472,10 @@ function EntityEditorPageContent() {
         if (!cancelled) setProfilePanel(next);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setProfileError(err instanceof Error ? err.message : 'Failed to load profile');
+        if (!cancelled) {
+          setProfilePanel(buildFallbackEffectiveProfile());
+          setProfileError(err instanceof Error ? err.message : 'Failed to load profile');
+        }
       });
     return () => {
       cancelled = true;
@@ -1634,7 +1650,13 @@ function EntityEditorPageContent() {
 
   const refreshProfilePanel = useCallback(async () => {
     if (!entityLevel || !selectedNode?.id) return;
-    setProfilePanel(await getEffectiveProfile(entityLevel, selectedNode.id));
+    try {
+      setProfilePanel(await getEffectiveProfile(entityLevel, selectedNode.id));
+      setProfileError(null);
+    } catch (err) {
+      setProfilePanel(buildFallbackEffectiveProfile());
+      setProfileError(err instanceof Error ? err.message : 'Failed to load profile');
+    }
   }, [entityLevel, selectedNode?.id]);
 
   const handleBindProfilePanel = useCallback(async (profileId: string) => {
@@ -1996,14 +2018,29 @@ ${createLocalNotes || '<empty>'}
         <div className="min-w-0">
           {activePrimaryTab === 'profile' && (
             profilePanel ? (
-              <ProfileScopeTab
-                profile={profilePanel}
-                profiles={profileCatalog}
-                busy={profileBusy}
-                onBind={(profileId) => void handleBindProfilePanel(profileId)}
-                onUnbind={() => void handleUnbindProfilePanel()}
-                onSaveOverride={(payload) => void handleSaveProfileOverridePanel(payload)}
-              />
+              <section className="space-y-3">
+                {profileError && (
+                  <div
+                    className="rounded-lg border p-3"
+                    style={{
+                      borderColor: 'var(--tone-warning-border, rgba(245,158,11,0.3))',
+                      background: 'var(--tone-warning-bg, rgba(245,158,11,0.08))',
+                      color: 'var(--tone-warning-text, #f59e0b)',
+                      fontSize: 13,
+                    }}
+                  >
+                    Profile service degraded: {profileError}
+                  </div>
+                )}
+                <ProfileScopeTab
+                  profile={profilePanel}
+                  profiles={profileCatalog}
+                  busy={profileBusy}
+                  onBind={(profileId) => void handleBindProfilePanel(profileId)}
+                  onUnbind={() => void handleUnbindProfilePanel()}
+                  onSaveOverride={(payload) => void handleSaveProfileOverridePanel(payload)}
+                />
+              </section>
             ) : (
               <div className="space-y-2">
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
