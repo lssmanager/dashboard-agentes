@@ -152,6 +152,7 @@ export default function AdministrationPage() {
 
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
   const [runtimeActionBusy, setRuntimeActionBusy] = useState<TopologyRuntimeAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -179,6 +180,19 @@ export default function AdministrationPage() {
     setBuilderTab(activeTab);
   }, [activeTab, activeFromQuery, setBuilderTab, setSearchParams]);
 
+  function buildFallbackProfile(): EffectiveProfileDto {
+    return {
+      catalogProfile: null,
+      appliedAtLevel: null,
+      inheritedFrom: [],
+      overrides: {},
+      effectiveModel: null,
+      effectiveSkills: [],
+      effectiveRoutines: [],
+      effectiveTags: [],
+    };
+  }
+
   async function loadProjections() {
     setLoading(true);
     setError(null);
@@ -189,6 +203,7 @@ export default function AdministrationPage() {
     setOperations(null);
     setInspector(null);
     setProfile(null);
+    setProfileLoadError(null);
 
     try {
       const [nextOverview, nextConnections, nextOperations, nextInspector] = await Promise.all([
@@ -204,7 +219,12 @@ export default function AdministrationPage() {
       setInspector(nextInspector);
 
       if (viewConfig.showProfileTab) {
-        setProfile(await getEffectiveProfile(entityLevel, entityId));
+        try {
+          setProfile(await getEffectiveProfile(entityLevel, entityId));
+        } catch (err) {
+          setProfile(buildFallbackProfile());
+          setProfileLoadError(err instanceof Error ? err.message : 'Profile endpoint is temporarily unavailable');
+        }
       } else {
         setProfile(null);
       }
@@ -222,7 +242,13 @@ export default function AdministrationPage() {
   async function refreshInspectorAndProfile() {
     setInspector(await getDashboardInspector(entityLevel, entityId));
     if (viewConfig.showProfileTab) {
-      setProfile(await getEffectiveProfile(entityLevel, entityId));
+      try {
+        setProfile(await getEffectiveProfile(entityLevel, entityId));
+        setProfileLoadError(null);
+      } catch (err) {
+        setProfile(buildFallbackProfile());
+        setProfileLoadError(err instanceof Error ? err.message : 'Profile endpoint is temporarily unavailable');
+      }
     }
   }
 
@@ -449,6 +475,13 @@ export default function AdministrationPage() {
           {activeTab === 'profile' && (
             unsupportedProfileTab ? null : profile ? (
               <section style={{ display: 'grid', gap: 14 }}>
+                {profileLoadError && (
+                  <SurfaceStateCard
+                    title="Profile service degraded"
+                    description={profileLoadError}
+                    tone="warning"
+                  />
+                )}
                 <ProfileScopeTab
                   profile={profile}
                   profiles={profileCatalog}
