@@ -1760,10 +1760,11 @@ export class DashboardService {
         id: item.id,
         name: item.name,
         description: item.description,
-        type: item.protocol,
+        type: (item as any).type ?? item.category ?? item.name ?? item.id ?? 'tool',
         source: 'global',
         state: selectedTools.has(item.id) ? 'selected' : 'available',
       })),
+
       effective: {
         skills: [...selectedSkills],
         tools: [...selectedTools],
