@@ -43,6 +43,7 @@ type EntitySection =
   | 'readiness';
 
 type EntityLevel = 'agency' | 'department' | 'workspace' | 'agent' | 'subagent';
+type BuilderCreateType = 'agency' | 'department' | 'workspace' | 'agent' | 'subagent';
 
 const SECTION_LABEL: Record<EntitySection, string> = {
   identity: 'Identity',
@@ -1328,11 +1329,20 @@ export default function EntityEditorPage() {
   const [createQuietHoursEnd, setCreateQuietHoursEnd] = useState('08:00');
   const [createMemoryScope, setCreateMemoryScope] = useState<'main_session_only' | 'shared_safe' | 'disabled'>('main_session_only');
   const [createSafetyApproval, setCreateSafetyApproval] = useState(true);
+  const [createHorizontalLinks, setCreateHorizontalLinks] = useState('');
   const [createSection, setCreateSection] = useState<EntitySection>('identity');
 
   const createMode = searchParams.get('mode') === 'create';
-  const createTypeFromQuery = searchParams.get('type') === 'subagent' ? 'subagent' : 'agent';
+  const createTypeRaw = searchParams.get('type');
+  const createTypeFromQuery: BuilderCreateType =
+    createTypeRaw === 'agency' ||
+    createTypeRaw === 'department' ||
+    createTypeRaw === 'workspace' ||
+    createTypeRaw === 'subagent'
+      ? createTypeRaw
+      : 'agent';
   const requestedParentWorkspaceId = searchParams.get('parentWorkspaceId');
+  const requestedParentAgentId = searchParams.get('parentAgentId');
   const requestedProfileId = searchParams.get('profileId');
 
   const level = selectedNode?.level;
@@ -1382,7 +1392,7 @@ export default function EntityEditorPage() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(
     requestedParentWorkspaceId ?? scope.workspaceId ?? workspaceOptions[0]?.id ?? '',
   );
-  const [createKind, setCreateKind] = useState<'agent' | 'subagent'>(createTypeFromQuery);
+  const [createKind, setCreateKind] = useState<BuilderCreateType>(createTypeFromQuery);
 
   useEffect(() => {
     if (!createMode) return;
@@ -1391,6 +1401,10 @@ export default function EntityEditorPage() {
 
   useEffect(() => {
     if (!createMode) return;
+    if (createTypeFromQuery === 'agency' || createTypeFromQuery === 'department' || createTypeFromQuery === 'workspace') {
+      setCreateKind(createTypeFromQuery);
+      return;
+    }
     if (createTypeFromQuery === 'subagent') {
       setCreateKind('subagent');
       return;
@@ -1408,6 +1422,11 @@ export default function EntityEditorPage() {
   }, [createModel, profilePrefill]);
 
   const handleCreateAgent = useCallback(async () => {
+    if (createKind === 'agency' || createKind === 'department' || createKind === 'workspace') {
+      setCreateError(`Creation for ${createKind} is now routed through Agents Builder context, but backend persistence for this level is not wired yet.`);
+      return;
+    }
+
     const parentWorkspaceId = selectedWorkspaceId || scope.workspaceId || workspace?.id;
     if (!parentWorkspaceId) {
       setCreateError('Select a parent workspace before creating an agent.');
@@ -1418,11 +1437,11 @@ export default function EntityEditorPage() {
       return;
     }
     const nextId = `${createKind}-${Date.now()}`;
-    const currentAgentId = selectedNode?.level === 'agent'
+    const currentAgentId = requestedParentAgentId ?? (selectedNode?.level === 'agent'
       ? selectedNode.id
       : selectedNode?.level === 'subagent'
         ? (selectedNode.parentKey?.split(':')[1] ?? scope.agentId ?? undefined)
-        : scope.agentId ?? undefined;
+        : scope.agentId ?? undefined);
     const parentAgentId = createKind === 'subagent' ? currentAgentId : undefined;
     if (createKind === 'subagent' && !parentAgentId) {
       setCreateError('To create a subagent, select an agent in hierarchy first.');
@@ -1440,7 +1459,14 @@ export default function EntityEditorPage() {
         instructions: createSystemPrompt,
         model: createModel || profilePrefill?.defaultModel || workspace?.defaultModel || '',
         skillRefs: profilePrefill?.defaultSkills ?? [],
-        tags: profilePrefill?.tags ?? [],
+        tags: [
+          ...(profilePrefill?.tags ?? []),
+          ...createHorizontalLinks
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .map((item) => `shared-with:${item}`),
+        ],
         visibility: 'workspace',
         executionMode: 'direct',
         kind: createKind,
@@ -1524,14 +1550,14 @@ export default function EntityEditorPage() {
         isEnabled: true,
       });
       await refresh();
-      selectByEntity(createKind, nextId);
-      navigate(`/entity-editor?${NODE_QUERY_KEY}=${createKind}:${nextId}`, { replace: true });
+      selectByEntity(createKind === 'subagent' ? 'subagent' : 'agent', nextId);
+      navigate(`/entity-editor?${NODE_QUERY_KEY}=${createKind === 'subagent' ? 'subagent' : 'agent'}:${nextId}`, { replace: true });
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create agent');
     } finally {
       setCreateBusy(false);
     }
-  }, [createDescription, createKind, createModel, createName, createRole, navigate, profilePrefill, refresh, scope.agentId, scope.workspaceId, selectByEntity, selectedNode, selectedWorkspaceId, workspace?.defaultModel]);
+  }, [createDescription, createHorizontalLinks, createKind, createModel, createName, createRole, navigate, profilePrefill, refresh, requestedParentAgentId, scope.agentId, scope.workspaceId, selectByEntity, selectedNode, selectedWorkspaceId, workspace?.defaultModel]);
 
   if (createMode) {
     const createSections: EntitySection[] = [
@@ -1567,9 +1593,9 @@ export default function EntityEditorPage() {
     return (
       <div className="max-w-7xl mx-auto space-y-6">
         <PageHeader
-          title={createKind === 'subagent' ? 'Create Subagent' : 'Create Agent'}
+          title={`Agents Builder · Create ${createKind.charAt(0).toUpperCase()}${createKind.slice(1)}`}
           icon={SquarePen}
-          description="Single create surface for Agent/Subagent with explicit context and 9 builder sections."
+          description="Single create surface with explicit context, hierarchy-aware defaults, and 9 builder sections."
         />
         <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)_280px] gap-4">
           <aside className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
@@ -1602,8 +1628,17 @@ export default function EntityEditorPage() {
                 Selected level: <strong>{selectedCreateContextLevel ?? 'none'}</strong> · Creating: <strong>{createKind}</strong>
               </p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Rules: Agency/Department/Workspace → Agent. Agent/Subagent → Subagent. Creation for agency/department/workspace is managed outside Agent Builder.
+                Vertical inheritance: Agency → Department → Workspace → Agent → Subagent. Horizontal links can be defined for shared dependencies between same-level entities.
               </p>
+              <div>
+                <label style={labelStyle()}>Horizontal sharing links (same-level IDs, comma-separated)</label>
+                <input
+                  style={inputStyle()}
+                  value={createHorizontalLinks}
+                  onChange={(event) => setCreateHorizontalLinks(event.target.value)}
+                  placeholder="marketing, growth, ads-workspace, agent-copywriter"
+                />
+              </div>
             </div>
 
             {createSection === 'identity' && (
@@ -1708,7 +1743,14 @@ ${createLocalNotes || '<empty>'}
               <SaveButton
                 saving={createBusy}
                 onClick={() => { void handleCreateAgent(); }}
-                disabled={!selectedWorkspaceId || !createName.trim() || (createKind === 'subagent' && !(scope.agentId || selectedNode?.level === 'agent' || selectedNode?.level === 'subagent'))}
+                disabled={
+                  createKind === 'agency' ||
+                  createKind === 'department' ||
+                  createKind === 'workspace' ||
+                  !selectedWorkspaceId ||
+                  !createName.trim() ||
+                  (createKind === 'subagent' && !(scope.agentId || selectedNode?.level === 'agent' || selectedNode?.level === 'subagent'))
+                }
               />
               <button type="button" onClick={() => navigate('/entity-editor')} style={{ ...inputStyle(), width: 'auto', cursor: 'pointer' }}>
                 Cancel
@@ -1737,7 +1779,7 @@ ${createLocalNotes || '<empty>'}
     return (
       <div className="max-w-6xl mx-auto space-y-6">
         <PageHeader
-          title="Entity Editor"
+          title="Agents Builder"
           icon={SquarePen}
           description="Edit Agency, Department, Workspace, Agent and Subagent configuration from a single surface."
         />
@@ -1774,7 +1816,7 @@ ${createLocalNotes || '<empty>'}
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
-        title="Entity Editor"
+        title="Agents Builder"
         icon={SquarePen}
         description="Configure identity, behavior, skills, routing, and operations"
       />

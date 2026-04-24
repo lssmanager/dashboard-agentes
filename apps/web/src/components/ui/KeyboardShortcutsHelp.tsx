@@ -12,7 +12,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     items: [
       { keys: ['Alt', '1'], description: 'Go to Administration' },
       { keys: ['Alt', '2'], description: 'Go to Studio' },
-      { keys: ['Alt', '3'], description: 'Go to Entity Editor' },
+      { keys: ['Alt', '3'], description: 'Go to Agents Builder' },
     ],
   },
   {

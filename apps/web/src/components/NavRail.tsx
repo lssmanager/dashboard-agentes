@@ -10,7 +10,7 @@ import type { SurfaceId } from '../lib/types';
 const NAV: Array<{ label: string; surface: SurfaceId; Icon: ComponentType<{ size?: number }> }> = [
   { label: 'Administration', surface: 'agency-builder', Icon: Building2 },
   { label: 'Studio', surface: 'workspace-studio', Icon: Cpu },
-  { label: 'Editor', surface: 'entity-editor', Icon: SquarePen },
+  { label: 'Agents Builder', surface: 'entity-editor', Icon: SquarePen },
 ];
 
 export function NavRail({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {

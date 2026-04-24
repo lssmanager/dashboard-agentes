@@ -48,6 +48,12 @@ function createAgentRouteForNode(nodeKey: string, nodes: Record<string, Hierarch
   if (!node) return null;
   const workspaceId = resolveWorkspaceIdForNode(nodeKey, nodes);
 
+  if (node.level === 'agency') {
+    return `/entity-editor?mode=create&type=department&parentAgencyId=${encodeURIComponent(node.id)}`;
+  }
+  if (node.level === 'department') {
+    return `/entity-editor?mode=create&type=workspace&parentDepartmentId=${encodeURIComponent(node.id)}`;
+  }
   if (node.level === 'workspace') {
     return workspaceId
       ? `/entity-editor?mode=create&type=agent&parentWorkspaceId=${encodeURIComponent(workspaceId)}`
@@ -55,7 +61,7 @@ function createAgentRouteForNode(nodeKey: string, nodes: Record<string, Hierarch
   }
   if (node.level === 'agent') {
     return workspaceId
-      ? `/entity-editor?mode=create&type=subagent&parentWorkspaceId=${encodeURIComponent(workspaceId)}`
+      ? `/entity-editor?mode=create&type=subagent&parentWorkspaceId=${encodeURIComponent(workspaceId)}&parentAgentId=${encodeURIComponent(node.id)}`
       : '/entity-editor?mode=create&type=subagent';
   }
   return null;
@@ -108,6 +114,8 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
     navigate(path);
     onNavigate?.();
   }
+
+  const selectedHierarchyCreateHref = selectedNode ? createAgentRouteForNode(selectedNode.key, tree.nodes) : null;
 
   const contextPath = selectedLineage.map((node) => node.label).join(' / ');
 
@@ -174,6 +182,58 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
         </div>
 
         <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => go('/entity-editor?mode=create&type=agency')}
+              style={{
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--shell-chip-border)',
+                background: 'var(--shell-chip-bg)',
+                color: 'var(--text-primary)',
+                fontSize: 12,
+                fontWeight: 700,
+                padding: '7px 10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+              aria-label="Create Agency"
+              title="Create Agency"
+            >
+              <Plus size={13} />
+              Create Agency
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!selectedHierarchyCreateHref) return;
+                go(selectedHierarchyCreateHref);
+              }}
+              disabled={!selectedHierarchyCreateHref}
+              style={{
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--shell-chip-border)',
+                background: selectedHierarchyCreateHref ? 'var(--shell-chip-bg)' : 'transparent',
+                color: selectedHierarchyCreateHref ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontSize: 12,
+                fontWeight: 700,
+                padding: '7px 10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: selectedHierarchyCreateHref ? 'pointer' : 'not-allowed',
+                whiteSpace: 'nowrap',
+              }}
+              aria-label="Create from selected level"
+              title="Create from selected level"
+            >
+              <Plus size={13} />
+              Create from selection
+            </button>
+          </div>
           <select
             value={selectedLineage[0]?.id ?? ''}
             onChange={(event) => {
@@ -437,15 +497,31 @@ function HierarchyBranch({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {(node.level === 'workspace' || node.level === 'agent') && (
+          {(node.level === 'agency' || node.level === 'department' || node.level === 'workspace' || node.level === 'agent') && (
             <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
                 onCreate(nodeKey);
               }}
-              title={node.level === 'workspace' ? 'Add Agent' : 'Add Subagent'}
-              aria-label={node.level === 'workspace' ? 'Add Agent' : 'Add Subagent'}
+              title={
+                node.level === 'agency'
+                  ? 'Add Department'
+                  : node.level === 'department'
+                    ? 'Add Workspace'
+                    : node.level === 'workspace'
+                      ? 'Add Agent'
+                      : 'Add Subagent'
+              }
+              aria-label={
+                node.level === 'agency'
+                  ? 'Add Department'
+                  : node.level === 'department'
+                    ? 'Add Workspace'
+                    : node.level === 'workspace'
+                      ? 'Add Agent'
+                      : 'Add Subagent'
+              }
               style={{
                 width: 18,
                 height: 18,

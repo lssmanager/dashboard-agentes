@@ -170,6 +170,8 @@ export function App() {
                   <Route path="/agency-builder" element={<LegacyAgencyBuilderRedirect />} />
                   <Route path="/workspace-studio" element={<WorkspaceStudioPage />} />
                   <Route path="/entity-editor" element={<EntityEditorPage />} />
+                  <Route path="/agents-builder" element={<Navigate to="/entity-editor" replace />} />
+                  <Route path="/create-subagent" element={<Navigate to="/entity-editor?mode=create&type=subagent" replace />} />
                   <Route path="/profiles"    element={<ProfilesPage />} />
                   <Route path="/sessions"    element={<SessionsPage />} />
                   <Route path="/runs"        element={<RunsPage />} />

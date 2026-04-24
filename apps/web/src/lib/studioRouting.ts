@@ -6,7 +6,7 @@ export const TAB_QUERY_KEY = 'tab';
 export const SURFACE_LABELS: Record<SurfaceId, string> = {
   'agency-builder': 'Administration',
   'workspace-studio': 'Studio',
-  'entity-editor': 'Editor',
+  'entity-editor': 'Agents Builder',
   profiles: 'Profiles Hub',
   runs: 'Runs',
   sessions: 'Sessions',
