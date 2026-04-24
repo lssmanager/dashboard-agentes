@@ -8,6 +8,10 @@ import { useStudioState } from '../../../lib/StudioStateContext';
 import {
   saveAgent,
   updateWorkspace,
+  getEffectiveProfile,
+  bindProfile,
+  unbindProfile,
+  saveProfileOverride,
   getHooks,
   getRuns,
   getEditorReadiness,
@@ -22,13 +26,14 @@ import {
   getEditorSkillsTools,
   patchEditorSkillsTools,
 } from '../../../lib/api';
-import type { AgentSpec, EditorSkillsToolsDto, HookSpec, RunSpec, WorkspaceSpec } from '../../../lib/types';
+import type { AgentSpec, EditorSkillsToolsDto, EffectiveProfileDto, HookSpec, RunSpec, WorkspaceSpec } from '../../../lib/types';
 import { RadarChart } from '../../../components/ui/Charts';
 import { AnalyticsStateBoundary } from '../../analytics/components/AnalyticsStateBoundary';
 import { TimeWindowSelector } from '../../analytics/components/TimeWindowSelector';
 import { useAnalyticsMetric } from '../../analytics/hooks/useAnalyticsMetric';
 import type { AnalyticsWindow } from '../../analytics/types';
 import { NODE_QUERY_KEY } from '../../../lib/studioRouting';
+import { ProfileScopeTab } from '../../studio/components/admin/ProfileScopeTab';
 
 type EntitySection =
   | 'identity'
@@ -66,11 +71,11 @@ const MATRIX: Record<EntityLevel, EntitySection[]> = {
   subagent:   ['identity', 'prompts-behavior', 'skills-tools', 'handoffs', 'routing-channels', 'hooks', 'versions', 'operations', 'readiness'],
 };
 
-type BuilderPrimaryTab = 'profile' | 'governance';
+type BuilderPrimaryTab = 'builder' | 'profile';
 
 const PRIMARY_TAB_SECTIONS: Record<BuilderPrimaryTab, EntitySection[]> = {
-  profile: ['identity', 'prompts-behavior', 'skills-tools', 'handoffs', 'routing-channels', 'hooks', 'operations'],
-  governance: ['versions', 'readiness'],
+  builder: ['identity', 'prompts-behavior', 'skills-tools', 'handoffs', 'routing-channels', 'hooks', 'versions', 'operations', 'readiness'],
+  profile: [],
 };
 
 // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1301,7 +1306,7 @@ export default function EntityEditorPage() {
   const { tree, selectedNode, selectedLineage, scope, selectByEntity } = useHierarchy();
   const { state, refresh } = useStudioState();
   const [activeSection, setActiveSection] = useState<EntitySection>('identity');
-  const [activePrimaryTab, setActivePrimaryTab] = useState<BuilderPrimaryTab>('profile');
+  const [activePrimaryTab, setActivePrimaryTab] = useState<BuilderPrimaryTab>('builder');
   const [createName, setCreateName] = useState('');
   const [createModel, setCreateModel] = useState('');
   const [createRole, setCreateRole] = useState('');
@@ -1326,7 +1331,9 @@ export default function EntityEditorPage() {
   const [createSafetyApproval, setCreateSafetyApproval] = useState(true);
   const [createHorizontalLinks, setCreateHorizontalLinks] = useState('');
   const [createSection, setCreateSection] = useState<EntitySection>('identity');
-  const [createPrimaryTab, setCreatePrimaryTab] = useState<BuilderPrimaryTab>('profile');
+  const [profilePanel, setProfilePanel] = useState<EffectiveProfileDto | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const createMode = searchParams.get('mode') === 'create';
   const createTypeRaw = searchParams.get('type');
@@ -1353,10 +1360,6 @@ export default function EntityEditorPage() {
     () => PRIMARY_TAB_SECTIONS[activePrimaryTab].filter((section) => sections.includes(section)),
     [activePrimaryTab, sections],
   );
-  const createPrimarySections = useMemo(
-    () => PRIMARY_TAB_SECTIONS[createPrimaryTab],
-    [createPrimaryTab],
-  );
 
   // Ensure active section is valid for current level
   useEffect(() => {
@@ -1366,24 +1369,17 @@ export default function EntityEditorPage() {
   }, [sections, activeSection]);
 
   useEffect(() => {
-    const nextPrimaryTab = (Object.entries(PRIMARY_TAB_SECTIONS).find(([, sectionList]) => sectionList.includes(activeSection))?.[0] ?? 'profile') as BuilderPrimaryTab;
+    const nextPrimaryTab = (Object.entries(PRIMARY_TAB_SECTIONS).find(([, sectionList]) => sectionList.includes(activeSection))?.[0] ?? 'builder') as BuilderPrimaryTab;
     if (nextPrimaryTab !== activePrimaryTab) {
       setActivePrimaryTab(nextPrimaryTab);
     }
   }, [activePrimaryTab, activeSection]);
 
   useEffect(() => {
-    if (!activePrimarySections.includes(activeSection)) {
+    if (activePrimaryTab !== 'profile' && !activePrimarySections.includes(activeSection)) {
       setActiveSection(activePrimarySections[0] ?? 'identity');
     }
-  }, [activePrimarySections, activeSection]);
-
-  useEffect(() => {
-    const nextPrimaryTab = (Object.entries(PRIMARY_TAB_SECTIONS).find(([, sectionList]) => sectionList.includes(createSection))?.[0] ?? 'profile') as BuilderPrimaryTab;
-    if (nextPrimaryTab !== createPrimaryTab) {
-      setCreatePrimaryTab(nextPrimaryTab);
-    }
-  }, [createPrimaryTab, createSection]);
+  }, [activePrimarySections, activePrimaryTab, activeSection]);
 
   // Resolve entity data
   const agent = useMemo<AgentSpec | null>(() => {
@@ -1405,6 +1401,7 @@ export default function EntityEditorPage() {
       : scope.agencyId ? 'agency'
       : null);
   const workspace = state.workspace;
+  const profileCatalog = useMemo(() => state.profiles ?? [], [state.profiles]);
   const profilePrefill = requestedProfileId ? state.profiles.find((item) => item.id === requestedProfileId) ?? null : null;
   const workspaceOptions = useMemo(
     () =>
@@ -1417,6 +1414,22 @@ export default function EntityEditorPage() {
     requestedParentWorkspaceId ?? scope.workspaceId ?? workspaceOptions[0]?.id ?? '',
   );
   const [createKind, setCreateKind] = useState<BuilderCreateType>(createTypeFromQuery);
+
+  useEffect(() => {
+    if (createMode || !entityLevel || !selectedNode?.id) return;
+    let cancelled = false;
+    setProfileError(null);
+    getEffectiveProfile(entityLevel, selectedNode.id)
+      .then((next) => {
+        if (!cancelled) setProfilePanel(next);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setProfileError(err instanceof Error ? err.message : 'Failed to load profile');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [createMode, entityLevel, selectedNode?.id]);
 
   useEffect(() => {
     if (!createMode) return;
@@ -1584,6 +1597,53 @@ export default function EntityEditorPage() {
     }
   }, [createDescription, createHorizontalLinks, createKind, createModel, createName, createRole, navigate, profilePrefill, refresh, requestedParentAgentId, scope.agentId, scope.workspaceId, selectByEntity, selectedNode, selectedWorkspaceId, workspace?.defaultModel]);
 
+  const refreshProfilePanel = useCallback(async () => {
+    if (!entityLevel || !selectedNode?.id) return;
+    setProfilePanel(await getEffectiveProfile(entityLevel, selectedNode.id));
+  }, [entityLevel, selectedNode?.id]);
+
+  const handleBindProfilePanel = useCallback(async (profileId: string) => {
+    if (!entityLevel || !selectedNode?.id || !profileId) return;
+    setProfileBusy(true);
+    setProfileError(null);
+    try {
+      await bindProfile(entityLevel, selectedNode.id, profileId);
+      await refreshProfilePanel();
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Failed to bind profile');
+    } finally {
+      setProfileBusy(false);
+    }
+  }, [entityLevel, refreshProfilePanel, selectedNode?.id]);
+
+  const handleUnbindProfilePanel = useCallback(async () => {
+    if (!entityLevel || !selectedNode?.id) return;
+    setProfileBusy(true);
+    setProfileError(null);
+    try {
+      await unbindProfile(entityLevel, selectedNode.id);
+      await refreshProfilePanel();
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Failed to unbind profile');
+    } finally {
+      setProfileBusy(false);
+    }
+  }, [entityLevel, refreshProfilePanel, selectedNode?.id]);
+
+  const handleSaveProfileOverridePanel = useCallback(async (payload: { model?: string; skills?: string[] }) => {
+    if (!entityLevel || !selectedNode?.id) return;
+    setProfileBusy(true);
+    setProfileError(null);
+    try {
+      await saveProfileOverride(entityLevel, selectedNode.id, payload);
+      await refreshProfilePanel();
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Failed to save override');
+    } finally {
+      setProfileBusy(false);
+    }
+  }, [entityLevel, refreshProfilePanel, selectedNode?.id]);
+
   if (createMode) {
     const createSections: EntitySection[] = [
       'identity',
@@ -1624,12 +1684,8 @@ export default function EntityEditorPage() {
         />
         <div className="space-y-4">
           <div className="rounded-xl border p-3 space-y-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(120px, max-content))', gap: 8 }}>
-              <button type="button" onClick={() => setCreatePrimaryTab('profile')} style={{ ...buttonStyle, background: createPrimaryTab === 'profile' ? 'var(--color-primary-soft)' : 'var(--bg-primary)', color: createPrimaryTab === 'profile' ? 'var(--color-primary)' : 'var(--text-primary)' }}>Profile</button>
-              <button type="button" onClick={() => setCreatePrimaryTab('governance')} style={{ ...buttonStyle, background: createPrimaryTab === 'governance' ? 'var(--color-primary-soft)' : 'var(--bg-primary)', color: createPrimaryTab === 'governance' ? 'var(--color-primary)' : 'var(--text-primary)' }}>Governance</button>
-            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-              {createSections.filter((section) => createPrimarySections.includes(section)).map((section) => (
+              {createSections.map((section) => (
                 <button
                   key={section}
                   type="button"
@@ -1882,9 +1938,10 @@ ${createLocalNotes || '<empty>'}
 
       <div className="rounded-xl border p-3 space-y-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(120px, max-content))', gap: 8 }}>
+          <button type="button" onClick={() => setActivePrimaryTab('builder')} style={{ ...buttonStyle, background: activePrimaryTab === 'builder' ? 'var(--color-primary-soft)' : 'var(--bg-primary)', color: activePrimaryTab === 'builder' ? 'var(--color-primary)' : 'var(--text-primary)' }}>Builder</button>
           <button type="button" onClick={() => setActivePrimaryTab('profile')} style={{ ...buttonStyle, background: activePrimaryTab === 'profile' ? 'var(--color-primary-soft)' : 'var(--bg-primary)', color: activePrimaryTab === 'profile' ? 'var(--color-primary)' : 'var(--text-primary)' }}>Profile</button>
-          <button type="button" onClick={() => setActivePrimaryTab('governance')} style={{ ...buttonStyle, background: activePrimaryTab === 'governance' ? 'var(--color-primary-soft)' : 'var(--bg-primary)', color: activePrimaryTab === 'governance' ? 'var(--color-primary)' : 'var(--text-primary)' }}>Governance</button>
         </div>
+        {activePrimaryTab === 'builder' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
           {sections.filter((section) => activePrimarySections.includes(section)).map((section) => (
             <button
@@ -1897,10 +1954,30 @@ ${createLocalNotes || '<empty>'}
             </button>
           ))}
         </div>
+        )}
       </div>
 
       <div className="rounded-xl border p-6" style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}>
         <div className="min-w-0">
+          {activePrimaryTab === 'profile' && (
+            profilePanel ? (
+              <ProfileScopeTab
+                profile={profilePanel}
+                profiles={profileCatalog}
+                busy={profileBusy}
+                onBind={(profileId) => void handleBindProfilePanel(profileId)}
+                onUnbind={() => void handleUnbindProfilePanel()}
+                onSaveOverride={(payload) => void handleSaveProfileOverridePanel(payload)}
+              />
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No profile data available for this scope.</p>
+                {profileError && <p className="text-xs" style={{ color: 'var(--tone-danger-text)' }}>{profileError}</p>}
+              </div>
+            )
+          )}
+          {activePrimaryTab === 'builder' && (
+          <>
           {activeSection === 'identity' && (
             <IdentitySection level={entityLevel} agent={activeAgent} workspace={workspace} onSaved={() => { void refresh(); }} />
           )}
@@ -1923,6 +2000,8 @@ ${createLocalNotes || '<empty>'}
               level={entityLevel}
               entityId={selectedNode?.id ?? ''}
             />
+          )}
+          </>
           )}
         </div>
       </div>

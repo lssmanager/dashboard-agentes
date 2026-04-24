@@ -16,7 +16,7 @@ export interface ScopeViewDefinition {
 
 export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition> = {
   agency: {
-    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile', 'settings'],
+    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile'],
     canEnterStudio: false,
     showProfileTab: true,
     settingsScope: 'global/defaults',
@@ -25,7 +25,7 @@ export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition
     runsMode: 'aggregated',
   },
   department: {
-    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile', 'settings'],
+    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile'],
     canEnterStudio: false,
     showProfileTab: true,
     settingsScope: 'partial',
@@ -34,7 +34,7 @@ export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition
     runsMode: 'aggregated',
   },
   workspace: {
-    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile', 'settings'],
+    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile'],
     canEnterStudio: true,
     showProfileTab: true,
     settingsScope: 'scoped',
@@ -43,7 +43,7 @@ export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition
     runsMode: 'scoped',
   },
   agent: {
-    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile', 'settings'],
+    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile'],
     canEnterStudio: true,
     showProfileTab: true,
     settingsScope: 'scoped',
@@ -52,7 +52,7 @@ export const SCOPE_VIEW_REGISTRY: Record<CanonicalNodeLevel, ScopeViewDefinition
     runsMode: 'scoped',
   },
   subagent: {
-    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile', 'settings'],
+    adminTabs: ['overview', 'connections', 'operations', 'runs', 'sessions', 'profile'],
     canEnterStudio: true,
     showProfileTab: true,
     settingsScope: 'scoped',

@@ -72,6 +72,11 @@ function parseTab(value: string | null): AgencyBuilderTab | null {
   return null;
 }
 
+function normalizeLegacyTab(tab: AgencyBuilderTab | null): AgencyBuilderTab | null {
+  if (tab === 'settings') return 'profile';
+  return tab;
+}
+
 function SurfaceStateCard({
   title,
   description,
@@ -136,7 +141,7 @@ export default function AdministrationPage() {
   const viewConfig = SCOPE_VIEW_REGISTRY[entityLevel];
 
   const tabs = viewConfig.adminTabs;
-  const activeFromQuery = parseTab(searchParams.get('tab'));
+  const activeFromQuery = normalizeLegacyTab(parseTab(searchParams.get('tab')));
   const activeTab = activeFromQuery && tabs.includes(activeFromQuery) ? activeFromQuery : tabs[0];
 
   const [overview, setOverview] = useState<DashboardOverviewDto | null>(null);
@@ -441,26 +446,25 @@ export default function AdministrationPage() {
             ) : !isInitialLoading && !error && <SurfaceStateCard title="No sessions available" description="Sessions need overview and operations projections to render." />
           )}
 
-          {activeTab === 'settings' && (
-            <section style={panelStyle}>
-              {isInitialLoading || (error && !hasLoadedProjections) ? (
-                <SurfaceStateCard title="Loading settings" description="Waiting for the current scope projections before showing settings." />
-              ) : (
-                <AdminSettingsPanel settingsScope={viewConfig.settingsScope} />
-              )}
-            </section>
-          )}
-
           {activeTab === 'profile' && (
             unsupportedProfileTab ? null : profile ? (
-              <ProfileScopeTab
-                profile={profile}
-                profiles={profileCatalog}
-                busy={busy}
-                onBind={(profileId) => void handleBindProfile(profileId)}
-                onUnbind={() => void handleUnbindProfile()}
-                onSaveOverride={(payload) => void handleSaveOverride(payload)}
-              />
+              <section style={{ display: 'grid', gap: 14 }}>
+                <ProfileScopeTab
+                  profile={profile}
+                  profiles={profileCatalog}
+                  busy={busy}
+                  onBind={(profileId) => void handleBindProfile(profileId)}
+                  onUnbind={() => void handleUnbindProfile()}
+                  onSaveOverride={(payload) => void handleSaveOverride(payload)}
+                />
+                <section style={panelStyle}>
+                  {isInitialLoading || (error && !hasLoadedProjections) ? (
+                    <SurfaceStateCard title="Loading profile settings" description="Waiting for the current scope projections before showing settings." />
+                  ) : (
+                    <AdminSettingsPanel settingsScope={viewConfig.settingsScope} />
+                  )}
+                </section>
+              </section>
             ) : !isInitialLoading && !error ? (
               <SurfaceStateCard title="No profile bound" description="Select or bind a profile to inspect the effective configuration for this scope." />
             ) : null
