@@ -50,6 +50,8 @@ interface HierarchyContextValue {
   expandedKeys: string[];
   isExpanded: (key: string) => boolean;
   toggleExpanded: (key: string) => void;
+  expandAll: () => void;
+  collapseAll: () => void;
   selectNode: (key: string) => void;
   selectByKey: (key: string) => void;
   selectByEntity: (level: HierarchyLevel, id: string) => void;
@@ -476,6 +478,19 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
       setExpandedKeys((previous) =>
         previous.includes(key) ? previous.filter((entry) => entry !== key) : [...previous, key],
       );
+    },
+    expandAll: () => {
+      const expandable = Object.values(tree.nodes)
+        .filter((node) => node.childKeys.length > 0)
+        .map((node) => node.key);
+      setExpandedKeys(expandable);
+    },
+    collapseAll: () => {
+      if (tree.rootKey && tree.nodes[tree.rootKey]) {
+        setExpandedKeys([tree.rootKey]);
+        return;
+      }
+      setExpandedKeys([]);
     },
     selectNode: (key: string) => {
       if (tree.nodes[key]) {

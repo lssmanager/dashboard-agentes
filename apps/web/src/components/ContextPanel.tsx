@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, FolderTree, Plus, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderTree, MinusSquare, Plus, PlusSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { type HierarchyLevel, type HierarchyNode, useHierarchy } from '../lib/HierarchyContext';
-import type { AgencyBuilderTab } from '../lib/types';
+import { saveAgent, updateWorkspace } from '../lib/api';
+import type { AgencyBuilderTab, AgentSpec, WorkspaceSpec } from '../lib/types';
 import { buildStudioHref } from '../lib/studioRouting';
 
 const LEVEL_LABEL: Record<HierarchyLevel, string> = {
@@ -77,38 +78,19 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
     selectedLineage,
     isExpanded,
     toggleExpanded,
+    expandAll,
+    collapseAll,
     selectNode,
     loading,
     selectedBuilderTab,
   } = useHierarchy();
-  const [search, setSearch] = useState('');
-
-  const searchText = search.trim().toLowerCase();
+  const [labelOverrides, setLabelOverrides] = useState<Record<string, string>>({});
 
   const matches = useMemo(() => {
     const cache = new Map<string, boolean>();
-    const scan = (key: string): boolean => {
-      if (cache.has(key)) return cache.get(key) ?? false;
-      const node = tree.nodes[key];
-      if (!node) {
-        cache.set(key, false);
-        return false;
-      }
-      const selfMatch =
-        searchText.length === 0 ||
-        node.label.toLowerCase().includes(searchText) ||
-        LEVEL_LABEL[node.level].toLowerCase().includes(searchText);
-      const childMatch = node.childKeys.some(scan);
-      const matched = selfMatch || childMatch;
-      cache.set(key, matched);
-      return matched;
-    };
-
-    for (const key of Object.keys(tree.nodes)) {
-      scan(key);
-    }
+    Object.keys(tree.nodes).forEach((key) => cache.set(key, true));
     return cache;
-  }, [searchText, tree.nodes]);
+  }, [tree.nodes]);
 
   function go(path: string) {
     navigate(path);
@@ -116,8 +98,33 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   const selectedHierarchyCreateHref = selectedNode ? createAgentRouteForNode(selectedNode.key, tree.nodes) : null;
+  const selectedAgencyId = selectedLineage.find((node) => node.level === 'agency')?.id ?? agencies[0]?.id ?? '';
 
-  const contextPath = selectedLineage.map((node) => node.label).join(' / ');
+  async function handleRenameNode(node: HierarchyNode, nextLabel: string) {
+    const label = nextLabel.trim();
+    if (!label || label === node.label) return;
+
+    if (node.level === 'workspace') {
+      const workspaceLike: Partial<WorkspaceSpec> = { id: node.id, name: label };
+      await updateWorkspace(workspaceLike);
+      setLabelOverrides((prev) => ({ ...prev, [node.key]: label }));
+      return;
+    }
+
+    if (node.level === 'agent' || node.level === 'subagent') {
+      const agentLike: Partial<AgentSpec> = {
+        id: node.id,
+        workspaceId: resolveWorkspaceIdForNode(node.key, tree.nodes) ?? '',
+        name: label,
+      };
+      await saveAgent(agentLike as AgentSpec);
+      setLabelOverrides((prev) => ({ ...prev, [node.key]: label }));
+      return;
+    }
+
+    // Agency/Department rename is still managed by canonical backend modules.
+    setLabelOverrides((prev) => ({ ...prev, [node.key]: label }));
+  }
 
   return (
     <div
@@ -146,7 +153,7 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
           Primary Index
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'start', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 10 }}>
           <div
             style={{
               width: 34,
@@ -175,9 +182,26 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
             >
               Hierarchy
             </h2>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.45, marginTop: 5 }}>
-              Agency / Departments / Workspaces / Agents / Subagents
-            </p>
+          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: '1px solid var(--shell-chip-border)', borderRadius: 'var(--radius-md)', background: 'var(--shell-chip-bg)', padding: 3 }}>
+            <button
+              type="button"
+              onClick={expandAll}
+              title="Expand all"
+              aria-label="Expand all hierarchy nodes"
+              style={iconButtonStyle()}
+            >
+              <PlusSquare size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={collapseAll}
+              title="Collapse all"
+              aria-label="Collapse all hierarchy nodes"
+              style={iconButtonStyle()}
+            >
+              <MinusSquare size={13} />
+            </button>
           </div>
         </div>
 
@@ -235,7 +259,7 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
             </button>
           </div>
           <select
-            value={selectedLineage[0]?.id ?? ''}
+            value={selectedAgencyId}
             onChange={(event) => {
               const nextAgency = agencies.find((agency) => agency.id === event.target.value);
               if (!nextAgency) return;
@@ -264,78 +288,6 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
               ))
             )}
           </select>
-
-          <div style={{ position: 'relative' }}>
-            <Search
-              size={14}
-              style={{
-                position: 'absolute',
-                left: 11,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-                pointerEvents: 'none',
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Search hierarchy..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 11px 10px 33px',
-                fontSize: 13,
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--shell-chip-border)',
-                background: 'var(--shell-chip-bg)',
-                color: 'var(--text-primary)',
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedNode) {
-                go(routeForNode(selectedNode, selectedBuilderTab));
-              }
-            }}
-            disabled={!selectedNode}
-            style={{
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--shell-chip-border)',
-              background: selectedNode ? 'var(--shell-chip-bg)' : 'transparent',
-              color: selectedNode ? 'var(--text-primary)' : 'var(--text-muted)',
-              fontSize: 12,
-              fontWeight: 700,
-              padding: '8px 10px',
-              textAlign: 'left',
-              cursor: selectedNode ? 'pointer' : 'not-allowed',
-              opacity: selectedNode ? 1 : 0.7,
-            }}
-          >
-            Open selected context
-          </button>
-        </div>
-      </div>
-
-      <div style={{ borderBottom: '1px solid var(--shell-panel-border)', padding: '10px 16px' }}>
-        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 700 }}>
-          Active Context
-        </div>
-        <div
-          style={{
-            marginTop: 4,
-            fontSize: 12,
-            color: 'var(--text-primary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {contextPath || 'No selection'}
         </div>
       </div>
 
@@ -348,6 +300,7 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
               nodeKey={tree.rootKey}
               depth={0}
               nodes={tree.nodes}
+              labelOverrides={labelOverrides}
               selectedKey={selectedKey}
               isExpanded={isExpanded}
               toggleExpanded={toggleExpanded}
@@ -363,6 +316,7 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
                 if (!href) return;
                 go(href);
               }}
+              onRename={handleRenameNode}
             />
           </div>
         ) : (
@@ -373,10 +327,26 @@ export function ContextPanel({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function iconButtonStyle(): React.CSSProperties {
+  return {
+    width: 22,
+    height: 22,
+    border: '1px solid var(--shell-chip-border)',
+    borderRadius: 'var(--radius-sm)',
+    background: 'var(--bg-primary)',
+    color: 'var(--text-muted)',
+    display: 'grid',
+    placeItems: 'center',
+    cursor: 'pointer',
+    padding: 0,
+  };
+}
+
 function HierarchyBranch({
   nodeKey,
   depth,
   nodes,
+  labelOverrides,
   selectedKey,
   isExpanded,
   toggleExpanded,
@@ -384,10 +354,12 @@ function HierarchyBranch({
   matches,
   onOpen,
   onCreate,
+  onRename,
 }: {
   nodeKey: string;
   depth: number;
   nodes: Record<string, HierarchyNode>;
+  labelOverrides: Record<string, string>;
   selectedKey: string | null;
   isExpanded: (key: string) => boolean;
   toggleExpanded: (key: string) => void;
@@ -395,15 +367,22 @@ function HierarchyBranch({
   matches: Map<string, boolean>;
   onOpen: (key: string) => void;
   onCreate: (key: string) => void;
+  onRename: (node: HierarchyNode, nextLabel: string) => Promise<void>;
 }) {
   const node = nodes[nodeKey];
   if (!node) return null;
   if (!matches.get(nodeKey)) return null;
 
+  const shownLabel = labelOverrides[nodeKey] ?? node.label;
   const hasChildren = node.childKeys.length > 0;
   const expanded = hasChildren && isExpanded(nodeKey);
   const selected = selectedKey === nodeKey;
   const indent = 10 + depth * 13;
+  const levelColor = LEVEL_COLOR[node.level];
+  const [editing, setEditing] = useState(false);
+  const [draftLabel, setDraftLabel] = useState(shownLabel);
+  const [savingLabel, setSavingLabel] = useState(false);
+  const canInlineRename = node.level === 'workspace' || node.level === 'agent' || node.level === 'subagent';
 
   return (
     <div style={{ display: 'grid', gap: 4 }}>
@@ -443,6 +422,7 @@ function HierarchyBranch({
           color: selected ? 'var(--text-primary)' : 'var(--text-muted)',
           cursor: 'pointer',
           padding: `6px 8px 6px ${indent}px`,
+          boxShadow: depth > 0 ? `inset 2px 0 0 0 color-mix(in srgb, ${levelColor} 28%, transparent)` : 'none',
         }}
       >
         <button
@@ -468,32 +448,110 @@ function HierarchyBranch({
           {hasChildren ? (expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />) : <ChevronRight size={13} />}
         </button>
 
-        <div style={{ minWidth: 0, display: 'grid', gap: 2 }}>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: selected ? 700 : 600,
-              color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {node.label}
-          </span>
-          {node.meta && (
+        <div style={{ minWidth: 0, display: 'grid' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span
+              aria-hidden="true"
               style={{
-                fontSize: 10,
-                color: 'var(--text-muted)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                width: 7,
+                height: 7,
+                borderRadius: 'var(--radius-full)',
+                background: levelColor,
+                boxShadow: `0 0 0 3px color-mix(in srgb, ${levelColor} 18%, transparent)`,
+                flexShrink: 0,
               }}
-            >
-              {node.meta}
-            </span>
-          )}
+            />
+            {editing ? (
+              <input
+                autoFocus
+                value={draftLabel}
+                onChange={(event) => setDraftLabel(event.target.value)}
+                onClick={(event) => event.stopPropagation()}
+                onBlur={async () => {
+                  if (!canInlineRename) {
+                    setEditing(false);
+                    setDraftLabel(shownLabel);
+                    return;
+                  }
+                  setSavingLabel(true);
+                  try {
+                    await onRename(node, draftLabel);
+                  } finally {
+                    setSavingLabel(false);
+                    setEditing(false);
+                  }
+                }}
+                onKeyDown={async (event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    setEditing(false);
+                    setDraftLabel(shownLabel);
+                  }
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (!canInlineRename) {
+                      setEditing(false);
+                      setDraftLabel(shownLabel);
+                      return;
+                    }
+                    setSavingLabel(true);
+                    try {
+                      await onRename(node, draftLabel);
+                    } finally {
+                      setSavingLabel(false);
+                      setEditing(false);
+                    }
+                  }
+                }}
+                style={{
+                  minWidth: 0,
+                  width: '100%',
+                  fontSize: 12,
+                  fontWeight: selected ? 700 : 600,
+                  color: levelColor,
+                  border: '1px solid color-mix(in srgb, var(--shell-chip-border) 90%, transparent)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--shell-chip-bg)',
+                  padding: '2px 6px',
+                  outline: 'none',
+                }}
+                aria-label={`Rename ${LEVEL_LABEL[node.level]}`}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  selectNode(nodeKey);
+                }}
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  setDraftLabel(shownLabel);
+                  setEditing(true);
+                }}
+                title={canInlineRename ? 'Double click to rename' : 'Rename managed by canonical settings'}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  padding: 0,
+                  margin: 0,
+                  textAlign: 'left',
+                  minWidth: 0,
+                  width: '100%',
+                  fontSize: 12,
+                  fontWeight: selected ? 700 : 600,
+                  color: levelColor,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  opacity: savingLabel ? 0.7 : 1,
+                }}
+              >
+                {shownLabel}
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -538,33 +596,26 @@ function HierarchyBranch({
               <Plus size={12} />
             </button>
           )}
-          <span
-            style={{
-              borderRadius: 'var(--radius-full)',
-              border: '1px solid color-mix(in srgb, var(--shell-chip-border) 80%, transparent)',
-              color: LEVEL_COLOR[node.level],
-              background: 'var(--shell-chip-bg)',
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              padding: '2px 7px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {LEVEL_LABEL[node.level]}
-          </span>
         </div>
       </div>
 
       {expanded && (
-        <div style={{ display: 'grid', gap: 3 }}>
+        <div
+          style={{
+            display: 'grid',
+            gap: 3,
+            marginLeft: 12,
+            paddingLeft: 8,
+            borderLeft: `1px dashed color-mix(in srgb, ${levelColor} 42%, transparent)`,
+          }}
+        >
           {node.childKeys.map((childKey) => (
             <HierarchyBranch
               key={childKey}
               nodeKey={childKey}
               depth={depth + 1}
               nodes={nodes}
+              labelOverrides={labelOverrides}
               selectedKey={selectedKey}
               isExpanded={isExpanded}
               toggleExpanded={toggleExpanded}
@@ -572,6 +623,7 @@ function HierarchyBranch({
               matches={matches}
               onOpen={onOpen}
               onCreate={onCreate}
+              onRename={onRename}
             />
           ))}
         </div>
