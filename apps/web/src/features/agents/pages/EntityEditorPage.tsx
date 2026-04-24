@@ -1312,9 +1312,26 @@ export default function EntityEditorPage() {
   const [createDescription, setCreateDescription] = useState('');
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createCreature, setCreateCreature] = useState('');
+  const [createVibe, setCreateVibe] = useState('');
+  const [createEmoji, setCreateEmoji] = useState('');
+  const [createAvatar, setCreateAvatar] = useState('');
+  const [createSystemPrompt, setCreateSystemPrompt] = useState('');
+  const [createPersonalityGuide, setCreatePersonalityGuide] = useState('');
+  const [createHumanContext, setCreateHumanContext] = useState('');
+  const [createAllowedChannels, setCreateAllowedChannels] = useState('');
+  const [createLocalNotes, setCreateLocalNotes] = useState('');
+  const [createEscalationPolicy, setCreateEscalationPolicy] = useState('');
+  const [createApprovalLane, setCreateApprovalLane] = useState('');
+  const [createHeartbeatEnabled, setCreateHeartbeatEnabled] = useState(false);
+  const [createQuietHoursStart, setCreateQuietHoursStart] = useState('23:00');
+  const [createQuietHoursEnd, setCreateQuietHoursEnd] = useState('08:00');
+  const [createMemoryScope, setCreateMemoryScope] = useState<'main_session_only' | 'shared_safe' | 'disabled'>('main_session_only');
+  const [createSafetyApproval, setCreateSafetyApproval] = useState(true);
+  const [createSection, setCreateSection] = useState<EntitySection>('identity');
 
   const createMode = searchParams.get('mode') === 'create';
-  const createType = searchParams.get('type') === 'subagent' ? 'subagent' : 'agent';
+  const createTypeFromQuery = searchParams.get('type') === 'subagent' ? 'subagent' : 'agent';
   const requestedParentWorkspaceId = searchParams.get('parentWorkspaceId');
   const requestedProfileId = searchParams.get('profileId');
 
@@ -1346,6 +1363,13 @@ export default function EntityEditorPage() {
   }, [scope.subagentId, state.agents]);
 
   const activeAgent = subagent ?? agent;
+  const selectedCreateContextLevel = selectedNode?.level
+    ?? (scope.subagentId ? 'subagent'
+      : scope.agentId ? 'agent'
+      : scope.workspaceId ? 'workspace'
+      : scope.departmentId ? 'department'
+      : scope.agencyId ? 'agency'
+      : null);
   const workspace = state.workspace;
   const profilePrefill = requestedProfileId ? state.profiles.find((item) => item.id === requestedProfileId) ?? null : null;
   const workspaceOptions = useMemo(
@@ -1358,11 +1382,25 @@ export default function EntityEditorPage() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(
     requestedParentWorkspaceId ?? scope.workspaceId ?? workspaceOptions[0]?.id ?? '',
   );
+  const [createKind, setCreateKind] = useState<'agent' | 'subagent'>(createTypeFromQuery);
 
   useEffect(() => {
     if (!createMode) return;
     setSelectedWorkspaceId(requestedParentWorkspaceId ?? scope.workspaceId ?? workspaceOptions[0]?.id ?? '');
   }, [createMode, requestedParentWorkspaceId, scope.workspaceId, workspaceOptions]);
+
+  useEffect(() => {
+    if (!createMode) return;
+    if (createTypeFromQuery === 'subagent') {
+      setCreateKind('subagent');
+      return;
+    }
+    if (selectedCreateContextLevel === 'agent' || selectedCreateContextLevel === 'subagent') {
+      setCreateKind('subagent');
+      return;
+    }
+    setCreateKind('agent');
+  }, [createMode, createTypeFromQuery, selectedCreateContextLevel]);
 
   useEffect(() => {
     if (!profilePrefill) return;
@@ -1379,8 +1417,17 @@ export default function EntityEditorPage() {
       setCreateError('Agent name is required.');
       return;
     }
-    const nextId = `${createType}-${Date.now()}`;
-    const parentAgentId = createType === 'subagent' ? (scope.agentId ?? undefined) : undefined;
+    const nextId = `${createKind}-${Date.now()}`;
+    const currentAgentId = selectedNode?.level === 'agent'
+      ? selectedNode.id
+      : selectedNode?.level === 'subagent'
+        ? (selectedNode.parentKey?.split(':')[1] ?? scope.agentId ?? undefined)
+        : scope.agentId ?? undefined;
+    const parentAgentId = createKind === 'subagent' ? currentAgentId : undefined;
+    if (createKind === 'subagent' && !parentAgentId) {
+      setCreateError('To create a subagent, select an agent in hierarchy first.');
+      return;
+    }
     setCreateBusy(true);
     setCreateError(null);
     try {
@@ -1390,51 +1437,53 @@ export default function EntityEditorPage() {
         name: createName.trim(),
         role: createRole || 'Agent',
         description: createDescription || '',
-        instructions: '',
+        instructions: createSystemPrompt,
         model: createModel || profilePrefill?.defaultModel || workspace?.defaultModel || '',
         skillRefs: profilePrefill?.defaultSkills ?? [],
         tags: profilePrefill?.tags ?? [],
         visibility: 'workspace',
         executionMode: 'direct',
-        kind: createType,
+        kind: createKind,
         parentAgentId,
         handoffRules: [],
         channelBindings: [],
         identity: {
           name: createName.trim(),
-          creature: '',
+          creature: createCreature,
           role: createRole || 'Agent',
           description: createDescription || '',
-          vibe: '',
-          emoji: '',
-          avatar: '',
+          vibe: createVibe,
+          emoji: createEmoji,
+          avatar: createAvatar,
         },
         behavior: {
-          systemPrompt: '',
-          personalityGuide: '',
+          systemPrompt: createSystemPrompt,
+          personalityGuide: createPersonalityGuide,
           operatingPrinciples: [],
           boundaries: [],
           privacyRules: [],
           continuityRules: [],
           responseStyle: '',
         },
-        humanContext: {},
+        humanContext: {
+          context: createHumanContext,
+        },
         skillsTools: {
           assignedSkills: profilePrefill?.defaultSkills ?? [],
           enabledTools: [],
-          localNotes: '',
+          localNotes: createLocalNotes,
           environmentNotes: '',
         },
         handoffs: {
           allowedTargets: [],
-          escalationPolicy: '',
-          approvalLane: '',
+          escalationPolicy: createEscalationPolicy,
+          approvalLane: createApprovalLane,
           internalActionsAllowed: [],
           externalActionsRequireApproval: [],
           publicPostingRequiresApproval: true,
         },
         routingChannels: {
-          allowedChannels: [],
+          allowedChannels: createAllowedChannels.split(',').map((item) => item.trim()).filter(Boolean),
           groupChatMode: 'respond_when_mentioned',
           reactionPolicy: 'limited',
           maxReactionsPerMessage: 1,
@@ -1444,8 +1493,10 @@ export default function EntityEditorPage() {
         },
         hooks: {
           heartbeat: {
-            enabled: false,
-            promptSource: 'disabled',
+            enabled: createHeartbeatEnabled,
+            promptSource: createHeartbeatEnabled ? 'inline' : 'disabled',
+            quietHoursStart: createQuietHoursStart,
+            quietHoursEnd: createQuietHoursEnd,
           },
           lifecycleHooks: [],
           proactiveChecks: [],
@@ -1461,11 +1512,11 @@ export default function EntityEditorPage() {
           memoryPolicy: {
             dailyNotesEnabled: true,
             longTermMemoryEnabled: true,
-            memoryScope: 'main_session_only',
+            memoryScope: createMemoryScope,
           },
           safety: {
-            destructiveCommandsRequireApproval: true,
-            externalActionsRequireApproval: true,
+            destructiveCommandsRequireApproval: createSafetyApproval,
+            externalActionsRequireApproval: createSafetyApproval,
             privateDataProtection: true,
             recoverableDeletePreferred: true,
           },
@@ -1473,62 +1524,210 @@ export default function EntityEditorPage() {
         isEnabled: true,
       });
       await refresh();
-      selectByEntity(createType, nextId);
-      navigate(`/entity-editor?${NODE_QUERY_KEY}=${createType}:${nextId}`, { replace: true });
+      selectByEntity(createKind, nextId);
+      navigate(`/entity-editor?${NODE_QUERY_KEY}=${createKind}:${nextId}`, { replace: true });
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create agent');
     } finally {
       setCreateBusy(false);
     }
-  }, [createDescription, createModel, createName, createRole, createType, navigate, profilePrefill, refresh, scope.agentId, scope.workspaceId, selectByEntity, selectedWorkspaceId, workspace?.defaultModel]);
+  }, [createDescription, createKind, createModel, createName, createRole, navigate, profilePrefill, refresh, scope.agentId, scope.workspaceId, selectByEntity, selectedNode, selectedWorkspaceId, workspace?.defaultModel]);
 
   if (createMode) {
+    const createSections: EntitySection[] = [
+      'identity',
+      'prompts-behavior',
+      'skills-tools',
+      'handoffs',
+      'routing-channels',
+      'hooks',
+      'versions',
+      'operations',
+      'readiness',
+    ];
+    const readinessChecks = {
+      identityComplete: Boolean(createName.trim() && createCreature.trim() && createVibe.trim()),
+      behaviorComplete: Boolean(createSystemPrompt.trim()),
+      toolsAssigned: Boolean((profilePrefill?.defaultSkills?.length ?? 0) > 0 || createLocalNotes.trim()),
+      routingConfigured: Boolean(createAllowedChannels.split(',').map((item) => item.trim()).filter(Boolean).length > 0),
+      hooksConfigured: createHeartbeatEnabled || createQuietHoursStart.length > 0 || createQuietHoursEnd.length > 0,
+      operationsConfigured: createSafetyApproval && Boolean(createMemoryScope),
+      versionsReady: Boolean(createName.trim()),
+    };
+    const readinessItems: Array<{ key: string; ok: boolean; label: string }> = [
+      { key: 'identity', ok: readinessChecks.identityComplete, label: 'Identity' },
+      { key: 'behavior', ok: readinessChecks.behaviorComplete, label: 'Behavior' },
+      { key: 'tools', ok: readinessChecks.toolsAssigned, label: 'Skills / Tools' },
+      { key: 'routing', ok: readinessChecks.routingConfigured, label: 'Routing / Channels' },
+      { key: 'hooks', ok: readinessChecks.hooksConfigured, label: 'Hooks' },
+      { key: 'ops', ok: readinessChecks.operationsConfigured, label: 'Operations' },
+      { key: 'versions', ok: readinessChecks.versionsReady, label: 'Versions Preview' },
+    ];
+
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         <PageHeader
-          title={createType === 'subagent' ? 'Create Subagent' : 'Create Agent'}
+          title={createKind === 'subagent' ? 'Create Subagent' : 'Create Agent'}
           icon={SquarePen}
-          description="Create entities directly in Entity Editor create mode (no startup wizard)."
+          description="Single create surface for Agent/Subagent with explicit context and 9 builder sections."
         />
-        <div className="rounded-xl border p-5 space-y-4" style={{ borderColor: 'var(--border-primary)', background: 'var(--card-bg)' }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label style={labelStyle()}>Parent Workspace</label>
-              <select style={inputStyle()} value={selectedWorkspaceId} onChange={(e) => setSelectedWorkspaceId(e.target.value)}>
-                <option value="">Select workspace</option>
-                {workspaceOptions.map((item) => (
-                  <option key={item.id} value={item.id}>{item.label}</option>
+        <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)_280px] gap-4">
+          <aside className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+            <div style={{ padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-primary)' }}>
+              Builder Sections
+            </div>
+            <nav className="py-1">
+              {createSections.map((section) => (
+                <button
+                  key={section}
+                  type="button"
+                  onClick={() => setCreateSection(section)}
+                  className="w-full text-left px-3 py-2 text-sm"
+                  style={{
+                    color: createSection === section ? 'var(--color-primary)' : 'var(--text-muted)',
+                    background: createSection === section ? 'var(--color-primary-soft)' : 'transparent',
+                    borderLeft: createSection === section ? '2px solid var(--color-primary)' : '2px solid transparent',
+                  }}
+                >
+                  {SECTION_LABEL[section]}
+                </button>
+              ))}
+            </nav>
+          </aside>
+
+          <div className="rounded-xl border p-5 space-y-4" style={{ borderColor: 'var(--border-primary)', background: 'var(--card-bg)' }}>
+            <div className="rounded-lg border p-3 space-y-2" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+              <p className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.07em' }}>Creation Context</p>
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                Selected level: <strong>{selectedCreateContextLevel ?? 'none'}</strong> · Creating: <strong>{createKind}</strong>
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Rules: Agency/Department/Workspace → Agent. Agent/Subagent → Subagent. Creation for agency/department/workspace is managed outside Agent Builder.
+              </p>
+            </div>
+
+            {createSection === 'identity' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label style={labelStyle()}>Parent Workspace</label><select style={inputStyle()} value={selectedWorkspaceId} onChange={(e) => setSelectedWorkspaceId(e.target.value)}><option value="">Select workspace</option>{workspaceOptions.map((item) => (<option key={item.id} value={item.id}>{item.label}</option>))}</select></div>
+                <div><label style={labelStyle()}>Profile source</label><input style={inputStyle()} value={profilePrefill?.name ?? 'blank'} disabled /></div>
+                <div><label style={labelStyle()}>Name</label><input style={inputStyle()} value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="Pick a name for this agent" /></div>
+                <div><label style={labelStyle()}>Creature</label><input style={inputStyle()} value={createCreature} onChange={(e) => setCreateCreature(e.target.value)} placeholder="AI assistant, orchestrator, dev agent..." /></div>
+                <div><label style={labelStyle()}>Role</label><input style={inputStyle()} value={createRole} onChange={(e) => setCreateRole(e.target.value)} placeholder="What kind of agent is this?" /></div>
+                <div><label style={labelStyle()}>Vibe</label><input style={inputStyle()} value={createVibe} onChange={(e) => setCreateVibe(e.target.value)} placeholder="warm, sharp, calm, direct..." /></div>
+                <div><label style={labelStyle()}>Emoji</label><input style={inputStyle()} value={createEmoji} onChange={(e) => setCreateEmoji(e.target.value)} placeholder="Signature emoji" /></div>
+                <div><label style={labelStyle()}>Avatar URL</label><input style={inputStyle()} value={createAvatar} onChange={(e) => setCreateAvatar(e.target.value)} placeholder="Workspace path or URL" /></div>
+                <div className="md:col-span-2"><label style={labelStyle()}>Description</label><input style={inputStyle()} value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} placeholder="Agent mission summary" /></div>
+              </div>
+            )}
+
+            {createSection === 'prompts-behavior' && (
+              <div className="space-y-4">
+                <div><label style={labelStyle()}>System Prompt</label><textarea rows={5} style={{ ...inputStyle(), resize: 'vertical' }} value={createSystemPrompt} onChange={(e) => setCreateSystemPrompt(e.target.value)} placeholder="Describe the agent's core mission and operating mode." /></div>
+                <div><label style={labelStyle()}>Personality Guide</label><textarea rows={3} style={{ ...inputStyle(), resize: 'vertical' }} value={createPersonalityGuide} onChange={(e) => setCreatePersonalityGuide(e.target.value)} placeholder="How should this agent sound and behave?" /></div>
+                <div><label style={labelStyle()}>Human Context</label><textarea rows={3} style={{ ...inputStyle(), resize: 'vertical' }} value={createHumanContext} onChange={(e) => setCreateHumanContext(e.target.value)} placeholder="Keep this useful and respectful, not invasive." /></div>
+              </div>
+            )}
+
+            {createSection === 'skills-tools' && (
+              <div className="space-y-3">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Assignments come from catalog/inheritance/profile. No ad-hoc installation from this panel.</p>
+                <div><label style={labelStyle()}>Model</label><input style={inputStyle()} value={createModel} onChange={(e) => setCreateModel(e.target.value)} placeholder="Default model" /></div>
+                <div><label style={labelStyle()}>TOOLS.md local notes</label><textarea rows={5} style={{ ...inputStyle(), resize: 'vertical' }} value={createLocalNotes} onChange={(e) => setCreateLocalNotes(e.target.value)} placeholder="Device aliases, SSH aliases, TTS preferences, environment notes..." /></div>
+              </div>
+            )}
+
+            {createSection === 'handoffs' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label style={labelStyle()}>Escalation Policy</label><textarea rows={3} style={{ ...inputStyle(), resize: 'vertical' }} value={createEscalationPolicy} onChange={(e) => setCreateEscalationPolicy(e.target.value)} placeholder="When should this agent escalate?" /></div>
+                <div><label style={labelStyle()}>Approval Lane</label><textarea rows={3} style={{ ...inputStyle(), resize: 'vertical' }} value={createApprovalLane} onChange={(e) => setCreateApprovalLane(e.target.value)} placeholder="Which actions require human approval?" /></div>
+              </div>
+            )}
+
+            {createSection === 'routing-channels' && (
+              <div className="space-y-3">
+                <label style={labelStyle()}>Allowed Channels (comma-separated)</label>
+                <textarea rows={3} style={{ ...inputStyle(), resize: 'vertical' }} value={createAllowedChannels} onChange={(e) => setCreateAllowedChannels(e.target.value)} placeholder="discord-main, whatsapp-team, inbox-ops" />
+              </div>
+            )}
+
+            {createSection === 'hooks' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-2"><input type="checkbox" checked={createHeartbeatEnabled} onChange={(e) => setCreateHeartbeatEnabled(e.target.checked)} /><span className="text-sm" style={{ color: 'var(--text-primary)' }}>Enable heartbeat</span></div>
+                <div><label style={labelStyle()}>Quiet start</label><input style={inputStyle()} value={createQuietHoursStart} onChange={(e) => setCreateQuietHoursStart(e.target.value)} placeholder="23:00" /></div>
+                <div><label style={labelStyle()}>Quiet end</label><input style={inputStyle()} value={createQuietHoursEnd} onChange={(e) => setCreateQuietHoursEnd(e.target.value)} placeholder="08:00" /></div>
+              </div>
+            )}
+
+            {createSection === 'versions' && (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Core Files Preview (deterministic draft)</p>
+                <pre className="text-xs overflow-auto rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+{`IDENTITY.md
+Name: ${createName || '<empty>'}
+Creature: ${createCreature || '<empty>'}
+Role: ${createRole || '<empty>'}
+Vibe: ${createVibe || '<empty>'}
+Emoji: ${createEmoji || '<empty>'}
+
+SOUL.md
+SystemPrompt: ${createSystemPrompt || '<empty>'}
+Personality: ${createPersonalityGuide || '<empty>'}
+
+TOOLS.md
+${createLocalNotes || '<empty>'}
+`}
+                </pre>
+              </div>
+            )}
+
+            {createSection === 'operations' && (
+              <div className="space-y-3">
+                <label style={labelStyle()}>Memory Scope</label>
+                <select style={inputStyle()} value={createMemoryScope} onChange={(e) => setCreateMemoryScope(e.target.value as 'main_session_only' | 'shared_safe' | 'disabled')}>
+                  <option value="main_session_only">main_session_only</option>
+                  <option value="shared_safe">shared_safe</option>
+                  <option value="disabled">disabled</option>
+                </select>
+                <div className="flex items-center gap-2"><input type="checkbox" checked={createSafetyApproval} onChange={(e) => setCreateSafetyApproval(e.target.checked)} /><span className="text-sm" style={{ color: 'var(--text-primary)' }}>Require approval for external/destructive actions</span></div>
+              </div>
+            )}
+
+            {createSection === 'readiness' && (
+              <div className="space-y-2">
+                {readinessItems.map((item) => (
+                  <div key={item.key} className="flex items-center gap-2 text-sm" style={{ color: item.ok ? 'var(--tone-success-text)' : 'var(--text-muted)' }}>
+                    <span>{item.ok ? '✓' : '✗'}</span>
+                    <span>{item.label}</span>
+                  </div>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle()}>Profile Prefill</label>
-              <input style={inputStyle()} value={profilePrefill?.name ?? 'None'} disabled />
-            </div>
-            <div>
-              <label style={labelStyle()}>Name</label>
-              <input style={inputStyle()} value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="Pick a name for this agent" />
-            </div>
-            <div>
-              <label style={labelStyle()}>Model</label>
-              <input style={inputStyle()} value={createModel} onChange={(e) => setCreateModel(e.target.value)} placeholder="Default model" />
-            </div>
-            <div>
-              <label style={labelStyle()}>Role</label>
-              <input style={inputStyle()} value={createRole} onChange={(e) => setCreateRole(e.target.value)} placeholder="What kind of agent is this?" />
-            </div>
-            <div>
-              <label style={labelStyle()}>Description</label>
-              <input style={inputStyle()} value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} placeholder="Agent mission summary" />
+              </div>
+            )}
+
+            {createError && <p className="text-xs" style={{ color: 'var(--tone-danger-text)' }}>{createError}</p>}
+            <div className="flex items-center gap-2">
+              <SaveButton
+                saving={createBusy}
+                onClick={() => { void handleCreateAgent(); }}
+                disabled={!selectedWorkspaceId || !createName.trim() || (createKind === 'subagent' && !(scope.agentId || selectedNode?.level === 'agent' || selectedNode?.level === 'subagent'))}
+              />
+              <button type="button" onClick={() => navigate('/entity-editor')} style={{ ...inputStyle(), width: 'auto', cursor: 'pointer' }}>
+                Cancel
+              </button>
             </div>
           </div>
-          {createError && <p className="text-xs" style={{ color: 'var(--tone-danger-text)' }}>{createError}</p>}
-          <div className="flex items-center gap-2">
-            <SaveButton saving={createBusy} onClick={() => { void handleCreateAgent(); }} disabled={!selectedWorkspaceId || !createName.trim()} />
-            <button type="button" onClick={() => navigate('/entity-editor')} style={{ ...inputStyle(), width: 'auto', cursor: 'pointer' }}>
-              Cancel
-            </button>
-          </div>
+
+          <aside className="rounded-xl border p-4 space-y-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+            <p className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.07em' }}>Readiness</p>
+            {readinessItems.map((item) => (
+              <div key={item.key} className="flex items-center gap-2 text-sm" style={{ color: item.ok ? 'var(--tone-success-text)' : 'var(--text-muted)' }}>
+                <span>{item.ok ? '✓' : '⚠'}</span>
+                <span>{item.label}</span>
+              </div>
+            ))}
+            <div className="pt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+              Status: {readinessItems.every((item) => item.ok) ? 'ready_to_publish' : 'incomplete'}
+            </div>
+          </aside>
         </div>
       </div>
     );
