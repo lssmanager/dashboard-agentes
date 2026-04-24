@@ -106,7 +106,7 @@ export class BuilderAgentService {
         inputs: DEFAULT_INPUTS_BY_LEVEL.subagent,
         outputs: DEFAULT_OUTPUTS_BY_LEVEL.subagent,
         skills: canonical.catalog.skills
-          .filter((skill) => subagent.skillRefs.includes(skill.id))
+          .filter((skill) => (subagent.skillRefs ?? []).includes(skill.id))
           .map((skill) => skill.name),
         tools: subagent.permissions?.tools ?? [],
         collaborators: canonical.agents
@@ -128,7 +128,7 @@ export class BuilderAgentService {
       inputs: DEFAULT_INPUTS_BY_LEVEL.agent,
       outputs: DEFAULT_OUTPUTS_BY_LEVEL.agent,
       skills: canonical.catalog.skills
-        .filter((skill) => agent.skillRefs.includes(skill.id))
+        .filter((skill) => (agent.skillRefs ?? []).includes(skill.id))
         .map((skill) => skill.name),
       tools: agent.permissions?.tools ?? [],
       collaborators: canonical.subagents

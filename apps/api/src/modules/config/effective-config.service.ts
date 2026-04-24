@@ -53,8 +53,9 @@ export class EffectiveConfigService {
     const resolvedModel = agent.model || profileModel || workspace.defaultModel || 'openai/gpt-5.4-mini';
     const modelSource = agent.model ? 'agent' : profileModel ? 'profile' : 'workspace';
 
-    const resolvedSkills = agent.skillRefs.length > 0 ? agent.skillRefs : profileSkills.length > 0 ? profileSkills : workspace.skillIds ?? [];
-    const skillsSource = agent.skillRefs.length > 0 ? 'agent' : profileSkills.length > 0 ? 'profile' : 'workspace';
+    const agentSkillRefs = agent.skillRefs ?? [];
+    const resolvedSkills: string[] = agentSkillRefs.length > 0 ? agentSkillRefs : profileSkills.length > 0 ? profileSkills : workspace.skillIds ?? [];
+    const skillsSource = agentSkillRefs.length > 0 ? 'agent' : profileSkills.length > 0 ? 'profile' : 'workspace';
 
     const agentPolicies = (agent.policyBindings ?? []).map((p) => p.policyId);
     const resolvedPolicies = agentPolicies.length > 0 ? agentPolicies : profilePolicies.length > 0 ? profilePolicies : (workspace.policyRefs ?? []).map((p) => p.id);

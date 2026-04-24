@@ -75,13 +75,13 @@ function crossValidate(input: CompileOpenClawWorkspaceInput): string[] {
   }
 
   for (const agent of input.agents) {
-    for (const ref of agent.skillRefs) {
+    for (const ref of agent.skillRefs ?? []) {
       if (!skillIds.has(ref)) {
         diagnostics.push(`agent ${agent.id} references missing skill: ${ref}`);
       }
     }
 
-    for (const handoff of agent.handoffRules) {
+    for (const handoff of agent.handoffRules ?? []) {
       if (!agentIds.has(handoff.targetAgentId)) {
         diagnostics.push(`agent ${agent.id} handoff target missing: ${handoff.targetAgentId}`);
       }
@@ -110,7 +110,7 @@ export function compileAgentsMd(agents: AgentSpec[]): string {
       `- role: ${agent.role}`,
       `- model: ${agent.model}`,
       `- executionMode: ${agent.executionMode}`,
-      `- skills: ${listOrNone(agent.skillRefs)}`,
+      `- skills: ${listOrNone(agent.skillRefs ?? [])}`,
       '',
       '### Instructions',
       '',
