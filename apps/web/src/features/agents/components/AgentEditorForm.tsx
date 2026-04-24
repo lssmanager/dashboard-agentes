@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 
 import {
+  getAgentReadiness,
   getEditorSkillsTools,
   getStudioState,
   patchEditorSkillsTools,
+  publishVersion,
   saveAgent,
 } from '../../../lib/api';
-import { AgentSpec, EditorSkillsToolsDto, ProfileSpec, SkillSpec } from '../../../lib/types';
+import { AgentSpec, AgentReadinessState, EditorSkillsToolsDto, ProfileSpec, SkillSpec } from '../../../lib/types';
 import { AgentBootstrapModal } from './modals/AgentBootstrapModal';
 import { CoreFilesImportModal } from './modals/CoreFilesImportModal';
 import { ProfilesHubModal } from './modals/ProfilesHubModal';
@@ -70,6 +72,7 @@ function computeReadiness(agent: AgentSpec) {
     : !agent.operations?.memoryPolicy ? 'missing_memory_policy'
     : !agent.operations?.safety ? 'missing_safety_policy'
     : 'ready_to_publish';
+
   return { checks, score, state } as const;
 }
 
@@ -229,8 +232,17 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError, agents =
   const [profiles, setProfiles] = useState<ProfileSpec[]>([]);
   const [profilesModalOpen, setProfilesModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [persistedAgentId, setPersistedAgentId] = useState<string | null>(agent?.id ?? null);
+  const [remoteReadiness, setRemoteReadiness] = useState<{ state: AgentReadinessState; score: number; checks: Record<string, boolean>; missingFields: string[] } | null>(null);
+  const [publishBusy, setPublishBusy] = useState(false);
 
-  const readiness = computeReadiness(draft);
+  const localReadiness = computeReadiness(draft);
+  const readinessView = remoteReadiness ?? {
+    state: localReadiness.state,
+    score: localReadiness.score,
+    checks: localReadiness.checks,
+    missingFields: [],
+  };
 
   useEffect(() => {
     void (async () => {
@@ -250,6 +262,41 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError, agents =
       setSkillsToolsData(data);
     })();
   }, [draft.id]);
+
+  useEffect(() => {
+    if (!persistedAgentId) {
+      setRemoteReadiness(null);
+      return;
+    }
+
+    let active = true;
+    const load = async () => {
+      try {
+        const response = await getAgentReadiness(persistedAgentId);
+        if (!active) return;
+        setRemoteReadiness({
+          state: response.state,
+          score: response.score,
+          checks: response.checks,
+          missingFields: response.missingFields,
+        });
+      } catch {
+        if (active) {
+          setRemoteReadiness(null);
+        }
+      }
+    };
+
+    void load();
+    const timer = setInterval(() => {
+      void load();
+    }, 2000);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [persistedAgentId]);
 
   const availableTargets = useMemo(
     () => agents.filter((candidate) => candidate.id !== draft.id).map((candidate) => ({ id: candidate.id, name: candidate.name ?? candidate.identity?.name ?? candidate.id })),
@@ -271,6 +318,8 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError, agents =
     setProfilesModalOpen(false);
     setBootOpen(false);
   };
+
+  const publishEnabled = readinessView.state === 'ready_to_publish' && Boolean(persistedAgentId);
 
   return (
     <>
@@ -312,6 +361,8 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError, agents =
           void (async () => {
             try {
               const saved = await saveAgent(draft);
+              setPersistedAgentId(saved.id);
+              setDraft(saved);
               onSaved(saved);
             } catch (err) {
               onError?.(err instanceof Error ? err : new Error(String(err)));
@@ -319,6 +370,13 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError, agents =
           })();
         }}
       >
+        <div className="xl:col-span-3 rounded-md border px-3 py-2 flex items-center justify-between">
+          <p className="text-sm font-semibold">Agent Builder</p>
+          <span className="rounded-full border px-2 py-1 text-xs uppercase tracking-wide">
+            {readinessView.state}
+          </span>
+        </div>
+
         <aside className="rounded-md border overflow-hidden">
           <div className="px-3 py-2 text-xs font-semibold uppercase opacity-80 border-b">Builder sections</div>
           <nav className="py-1">
@@ -377,7 +435,27 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError, agents =
           </button>
         </div>
 
-        <AgentReadinessPanel state={readiness.state} score={readiness.score} checks={readiness.checks} />
+        <AgentReadinessPanel
+          state={readinessView.state}
+          score={readinessView.score}
+          checks={readinessView.checks}
+          missingFields={readinessView.missingFields}
+          publishEnabled={publishEnabled}
+          publishing={publishBusy}
+          onPublish={() => {
+            if (!persistedAgentId || readinessView.state !== 'ready_to_publish') return;
+            void (async () => {
+              setPublishBusy(true);
+              try {
+                await publishVersion(`agent-${persistedAgentId}-publish`, 'Published from Agent Builder readiness gate');
+              } catch (err) {
+                onError?.(err instanceof Error ? err : new Error(String(err)));
+              } finally {
+                setPublishBusy(false);
+              }
+            })();
+          }}
+        />
       </form>
     </>
   );
