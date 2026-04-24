@@ -9,11 +9,12 @@ import {
   getMcpServers,
   getBudgets,
   getHooks,
+  getOpenClawConnectionStatus,
   getRuntimeCapabilities,
   getRuntimeChannels,
   removeMcpServer,
 } from '../../../lib/api';
-import type { HookSpec, RuntimeCapabilityMatrix } from '../../../lib/types';
+import type { HookSpec, OpenClawConnectionStatus, RuntimeCapabilityMatrix } from '../../../lib/types';
 
 const TABS = ['general', 'providers', 'runtimes', 'channels', 'integrations', 'diagnostics', 'security', 'automations'] as const;
 type Tab = typeof TABS[number];
@@ -76,6 +77,153 @@ function SectionError({ message, onRetry }: { message: string; onRetry: () => vo
       >
         <RefreshCw size={11} /> Retry
       </button>
+    </div>
+  );
+}
+
+function OpenClawConnectionCard() {
+  const [status, setStatus] = useState<OpenClawConnectionStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [includeMasked, setIncludeMasked] = useState(false);
+  const [nowTs, setNowTs] = useState(Date.now());
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const next = await getOpenClawConnectionStatus(includeMasked);
+      setStatus(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load OpenClaw connection status');
+    } finally {
+      setLoading(false);
+      setNowTs(Date.now());
+    }
+  }, [includeMasked]);
+
+  useEffect(() => {
+    setLoading(true);
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const intervalMs = status?.autoCheckIntervalMs ?? 30000;
+    const poll = setInterval(() => {
+      void load();
+    }, intervalMs);
+    return () => clearInterval(poll);
+  }, [status?.autoCheckIntervalMs, load]);
+
+  const checkedAtTs = status?.checkedAt ? Date.parse(status.checkedAt) : Date.now();
+  const intervalMs = status?.autoCheckIntervalMs ?? 30000;
+  const elapsed = Math.max(0, nowTs - checkedAtTs);
+  const nextIn = Math.max(0, Math.ceil((intervalMs - elapsed) / 1000));
+
+  const tone =
+    status?.state === 'connected' ? { bg: 'var(--tone-success-bg)', border: 'var(--tone-success-border)', text: 'var(--tone-success-text)' }
+    : status?.state === 'degraded' ? { bg: 'var(--tone-warning-bg)', border: 'var(--tone-warning-border)', text: 'var(--tone-warning-text)' }
+    : { bg: 'var(--tone-danger-bg)', border: 'var(--tone-danger-border)', text: 'var(--tone-danger-text)' };
+
+  return (
+    <div className="rounded-xl border p-4 space-y-4" style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>OpenClaw Connection</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Auto-check every {Math.round((status?.autoCheckIntervalMs ?? 30000) / 1000)}s · Next in {nextIn}s
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+            <input
+              type="checkbox"
+              checked={includeMasked}
+              onChange={(e) => setIncludeMasked(e.target.checked)}
+            />
+            Allow masked secret preview
+          </label>
+          <button type="button" onClick={() => { void load(); }} className="text-xs px-2.5 py-1.5 rounded-md font-semibold flex items-center gap-1"
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>
+            <RefreshCw size={12} /> Test now
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <SectionLoading />
+      ) : error ? (
+        <SectionError message={error} onRetry={() => { void load(); }} />
+      ) : status ? (
+        <>
+          <div className="rounded-lg border p-3 flex items-center justify-between" style={{ background: tone.bg, borderColor: tone.border }}>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: tone.text, textTransform: 'capitalize' }}>{status.state}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Health: {status.summary.healthOk ? 'ok' : 'fail'} · Diagnostics: {status.summary.diagnosticsOk ? 'ok' : 'fail'} · Latency: {status.latencyMs}ms
+              </p>
+            </div>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Last check: {new Date(status.checkedAt).toLocaleTimeString()}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+              <p className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)', letterSpacing: '0.07em' }}>Success Criteria</p>
+              <div className="space-y-1.5">
+                {status.successCriteria.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-2">
+                    <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{item.label}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${item.passed ? 'text-emerald-700 bg-emerald-50' : 'text-slate-600 bg-slate-100'}`}>
+                      {item.passed ? 'pass' : 'fail'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+              <p className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)', letterSpacing: '0.07em' }}>Failure Reasons</p>
+              {status.failureReasons.length === 0 ? (
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No active failure reasons</p>
+              ) : (
+                <ul className="space-y-1">
+                  {status.failureReasons.map((reason) => (
+                    <li key={reason} className="text-xs" style={{ color: 'var(--tone-warning-text)' }}>• {reason}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
+            <p className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)', letterSpacing: '0.07em' }}>ENV Readiness</p>
+            <div className="space-y-1.5">
+              {status.envChecklist.map((env) => (
+                <div key={env.key} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{env.key}</p>
+                    {env.reason ? <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{env.reason}</p> : null}
+                  </div>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${env.configured ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>
+                    {env.configured ? 'configured' : env.required ? 'required' : 'optional'}
+                  </span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    {includeMasked ? env.maskedValue ?? 'hidden' : `${env.source}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -805,6 +953,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader title="Settings" icon={SettingsIcon} description="Global configuration, providers, security, and diagnostics" />
+      <OpenClawConnectionCard />
 
       {!scope.agencyId && (
         <div

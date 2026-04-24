@@ -2,12 +2,14 @@ import { Router } from 'express';
 
 import { GatewayDiagnosticsService } from './gateway-diagnostics.service';
 import { GatewayHealthService } from './gateway-health.service';
+import { GatewayConnectionStatusService } from './gateway-connection-status.service';
 import { GatewayService } from './gateway.service';
 
 export function registerGatewayRoutes(router: Router) {
   const gatewayService = new GatewayService();
   const gatewayHealthService = new GatewayHealthService(gatewayService);
   const gatewayDiagnosticsService = new GatewayDiagnosticsService(gatewayService);
+  const gatewayConnectionStatusService = new GatewayConnectionStatusService(gatewayService);
 
   router.get('/gateway/health', async (_req, res) => {
     res.json(await gatewayHealthService.getHealthSummary());
@@ -15,6 +17,14 @@ export function registerGatewayRoutes(router: Router) {
 
   router.get('/gateway/diagnostics', async (_req, res) => {
     res.json(await gatewayDiagnosticsService.getDiagnosticsSummary());
+  });
+
+  router.get('/gateway/connection-status', async (req, res) => {
+    const includeMasked =
+      req.query.includeMasked === '1' ||
+      req.query.includeMasked === 'true' ||
+      req.query.includeMasked === true;
+    res.json(await gatewayConnectionStatusService.getConnectionStatus(Boolean(includeMasked)));
   });
 
   router.get('/gateway/agents', async (_req, res) => {

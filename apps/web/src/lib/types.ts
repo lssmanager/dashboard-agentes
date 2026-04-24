@@ -640,6 +640,31 @@ export interface DashboardOperationsDto {
   };
 }
 
+export type OpenClawConnectionState = 'connected' | 'degraded' | 'offline' | 'misconfigured';
+
+export interface OpenClawConnectionStatus {
+  state: OpenClawConnectionState;
+  checkedAt: string;
+  autoCheckIntervalMs: number;
+  latencyMs: number;
+  summary: {
+    healthOk: boolean;
+    diagnosticsOk: boolean;
+  };
+  successCriteria: Array<{ id: string; label: string; passed: boolean }>;
+  failureReasons: string[];
+  envChecklist: Array<{
+    key: string;
+    required: boolean;
+    configured: boolean;
+    source: 'env' | 'default';
+    maskedValue?: string;
+    reason?: string;
+  }>;
+  health: Record<string, unknown>;
+  diagnostics: Record<string, unknown>;
+}
+
 export interface DashboardOperationsRuntimeStateDto {
   scope: DashboardScope;
   lineage: DashboardLineageItem[];

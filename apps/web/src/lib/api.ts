@@ -46,6 +46,7 @@ import {
   OperationsApprovalForecastDto,
   OperationsPolicyConflictsDto,
   OperationsRuntimeRecoverySimulationDto,
+  OpenClawConnectionStatus,
   ReplayMetadataResponse,
   RuntimeCapabilityMatrix,
   SessionState,
@@ -310,6 +311,15 @@ export async function getRuntimeChannels() {
 export async function getRuntimeTopologyLinks() {
   const response = await fetch(`${API_BASE}/runtime/topology-links`);
   return parseJson<TopologyLinkState[]>(response);
+}
+
+export async function getOpenClawConnectionStatus(includeMasked = false) {
+  const params = new URLSearchParams();
+  if (includeMasked) {
+    params.set('includeMasked', 'true');
+  }
+  const response = await fetch(`${API_BASE}/gateway/connection-status${params.toString() ? `?${params.toString()}` : ''}`);
+  return parseJson<OpenClawConnectionStatus>(response);
 }
 
 export async function createWorkspace(input: {
