@@ -26,6 +26,7 @@ import { registerCorefilesRoutes } from './modules/corefiles/corefiles.controlle
 import { registerBuilderAgentRoutes } from './modules/builder-agent/builder-agent.controller';
 import { registerRuntimeInspectionRoutes } from './modules/runtime/runtime-inspection.controller';
 import { registerDashboardRoutes } from './modules/dashboard/dashboard.controller';
+import { registerEditorRoutes } from './modules/editor/editor.controller';
 
 export function registerRoutes(app: Express) {
   const router = Router();
@@ -58,6 +59,7 @@ export function registerRoutes(app: Express) {
   registerCorefilesRoutes(router);
   registerBuilderAgentRoutes(router);
   registerRuntimeInspectionRoutes(router);
+  registerEditorRoutes(router);
   registerDashboardRoutes(router);
 
   app.use(studioConfig.apiPrefix, router);

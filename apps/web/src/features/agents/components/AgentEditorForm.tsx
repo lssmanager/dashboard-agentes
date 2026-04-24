@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { saveAgent } from '../../../lib/api';
-import { AgentSpec, SkillSpec } from '../../../lib/types';
+import { getEditorSkillsTools, patchEditorSkillsTools, saveAgent } from '../../../lib/api';
+import { AgentSpec, EditorSkillsToolsDto, SkillSpec } from '../../../lib/types';
 import { AgentBehaviorSection } from './sections/AgentBehaviorSection';
 import { AgentHandoffsSection } from './sections/AgentHandoffsSection';
 import { AgentHooksSection } from './sections/AgentHooksSection';
@@ -132,7 +132,16 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError }: AgentE
   );
 
   const [draft, setDraft] = useState<AgentSpec>(defaults);
+  const [skillsToolsData, setSkillsToolsData] = useState<EditorSkillsToolsDto | null>(null);
   const readiness = computeReadiness(draft);
+
+  useEffect(() => {
+    void (async () => {
+      if (!draft.id) return;
+      const data = await getEditorSkillsTools('agent', draft.id);
+      setSkillsToolsData(data);
+    })();
+  }, [draft.id]);
 
   return (
     <form
@@ -152,7 +161,24 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError }: AgentE
       <div className="space-y-4">
         <AgentIdentitySection value={draft} onChange={setDraft} />
         <AgentBehaviorSection value={draft} onChange={setDraft} />
-        <AgentSkillsToolsSection data={null} onPatch={async () => Promise.resolve()} />
+        <AgentSkillsToolsSection
+          data={skillsToolsData}
+          onPatch={async (payload) => {
+            if (!draft.id) return;
+            await patchEditorSkillsTools({ level: 'agent', id: draft.id, ...payload });
+            const data = await getEditorSkillsTools('agent', draft.id);
+            setSkillsToolsData(data);
+            setDraft((prev) => ({
+              ...prev,
+              skillsTools: {
+                ...(prev.skillsTools ?? {}),
+                assignedSkills: data.effective.skills,
+                enabledTools: data.effective.tools,
+              },
+              skillRefs: data.effective.skills,
+            }));
+          }}
+        />
         <AgentHandoffsSection value={draft} />
         <AgentRoutingSection value={draft} />
         <AgentHooksSection value={draft} />
@@ -169,4 +195,3 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError }: AgentE
     </form>
   );
 }
-
