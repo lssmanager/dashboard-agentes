@@ -153,6 +153,31 @@ const buttonStyle: React.CSSProperties = {
   textOverflow: 'ellipsis',
 };
 
+function primaryTabStyle(active: boolean): React.CSSProperties {
+  return {
+    ...buttonStyle,
+    minWidth: 120,
+    padding: '8px 14px',
+    borderRadius: 'var(--radius-md)',
+    border: `1px solid ${active ? 'color-mix(in srgb, var(--color-primary) 45%, var(--border-primary))' : 'var(--border-primary)'}`,
+    background: active ? 'var(--color-primary-soft)' : 'var(--bg-primary)',
+    color: active ? 'var(--color-primary)' : 'var(--text-primary)',
+  };
+}
+
+function secondaryTabStyle(active: boolean): React.CSSProperties {
+  return {
+    ...buttonStyle,
+    minWidth: 136,
+    padding: '7px 10px',
+    fontSize: 12,
+    borderRadius: 'var(--radius-sm)',
+    border: `1px solid ${active ? 'color-mix(in srgb, var(--color-primary) 45%, var(--border-primary))' : 'var(--border-primary)'}`,
+    background: active ? 'var(--color-primary-soft)' : 'var(--bg-primary)',
+    color: active ? 'var(--color-primary)' : 'var(--text-muted)',
+  };
+}
+
 // â”€â”€ Identity Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function IdentitySection({
@@ -1947,18 +1972,18 @@ ${createLocalNotes || '<empty>'}
       </div>
 
       <div className="rounded-xl border p-3 space-y-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(120px, max-content))', gap: 8 }}>
-          <button type="button" onClick={() => setActivePrimaryTab('builder')} style={{ ...buttonStyle, background: activePrimaryTab === 'builder' ? 'var(--color-primary-soft)' : 'var(--bg-primary)', color: activePrimaryTab === 'builder' ? 'var(--color-primary)' : 'var(--text-primary)' }}>Builder</button>
-          <button type="button" onClick={() => setActivePrimaryTab('profile')} style={{ ...buttonStyle, background: activePrimaryTab === 'profile' ? 'var(--color-primary-soft)' : 'var(--bg-primary)', color: activePrimaryTab === 'profile' ? 'var(--color-primary)' : 'var(--text-primary)' }}>Profile</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => setActivePrimaryTab('builder')} style={primaryTabStyle(activePrimaryTab === 'builder')}>Builder</button>
+          <button type="button" onClick={() => setActivePrimaryTab('profile')} style={primaryTabStyle(activePrimaryTab === 'profile')}>Profile</button>
         </div>
         {activePrimaryTab === 'builder' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <div className="app-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
           {sections.filter((section) => activePrimarySections.includes(section)).map((section) => (
             <button
               key={section}
               type="button"
               onClick={() => setActiveSection(section)}
-              style={{ ...buttonStyle, background: activeSection === section ? 'var(--color-primary-soft)' : 'var(--bg-primary)', color: activeSection === section ? 'var(--color-primary)' : 'var(--text-primary)' }}
+              style={secondaryTabStyle(activeSection === section)}
             >
               {SECTION_LABEL[section]}
             </button>
@@ -1967,7 +1992,7 @@ ${createLocalNotes || '<empty>'}
         )}
       </div>
 
-      <div className="rounded-xl border p-6" style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}>
+      <div className="rounded-xl border p-4 md:p-5" style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}>
         <div className="min-w-0">
           {activePrimaryTab === 'profile' && (
             profilePanel ? (
