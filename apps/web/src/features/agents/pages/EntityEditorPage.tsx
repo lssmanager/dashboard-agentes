@@ -35,6 +35,8 @@ import type { AnalyticsWindow } from '../../analytics/types';
 import { NODE_QUERY_KEY } from '../../../lib/studioRouting';
 import { ProfileScopeTab } from '../../studio/components/admin/ProfileScopeTab';
 import { ErrorBoundary } from '../../../components/ErrorBoundary';
+import { AdminSettingsPanel } from '../../studio/components/admin/AdminSettingsPanel';
+import { SCOPE_VIEW_REGISTRY } from '../../../lib/ScopeViewRegistry';
 
 type EntitySection =
   | 'identity'
@@ -1410,6 +1412,7 @@ function EntityEditorPageContent() {
 
   const sections = useMemo(() => (entityLevel ? MATRIX[entityLevel] : []), [entityLevel]);
   const contextLabel = selectedLineage.map((node) => node.label).join(' / ');
+  const settingsScope = entityLevel ? SCOPE_VIEW_REGISTRY[entityLevel].settingsScope : 'scoped';
   const activePrimarySections = useMemo(
     () => PRIMARY_TAB_SECTIONS[activePrimaryTab].filter((section) => sections.includes(section)),
     [activePrimaryTab, sections],
@@ -2040,6 +2043,15 @@ ${createLocalNotes || '<empty>'}
                   onUnbind={() => void handleUnbindProfilePanel()}
                   onSaveOverride={(payload) => void handleSaveProfileOverridePanel(payload)}
                 />
+                <section
+                  className="rounded-xl border p-4"
+                  style={{
+                    borderColor: 'var(--border-primary)',
+                    background: 'var(--bg-primary)',
+                  }}
+                >
+                  <AdminSettingsPanel settingsScope={settingsScope} />
+                </section>
               </section>
             ) : (
               <div className="space-y-2">
