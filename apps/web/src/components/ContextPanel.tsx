@@ -379,7 +379,7 @@ function HierarchyBranch({
   const hasChildren = node.childKeys.length > 0;
   const expanded = hasChildren && isExpanded(nodeKey);
   const selected = selectedKey === nodeKey;
-  const indent = 6 + depth * 9;
+  const indent = 2 + depth * 6;
   const levelColor = LEVEL_COLOR[node.level];
   const [editing, setEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState(shownLabel);
@@ -632,9 +632,9 @@ function HierarchyBranch({
         <div
           style={{
             display: 'grid',
-            gap: 2,
-            marginLeft: 8,
-            paddingLeft: 6,
+            gap: 1,
+            marginLeft: 4,
+            paddingLeft: 4,
             borderLeft: `1px dashed color-mix(in srgb, ${levelColor} 42%, transparent)`,
           }}
         >
