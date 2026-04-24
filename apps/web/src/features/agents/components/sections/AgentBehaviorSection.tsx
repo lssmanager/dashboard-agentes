@@ -4,7 +4,7 @@ type Props = { value: AgentSpec; onChange: (next: AgentSpec) => void };
 
 const DEFAULT_PRINCIPLES = [
   'Be genuinely helpful, not performatively helpful.',
-  "Have opinions — don't just reflect back.",
+  "Have opinions â€” don't just reflect back.",
   'Be resourceful before asking.',
   'Earn trust through competence.',
   "Remember you're a guest in the human's space.",
