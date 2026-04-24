@@ -143,6 +143,7 @@ export interface AgentReadiness {
   hooksConfigured: boolean;
   operationsConfigured: boolean;
   versionsReady: boolean;
+  state?: AgentReadinessState;
 }
 
 export type AgentReadinessState =
@@ -185,27 +186,49 @@ export interface SkillsToolsResolverResponse {
   };
 }
 
+export interface EditorSkillsToolsQueryDto {
+  level: 'agency' | 'department' | 'workspace' | 'agent' | 'subagent';
+  id: string;
+}
+
+export interface EditorSkillsToolsPatchDto {
+  level: 'agency' | 'department' | 'workspace' | 'agent' | 'subagent';
+  id: string;
+  skills?: {
+    select?: string[];
+    deselect?: string[];
+    require?: string[];
+    disable?: string[];
+  };
+  tools?: {
+    select?: string[];
+    deselect?: string[];
+    require?: string[];
+    disable?: string[];
+  };
+}
+
+export interface AgentReadinessResponseDto {
+  agentId: string;
+  state: AgentReadinessState;
+  checks: Omit<AgentReadiness, 'state'>;
+  missingFields: string[];
+  score: number;
+}
+
+export interface GenerateCoreFilesResponseDto {
+  agentId: string;
+  generatedAt: string;
+  files: Record<string, string>;
+  diagnostics?: string[];
+}
+
 export interface AgentSpec {
   id: string;
-  workspaceId: string;
-  name: string;
-  role: string;
-  description: string;
-  instructions?: string;
-  model: string;
-  skillRefs?: string[];
-  tags: string[];
-  visibility: AgentVisibility;
-  executionMode: AgentExecutionMode;
-  kind?: AgentKind;
+  parentWorkspaceId?: string;
   parentAgentId?: string;
-  context?: string[];
-  triggers?: AgentTrigger[];
-  permissions?: AgentPermission;
-  handoffRules?: AgentHandoffRule[];
-  channelBindings?: AgentChannelBinding[];
-  policyBindings?: AgentPolicyBinding[];
-  isEnabled: boolean;
+  profileId?: string;
+  kind: AgentKind;
   identity?: AgentIdentity;
   behavior?: AgentBehavior;
   humanContext?: AgentHumanContext;
@@ -215,6 +238,24 @@ export interface AgentSpec {
   hooks?: AgentHooks;
   operations?: AgentOperations;
   readiness?: AgentReadiness;
+  // Derived/back-compat fields kept for current runtime readers.
+  workspaceId?: string;
+  name?: string;
+  role?: string;
+  description?: string;
+  instructions?: string;
+  model?: string;
+  skillRefs?: string[];
+  tags?: string[];
+  visibility?: AgentVisibility;
+  executionMode?: AgentExecutionMode;
+  context?: string[];
+  triggers?: AgentTrigger[];
+  permissions?: AgentPermission;
+  handoffRules?: AgentHandoffRule[];
+  channelBindings?: AgentChannelBinding[];
+  policyBindings?: AgentPolicyBinding[];
+  isEnabled?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

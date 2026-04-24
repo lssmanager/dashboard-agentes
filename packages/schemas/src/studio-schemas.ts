@@ -137,72 +137,19 @@ export const workspaceSpecSchema = z.object({
 
 export const agentSpecSchema = z.object({
   id: z.string().min(1),
-  workspaceId: z.string().min(1),
-  name: z.string().min(1),
-  role: z.string().min(1).default('Agent'),
-  description: z.string().default(''),
-  instructions: z.string().optional(),
-  model: z.string().min(1),
-  skillRefs: z.array(z.string()).optional(),
-  tags: z.array(z.string()),
-  visibility: z.enum(['private', 'workspace', 'public']),
-  executionMode: z.enum(['direct', 'orchestrated', 'handoff']),
-  kind: z.enum(['agent', 'subagent', 'orchestrator']).default('agent'),
+  parentWorkspaceId: z.string().min(1),
   parentAgentId: z.string().optional(),
-  context: z.array(z.string()).optional(),
-  triggers: z
-    .array(
-      z.object({
-        type: z.enum(['event', 'schedule', 'manual', 'webhook']),
-        config: z.record(z.string(), z.unknown()).optional(),
-      }),
-    )
-    .optional(),
-  permissions: z
-    .object({
-      tools: z.array(z.string()).optional(),
-      channels: z.array(z.string()).optional(),
-      models: z.array(z.string()).optional(),
-      maxTokensPerTurn: z.number().int().positive().optional(),
-    })
-    .optional(),
-  handoffRules: z.array(
-    z.object({
-      id: z.string().min(1),
-      targetAgentId: z.string().min(1),
-      when: z.string().min(1),
-      description: z.string().optional(),
-      priority: z.number().int().optional(),
-    }),
-  ).optional(),
-  channelBindings: z.array(
-    z.object({
-      id: z.string().min(1),
-      channel: z.string().min(1),
-      route: z.string().min(1),
-      enabled: z.boolean(),
-    }),
-  ).optional(),
-  policyBindings: z
-    .array(
-      z.object({
-        policyId: z.string().min(1),
-        mode: z.enum(['enforce', 'warn']),
-      }),
-    )
-    .optional(),
-  isEnabled: z.boolean(),
-  identity: z
-    .object({
-      name: z.string().min(1),
-      creature: z.string().optional(),
-      role: z.string().optional(),
-      description: z.string().optional(),
-      vibe: z.string().optional(),
-      emoji: z.string().optional(),
-      avatar: z.string().optional(),
-    })
-    .optional(),
+  profileId: z.string().optional(),
+  kind: z.enum(['agent', 'subagent']).default('agent'),
+  identity: z.object({
+    name: z.string().min(1),
+    creature: z.string().optional(),
+    role: z.string().optional(),
+    description: z.string().optional(),
+    vibe: z.string().optional(),
+    emoji: z.string().optional(),
+    avatar: z.string().optional(),
+  }),
   behavior: z
     .object({
       systemPrompt: z.string().optional(),
@@ -318,14 +265,73 @@ export const agentSpecSchema = z.object({
       hooksConfigured: z.boolean(),
       operationsConfigured: z.boolean(),
       versionsReady: z.boolean(),
+      state: z.enum([
+        'missing_identity',
+        'missing_behavior',
+        'missing_model',
+        'missing_channel_binding',
+        'missing_memory_policy',
+        'missing_safety_policy',
+        'ready_to_publish',
+      ]).optional(),
     })
     .optional(),
+  workspaceId: z.string().min(1).optional(),
+  name: z.string().min(1).optional(),
+  role: z.string().min(1).optional(),
+  description: z.string().optional(),
+  instructions: z.string().optional(),
+  model: z.string().optional(),
+  skillRefs: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  visibility: z.enum(['private', 'workspace', 'public']).optional(),
+  executionMode: z.enum(['direct', 'orchestrated', 'handoff']).optional(),
+  context: z.array(z.string()).optional(),
+  triggers: z
+    .array(
+      z.object({
+        type: z.enum(['event', 'schedule', 'manual', 'webhook']),
+        config: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
+    .optional(),
+  permissions: z
+    .object({
+      tools: z.array(z.string()).optional(),
+      channels: z.array(z.string()).optional(),
+      models: z.array(z.string()).optional(),
+      maxTokensPerTurn: z.number().int().positive().optional(),
+    })
+    .optional(),
+  handoffRules: z.array(
+    z.object({
+      id: z.string().min(1),
+      targetAgentId: z.string().min(1),
+      when: z.string().min(1),
+      description: z.string().optional(),
+      priority: z.number().int().optional(),
+    }),
+  ).optional(),
+  channelBindings: z.array(
+    z.object({
+      id: z.string().min(1),
+      channel: z.string().min(1),
+      route: z.string().min(1),
+      enabled: z.boolean(),
+    }),
+  ).optional(),
+  policyBindings: z
+    .array(
+      z.object({
+        policyId: z.string().min(1),
+        mode: z.enum(['enforce', 'warn']),
+      }),
+    )
+    .optional(),
+  isEnabled: z.boolean().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
-
-// ── Profile ────────────────────────────────────────────────────────────
-
 export const profileSpecSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -830,3 +836,4 @@ export type RuntimeCapabilityMatrixInput = z.infer<typeof runtimeCapabilityMatri
 export type SessionStateInput = z.infer<typeof sessionStateSchema>;
 export type ChannelBindingInput = z.infer<typeof channelBindingSchema>;
 export type TopologyLinkStateInput = z.infer<typeof topologyLinkStateSchema>;
+

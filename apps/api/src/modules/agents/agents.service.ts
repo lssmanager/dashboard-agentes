@@ -9,33 +9,33 @@ export class AgentsService {
   private readonly corefileGenerator = new CorefileGeneratorService();
 
   private normalizeStructuredShape(agent: AgentSpec): AgentSpec {
-    const identity = agent.identity ?? {
-      name: agent.name,
-      role: agent.role,
-      description: agent.description,
-    };
+    if (!agent.identity?.name) {
+      throw new Error('identity.name is required');
+    }
 
-    const behavior = agent.behavior ?? {
-      systemPrompt: agent.instructions ?? '',
-    };
+    const parentWorkspaceId = agent.parentWorkspaceId ?? agent.workspaceId;
+    if (!parentWorkspaceId) {
+      throw new Error('parentWorkspaceId is required');
+    }
 
+    const kind = agent.kind ?? 'agent';
+
+    const behavior = agent.behavior ?? {};
     const skillsTools = agent.skillsTools ?? {
-      assignedSkills: agent.skillRefs ?? [],
+      assignedSkills: [],
       enabledTools: [],
       localNotes: '',
     };
-
     const handoffs = agent.handoffs ?? {
-      allowedTargets: (agent.handoffRules ?? []).map((rule) => rule.targetAgentId),
+      allowedTargets: [],
       escalationPolicy: '',
       approvalLane: '',
       internalActionsAllowed: [],
       externalActionsRequireApproval: [],
       publicPostingRequiresApproval: true,
     };
-
     const routingChannels = agent.routingChannels ?? {
-      allowedChannels: (agent.channelBindings ?? []).map((binding) => binding.channel),
+      allowedChannels: [],
       groupChatMode: 'respond_when_mentioned',
       reactionPolicy: 'limited',
       maxReactionsPerMessage: 1,
@@ -43,7 +43,6 @@ export class AgentsService {
       platformFormattingRules: '',
       responseTriggerPolicy: '',
     };
-
     const hooks = agent.hooks ?? {
       heartbeat: {
         enabled: false,
@@ -53,7 +52,6 @@ export class AgentsService {
       cronHooks: [],
       proactiveChecks: [],
     };
-
     const operations = agent.operations ?? {
       startup: {
         readSoul: true,
@@ -76,19 +74,35 @@ export class AgentsService {
 
     return {
       ...agent,
-      role: identity.role ?? agent.role ?? 'Agent',
-      description: identity.description ?? agent.description ?? '',
-      instructions: behavior.systemPrompt ?? agent.instructions ?? '',
-      skillRefs: skillsTools.assignedSkills ?? agent.skillRefs ?? [],
-      identity,
+      parentWorkspaceId,
+      workspaceId: parentWorkspaceId,
+      kind,
+      name: agent.identity.name,
+      role: agent.identity.role ?? agent.role ?? 'Agent',
+      description: agent.identity.description ?? agent.description ?? '',
+      instructions: behavior.systemPrompt ?? '',
+      skillRefs: skillsTools.assignedSkills ?? [],
+      tags: agent.tags ?? [],
+      visibility: agent.visibility ?? 'workspace',
+      executionMode: agent.executionMode ?? 'direct',
+      isEnabled: agent.isEnabled ?? true,
       behavior,
       skillsTools,
       handoffs,
       routingChannels,
       hooks,
       operations,
-      handoffRules: agent.handoffRules ?? [],
-      channelBindings: agent.channelBindings ?? [],
+      handoffRules: (handoffs.allowedTargets ?? []).map((targetAgentId, index) => ({
+        id: `handoff-${index + 1}`,
+        targetAgentId,
+        when: 'manual',
+      })),
+      channelBindings: (routingChannels.allowedChannels ?? []).map((channel, index) => ({
+        id: `channel-${index + 1}`,
+        channel,
+        route: 'default',
+        enabled: true,
+      })),
     };
   }
 
@@ -137,11 +151,14 @@ export class AgentsService {
     const parsed = this.normalizeStructuredShape(agentSpecSchema.parse(agent) as AgentSpec);
     const agents = this.repository.list();
 
+    if (!parsed.id) {
+      throw new Error('id is required');
+    }
     if (agents.some((item) => item.id === parsed.id)) {
       throw new Error(`Agent already exists: ${parsed.id}`);
     }
-    if (!parsed.workspaceId) {
-      throw new Error('parentWorkspaceId/workspaceId is required');
+    if (!parsed.parentWorkspaceId) {
+      throw new Error('parentWorkspaceId is required');
     }
     if ((parsed.kind ?? 'agent') === 'subagent' && !parsed.parentAgentId) {
       throw new Error('parentAgentId is required for subagent');
@@ -159,8 +176,8 @@ export class AgentsService {
     }
 
     const parsed = this.normalizeStructuredShape(agentSpecSchema.parse({ ...agents[index], ...updates, id }) as AgentSpec);
-    if (!parsed.workspaceId) {
-      throw new Error('parentWorkspaceId/workspaceId is required');
+    if (!parsed.parentWorkspaceId) {
+      throw new Error('parentWorkspaceId is required');
     }
     if ((parsed.kind ?? 'agent') === 'subagent' && !parsed.parentAgentId) {
       throw new Error('parentAgentId is required for subagent');

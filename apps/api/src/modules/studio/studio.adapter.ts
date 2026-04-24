@@ -124,8 +124,22 @@ export function adaptLegacyStudioStateToCanonical(
       departmentId,
     };
 
-  const agents = legacy.agents.filter((agent) => agent.kind !== 'subagent');
-  const subagents = legacy.agents.filter((agent) => agent.kind === 'subagent');
+  const agents = legacy.agents
+    .filter((agent) => agent.kind !== 'subagent')
+    .map((agent) => ({
+      ...agent,
+      parentWorkspaceId: agent.parentWorkspaceId ?? agent.workspaceId ?? workspace.id,
+      identity: agent.identity ?? { name: agent.name ?? 'Agent' },
+      kind: (agent.kind ?? 'agent') === 'orchestrator' ? 'agent' : (agent.kind ?? 'agent'),
+    }));
+  const subagents = legacy.agents
+    .filter((agent) => agent.kind === 'subagent')
+    .map((agent) => ({
+      ...agent,
+      parentWorkspaceId: agent.parentWorkspaceId ?? agent.workspaceId ?? workspace.id,
+      identity: agent.identity ?? { name: agent.name ?? 'Subagent' },
+      kind: 'subagent' as const,
+    }));
   const capabilityMatrix: RuntimeCapabilityMatrix = options?.capabilityMatrix ?? {
     source: 'unknown',
     topology: {
