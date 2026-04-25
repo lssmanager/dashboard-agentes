@@ -1,0 +1,324 @@
+// Agent Visual Studio — Prisma Schema
+// Inspired by: LangGraph PostgresSaver, CrewAI role/goal/backstory, AutoGen GroupChat
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Hierarchy ────────────────────────────────────────────────────────────────
+
+model Agency {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  logoUrl     String?
+  systemPrompt String      @default("")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  departments Department[]
+  auditEvents AuditEvent[]
+}
+
+model Department {
+  id          String      @id @default(cuid())
+  agencyId    String
+  name        String
+  description String?
+  systemPrompt String     @default("")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  agency      Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  workspaces  Workspace[]
+}
+
+model Workspace {
+  id           String       @id @default(cuid())
+  departmentId String
+  name         String
+  description  String?
+  systemPrompt String       @default("")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  department   Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  agents       Agent[]
+}
+
+model Agent {
+  id           String       @id @default(cuid())
+  workspaceId  String
+  name         String
+  // CrewAI-inspired semantic fields
+  role         String       @default("")
+  goal         String       @default("")
+  backstory    String       @default("")
+  systemPrompt String       @default("")
+  modelId      String?
+  channelId    String?
+  executionMode AgentExecutionMode @default(SEQUENTIAL)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subagents    Subagent[]
+  runs         Run[]
+  channelBindings ChannelBinding[]
+  llmProvider  LlmProvider? @relation(fields: [modelId], references: [id])
+}
+
+model Subagent {
+  id          String   @id @default(cuid())
+  agentId     String
+  name        String
+  role        String   @default("")
+  goal        String   @default("")
+  backstory   String   @default("")
+  systemPrompt String  @default("")
+  modelId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  llmProvider LlmProvider? @relation(fields: [modelId], references: [id])
+}
+
+enum AgentExecutionMode {
+  SEQUENTIAL
+  HIERARCHICAL
+}
+
+// ─── LLM Providers ────────────────────────────────────────────────────────────
+
+model LlmProvider {
+  id           String    @id @default(cuid())
+  name         String
+  providerType String    // openai | anthropic | openrouter | modelstudio | custom
+  baseUrl      String?
+  apiKeyEnc    String    // AES-256-GCM encrypted
+  defaultModel String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  agents       Agent[]
+  subagents    Subagent[]
+}
+
+// ─── Channels ─────────────────────────────────────────────────────────────────
+
+model ChannelConfig {
+  id           String    @id @default(cuid())
+  channelType  ChannelType
+  name         String
+  credentialsEnc String  // AES-256-GCM encrypted JSON
+  status       ChannelStatus @default(STOPPED)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  bindings     ChannelBinding[]
+}
+
+model ChannelBinding {
+  id              String        @id @default(cuid())
+  channelConfigId String
+  agentId         String
+  scopeType       String        // agency | department | workspace | agent
+  createdAt       DateTime      @default(now())
+  channelConfig   ChannelConfig @relation(fields: [channelConfigId], references: [id], onDelete: Cascade)
+  agent           Agent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([channelConfigId, agentId])
+}
+
+enum ChannelType {
+  WEBCHAT
+  TELEGRAM
+  DISCORD
+  WHATSAPP
+  TEAMS
+}
+
+enum ChannelStatus {
+  RUNNING
+  STOPPED
+  ERROR
+  CONNECTING
+}
+
+// ─── Flows ────────────────────────────────────────────────────────────────────
+
+model Flow {
+  id          String     @id @default(cuid())
+  agentId     String?
+  name        String
+  description String?
+  isActive    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  nodes       FlowNode[]
+  edges       FlowEdge[]
+  runs        Run[]
+}
+
+model FlowNode {
+  id         String   @id @default(cuid())
+  flowId     String
+  nodeType   FlowNodeType
+  label      String
+  positionX  Float    @default(0)
+  positionY  Float    @default(0)
+  config     Json     @default("{}")
+  flow       Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  edgesFrom  FlowEdge[] @relation("EdgeSource")
+  edgesTo    FlowEdge[] @relation("EdgeTarget")
+}
+
+model FlowEdge {
+  id           String   @id @default(cuid())
+  flowId       String
+  sourceNodeId String
+  targetNodeId String
+  label        String?
+  condition    String?
+  flow         Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  sourceNode   FlowNode @relation("EdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode   FlowNode @relation("EdgeTarget", fields: [targetNodeId], references: [id], onDelete: Cascade)
+}
+
+enum FlowNodeType {
+  LLM_CALL
+  TOOL_CALL
+  CONDITION      // @router pattern (CrewAI-inspired)
+  LOOP
+  SUBAGENT
+  SUPERVISOR     // Process.hierarchical (CrewAI-inspired)
+  N8N_WORKFLOW
+  HUMAN_APPROVAL // interrupt() pattern (LangGraph-inspired)
+  STATE          // StateGraph node (LangGraph-inspired)
+  START
+  END
+}
+
+// ─── Runs & Checkpointing (LangGraph PostgresSaver pattern) ───────────────────
+
+model Run {
+  id          String     @id @default(cuid())
+  agentId     String?
+  flowId      String?
+  status      RunStatus  @default(PENDING)
+  inputData   Json       @default("{}")
+  outputData  Json?
+  errorMsg    String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  agent       Agent?     @relation(fields: [agentId], references: [id])
+  flow        Flow?      @relation(fields: [flowId], references: [id])
+  steps       RunStep[]
+}
+
+model RunStep {
+  id              String      @id @default(cuid())
+  runId           String
+  stepIndex       Int
+  nodeId          String
+  nodeType        String
+  status          StepStatus  @default(PENDING)
+  inputSnapshot   Json        @default("{}")
+  outputSnapshot  Json?
+  // LangGraph PostgresSaver pattern: full graph state snapshot for resume
+  checkpoint_data Json?
+  interruptReason String?     // populated when status = INTERRUPTED
+  errorMsg        String?
+  tokensUsed      Int         @default(0)
+  costUsd         Float       @default(0)
+  createdAt       DateTime    @default(now())
+  completedAt     DateTime?
+  run             Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  pendingApproval PendingApproval?
+
+  @@index([runId, stepIndex])
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  INTERRUPTED
+}
+
+enum StepStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  INTERRUPTED
+  SKIPPED
+}
+
+// ─── Human-in-the-Loop Approvals (LangGraph interrupt() pattern) ──────────────
+
+model PendingApproval {
+  id           String          @id @default(cuid())
+  runStepId    String          @unique
+  title        String
+  description  String
+  contextData  Json            @default("{}")
+  status       ApprovalStatus  @default(PENDING)
+  resolvedBy   String?
+  resolvedNote String?
+  createdAt    DateTime        @default(now())
+  resolvedAt   DateTime?
+  runStep      RunStep         @relation(fields: [runStepId], references: [id], onDelete: Cascade)
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── Budget ───────────────────────────────────────────────────────────────────
+
+model BudgetConfig {
+  id           String   @id @default(cuid())
+  scopeType    String   // agency | department | workspace | agent
+  scopeId      String
+  dailyLimitUsd  Float?
+  monthlyLimitUsd Float?
+  alertThreshold Float  @default(0.8)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([scopeType, scopeId])
+}
+
+// ─── N8n Integrations ─────────────────────────────────────────────────────────
+
+model N8nWorkflow {
+  id           String   @id @default(cuid())
+  n8nWorkflowId String
+  name         String
+  description  String?
+  webhookUrl   String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─── Audit ────────────────────────────────────────────────────────────────────
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  agencyId   String?
+  actor      String
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+  agency     Agency?  @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId, createdAt])
+}
