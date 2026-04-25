@@ -1,0 +1,261 @@
+// ============================================================
+// LSS Agent Studio — Prisma Schema
+// Compatible: PostgreSQL 14+
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Agencies / Tenants ─────────────────────────────────────
+model Agency {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  departments Department[]
+  agents      Agent[]
+  flows       Flow[]
+  runs        Run[]
+  budgets     BudgetConfig[]
+  auditEvents AuditEvent[]
+  n8nConnections N8nConnection[]
+  channelBindings ChannelBinding[]
+}
+
+// ─── Departments ────────────────────────────────────────────
+model Department {
+  id        String   @id @default(uuid())
+  agencyId  String
+  name      String
+  createdAt DateTime @default(now())
+
+  agency     Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  workspaces Workspace[]
+}
+
+// ─── Workspaces ─────────────────────────────────────────────
+model Workspace {
+  id           String   @id @default(uuid())
+  departmentId String
+  name         String
+  createdAt    DateTime @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  agents     Agent[]
+}
+
+// ─── Agents ─────────────────────────────────────────────────
+model Agent {
+  id           String   @id @default(uuid())
+  agencyId     String
+  workspaceId  String?
+  parentId     String?  // null = top-level agent, set = subagent
+  name         String
+  description  String?
+  systemPrompt String?  @db.Text
+  model        String   @default("gpt-4o-mini")
+  provider     String   @default("openai")  // openai | openrouter | custom
+  temperature  Float    @default(0.7)
+  maxTokens    Int      @default(2048)
+  tools        Json     @default("[]")
+  capabilities Json     @default("{}") // AgentCapability contract (agent-framework pattern)
+  status       AgentStatus @default(ACTIVE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  agency          Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  workspace       Workspace?       @relation(fields: [workspaceId], references: [id])
+  parent          Agent?           @relation("SubAgents", fields: [parentId], references: [id])
+  subAgents       Agent[]          @relation("SubAgents")
+  channelBindings ChannelBinding[]
+  runs            Run[]
+  budgets         BudgetConfig[]
+}
+
+enum AgentStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+// ─── Channel Bindings ────────────────────────────────────────
+// Any user on any cloud can connect their own channel
+model ChannelBinding {
+  id         String      @id @default(uuid())
+  agencyId   String
+  agentId    String
+  channel    ChannelType
+  // Generic credential bag — never stored in plain text in prod
+  // Each channel uses different fields:
+  // telegram: { botToken }
+  // whatsapp: { apiUrl, phoneNumberId, accessToken, verifyToken }
+  // slack:    { botToken, signingSecret, appId }
+  // discord:  { botToken, applicationId }
+  // webchat:  { widgetKey (auto-generated) }
+  // custom:   { webhookUrl, secret }
+  credentials Json
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agent  Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  sessions GatewaySession[]
+}
+
+enum ChannelType {
+  WEBCHAT
+  TELEGRAM
+  WHATSAPP
+  SLACK
+  DISCORD
+  CUSTOM
+}
+
+// ─── Gateway Sessions ────────────────────────────────────────
+model GatewaySession {
+  id               String   @id @default(uuid())
+  channelBindingId String
+  externalUserId   String   // user id on the channel side
+  externalUsername String?
+  metadata         Json     @default("{}")
+  lastSeenAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  channelBinding ChannelBinding @relation(fields: [channelBindingId], references: [id], onDelete: Cascade)
+  runs           Run[]
+}
+
+// ─── Runs ────────────────────────────────────────────────────
+model Run {
+  id        String    @id @default(uuid())
+  agencyId  String
+  agentId   String
+  sessionId String?
+  flowId    String?
+  status    RunStatus @default(QUEUED)
+  input     Json
+  output    Json?
+  error     String?
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  agency  Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agent   Agent           @relation(fields: [agentId], references: [id])
+  session GatewaySession? @relation(fields: [sessionId], references: [id])
+  flow    Flow?           @relation(fields: [flowId], references: [id])
+  steps   RunStep[]
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ─── Run Steps ───────────────────────────────────────────────
+model RunStep {
+  id        String   @id @default(uuid())
+  runId     String
+  nodeId    String?  // flow node id if triggered by flow
+  type      String   // llm_call | tool_call | subagent | n8n_webhook | condition
+  input     Json
+  output    Json?
+  tokens    Int      @default(0)
+  costUsd   Float    @default(0)
+  durationMs Int     @default(0)
+  createdAt DateTime @default(now())
+
+  run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+// ─── Flows ───────────────────────────────────────────────────
+model Flow {
+  id          String     @id @default(uuid())
+  agencyId    String
+  name        String
+  description String?
+  // ReactFlow JSON: { nodes: [], edges: [] }
+  definition  Json
+  version     Int        @default(1)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  runs   Run[]
+}
+
+// ─── N8n Connections ─────────────────────────────────────────
+// One per user/agency — plug in their own n8n instance
+model N8nConnection {
+  id        String   @id @default(uuid())
+  agencyId  String   @unique
+  baseUrl   String   // e.g. https://n8n.mycompany.com
+  apiKey    String   // n8n API key — encrypted at rest
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agency    Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  webhooks  N8nWebhook[]
+}
+
+// ─── N8n Webhooks ────────────────────────────────────────────
+model N8nWebhook {
+  id           String   @id @default(uuid())
+  connectionId String
+  name         String
+  webhookUrl   String   // full URL on n8n side
+  method       String   @default("POST")
+  description  String?
+  createdAt    DateTime @default(now())
+
+  connection N8nConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+}
+
+// ─── Budget Configs ──────────────────────────────────────────
+model BudgetConfig {
+  id          String    @id @default(uuid())
+  agencyId    String
+  agentId     String?
+  scope       String    // agency | agent | workspace
+  limitUsd    Float
+  periodDays  Int       @default(30)
+  currentUsd  Float     @default(0)
+  resetAt     DateTime
+  alertAt     Float     @default(0.8) // 80% threshold
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  agency Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agent  Agent?  @relation(fields: [agentId], references: [id])
+}
+
+// ─── Audit Events ────────────────────────────────────────────
+model AuditEvent {
+  id        String   @id @default(uuid())
+  agencyId  String
+  actorId   String?  // user id from Logto/auth
+  actorType String   @default("user") // user | agent | system
+  action    String   // e.g. agent.created, flow.executed, channel.connected
+  resourceType String?
+  resourceId   String?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+}
