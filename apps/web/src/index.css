@@ -196,6 +196,39 @@
   --shell-chip-border: rgba(154, 173, 214, 0.18);
   --canvas-surface-bg: #0d172d;
   --canvas-grid-color: rgba(154, 173, 214, 0.22);
+
+  /* EntityEditorPage builder tokens */
+  --builder-bg-primary:    #0f1117;
+  --builder-bg-secondary:  #1a1d27;
+  --builder-bg-tertiary:   #22263a;
+  --builder-bg-elevated:   #2a2f45;
+  --builder-bg-hover:      rgba(255,255,255,0.03);
+  --builder-bg-active:     rgba(66,153,225,0.08);
+
+  --builder-border-subtle:  rgba(255,255,255,0.06);
+  --builder-border-color:   rgba(255,255,255,0.08);
+  --builder-border-strong:  rgba(255,255,255,0.14);
+  --builder-border-accent:  rgba(66,153,225,0.40);
+
+  --builder-accent:         #4299e1;
+  --builder-accent-hover:   #3182ce;
+  --builder-accent-dim:     rgba(66,153,225,0.12);
+
+  --builder-text-primary:   #e2e8f0;
+  --builder-text-secondary: #94a3b8;
+  --builder-text-muted:     #64748b;
+  --builder-text-disabled:  #475569;
+  --builder-text-accent:    #63b3ed;
+  --builder-text-danger:    #fc8181;
+  --builder-text-warning:   #fbd38d;
+
+  --builder-status-ok:      #68d391;
+  --builder-status-ok-dim:  rgba(104,211,145,0.12);
+  --builder-status-warn:    #f6ad55;
+  --builder-status-warn-dim:rgba(246,173,85,0.12);
+  --builder-status-err:     #fc8181;
+  --builder-status-err-dim: rgba(252,129,129,0.12);
+  --builder-status-off:     #718096;
 }
 
 @layer base {

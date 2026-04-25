@@ -1,4 +1,8 @@
 import type { AgentSpec } from '../../../../lib/types';
+import { FieldWrapper } from '../FieldWrapper';
+import { EditableList } from '../EditableList';
+import { ToggleRow } from '../ToggleRow';
+import { MultiSelectChips } from '../MultiSelectChips';
 
 type Props = {
   value: AgentSpec;
@@ -6,151 +10,134 @@ type Props = {
   onChange: (next: AgentSpec) => void;
 };
 
-const DEFAULT_INTERNAL = ['read files', 'explore workspace', 'organize memory', 'search web', 'check git status', 'update docs'];
-const DEFAULT_EXTERNAL = ['send email', 'post tweet', 'publish content', 'run destructive commands', 'exfiltrate data'];
+const DEFAULT_INTERNAL = [
+  'Read files and explore workspace',
+  'Organize memory and daily notes',
+  'Search the web',
+  'Check git status',
+  'Update documentation',
+];
 
-export function AgentHandoffsSection({ value, onChange, availableTargets = [] }: Props) {
+const DEFAULT_EXTERNAL = [
+  'Send emails',
+  'Post tweets or public content',
+  'Run destructive commands',
+  'Publish to group channels',
+  'Exfiltrate or transfer data',
+];
+
+export function AgentHandoffsSection({ value, availableTargets = [], onChange }: Props) {
   const handoffs = value.handoffs ?? {
     allowedTargets: [],
     fallbackAgent: '',
     escalationPolicy: '',
-    approvalLane: '',
-    delegationNotes: '',
-    internalActionsAllowed: DEFAULT_INTERNAL,
-    externalActionsRequireApproval: DEFAULT_EXTERNAL,
-    publicPostingRequiresApproval: true,
   };
 
-  const update = (patch: Partial<typeof handoffs>) => {
+  const updateHandoffs = (patch: Partial<typeof handoffs>) => {
     onChange({ ...value, handoffs: { ...handoffs, ...patch } });
   };
 
-  const currentTargets = handoffs.allowedTargets ?? [];
-  const addTarget = (id: string) => update({ allowedTargets: [...currentTargets, id] });
-  const removeTarget = (id: string) => update({ allowedTargets: currentTargets.filter((t) => t !== id) });
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--builder-bg-secondary)',
+    border: '1px solid var(--builder-border-color)',
+    borderRadius: 'var(--radius-md)',
+    padding: '10px 14px',
+    fontSize: 14,
+    color: 'var(--builder-text-primary)',
+    outline: 'none',
+    transition: 'var(--transition)',
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    ...inputStyle,
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    lineHeight: 1.6,
+  };
 
   return (
-    <section className="space-y-4">
-      <h3 className="text-sm font-semibold">Handoffs</h3>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <MultiSelectChips
+        label="Allowed Handoff Targets"
+        selected={handoffs.allowedTargets ?? []}
+        onAdd={(id) => updateHandoffs({ allowedTargets: [...(handoffs.allowedTargets ?? []), id] })}
+        onRemove={(id) => updateHandoffs({ allowedTargets: (handoffs.allowedTargets ?? []).filter((t) => t !== id) })}
+        searchPlaceholder="Search agents in this workspace…"
+        options={availableTargets}
+      />
 
-      {/* Allowed targets — chip multi-select */}
-      <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase opacity-60">Allowed Targets</p>
-        <div
-          className="rounded-md border p-2 flex flex-wrap gap-1.5 min-h-[2.5rem] items-start"
-          style={{ background: 'var(--bg-secondary)' }}
-        >
-          {currentTargets.map((targetId) => {
-            const target = availableTargets.find((t) => t.id === targetId);
-            return (
-              <span
-                key={targetId}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                style={{ background: 'var(--color-primary-soft)', color: 'var(--color-primary)' }}
-              >
-                {target?.name ?? targetId}
-                <button
-                  type="button"
-                  className="hover:opacity-60 transition-opacity leading-none"
-                  onClick={() => removeTarget(targetId)}
-                >
-                  ×
-                </button>
-              </span>
-            );
-          })}
-          {availableTargets
-            .filter((t) => !currentTargets.includes(t.id))
-            .map((target) => (
-              <button
-                key={target.id}
-                type="button"
-                className="rounded-full px-2.5 py-0.5 text-xs border transition-colors hover:border-current"
-                style={{ borderStyle: 'dashed', color: 'var(--text-muted)' }}
-                onClick={() => addTarget(target.id)}
-              >
-                + {target.name}
-              </button>
-            ))}
-          {availableTargets.length === 0 && currentTargets.length === 0 && (
-            <span className="text-xs opacity-40 p-0.5">No other agents in workspace</span>
-          )}
-        </div>
-      </div>
-
-      {/* Fallback agent */}
-      <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase opacity-60">Fallback Agent</p>
+      <FieldWrapper label="Fallback Agent" helper="Used when no other target is available.">
         <select
-          className="w-full rounded-md border px-3 py-2 text-sm"
           value={handoffs.fallbackAgent ?? ''}
-          onChange={(e) => update({ fallbackAgent: e.target.value })}
+          onChange={(e) => updateHandoffs({ fallbackAgent: e.target.value })}
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
         >
-          <option value="">None</option>
-          {availableTargets.map((target) => (
-            <option key={target.id} value={target.id}>{target.name}</option>
+          <option value="">Select a fallback agent (optional)</option>
+          {availableTargets.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
           ))}
         </select>
-      </div>
+      </FieldWrapper>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase opacity-60">Escalation Policy</p>
-          <textarea
-            rows={3}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            value={handoffs.escalationPolicy ?? ''}
-            onChange={(e) => update({ escalationPolicy: e.target.value })}
-            placeholder="When should this agent escalate?"
-          />
-        </div>
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase opacity-60">Approval Lane</p>
-          <textarea
-            rows={3}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            value={handoffs.approvalLane ?? ''}
-            onChange={(e) => update({ approvalLane: e.target.value })}
-            placeholder="Which actions require human approval?"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase opacity-60">Internal Actions Allowed</p>
-          <textarea
-            rows={5}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            value={(handoffs.internalActionsAllowed ?? DEFAULT_INTERNAL).join('\n')}
-            onChange={(e) =>
-              update({ internalActionsAllowed: e.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })
-            }
-            placeholder="one action per line"
-          />
-        </div>
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase opacity-60">External Actions (require approval)</p>
-          <textarea
-            rows={5}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-            value={(handoffs.externalActionsRequireApproval ?? DEFAULT_EXTERNAL).join('\n')}
-            onChange={(e) =>
-              update({ externalActionsRequireApproval: e.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })
-            }
-            placeholder="one action per line"
-          />
-        </div>
-      </div>
-
-      <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-        <input
-          type="checkbox"
-          checked={Boolean(handoffs.publicPostingRequiresApproval)}
-          onChange={(e) => update({ publicPostingRequiresApproval: e.target.checked })}
+      <FieldWrapper label="Escalation Policy">
+        <textarea
+          value={handoffs.escalationPolicy ?? ''}
+          onChange={(e) => updateHandoffs({ escalationPolicy: e.target.value })}
+          placeholder="When should this agent escalate?..."
+          style={{ ...textareaStyle, minHeight: 60 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
         />
-        Public posting requires approval
-      </label>
+      </FieldWrapper>
+
+      <FieldWrapper label="Approval Lane">
+        <textarea
+          placeholder="Which actions require explicit human approval..."
+          style={{ ...textareaStyle, minHeight: 60 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <EditableList
+        label="Internal Actions — Allowed freely"
+        helper="The agent can do these without asking."
+        items={[]}
+        onChange={() => {}}
+        addLabel="+ Add action"
+        defaults={DEFAULT_INTERNAL}
+      />
+
+      <EditableList
+        label="External Actions — Require approval"
+        helper="The agent must ask before doing any of these."
+        items={[]}
+        onChange={() => {}}
+        addLabel="+ Add action"
+        defaults={DEFAULT_EXTERNAL}
+      />
+
+      <ToggleRow
+        label="Public posting requires approval"
+        helper="Always ask before sending anything to a public or group channel."
+        checked={true}
+        onChange={() => {}}
+        defaultChecked={true}
+      />
+
+      <FieldWrapper label="Delegation Notes (optional)">
+        <textarea
+          placeholder="Any additional notes about how and when this agent should delegate."
+          style={{ ...textareaStyle, minHeight: 48 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
     </section>
   );
 }

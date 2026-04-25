@@ -1,4 +1,6 @@
 import type { AgentSpec } from '../../../../lib/types';
+import { FieldWrapper } from '../FieldWrapper';
+import { ToggleRow } from '../ToggleRow';
 
 type Props = {
   value: AgentSpec;
@@ -28,34 +30,128 @@ export function AgentIdentitySection({ value, onChange, profileSource = 'blank' 
     });
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--builder-bg-secondary)',
+    border: '1px solid var(--builder-border-color)',
+    borderRadius: 'var(--radius-md)',
+    padding: '10px 14px',
+    fontSize: 14,
+    color: 'var(--builder-text-primary)',
+    outline: 'none',
+    transition: 'var(--transition)',
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    ...inputStyle,
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    lineHeight: 1.6,
+  };
+
+  const agentEnabled = value.isEnabled !== false;
+
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Identity</h3>
-        <span className="rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide">from {profileSource}</span>
-      </div>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <FieldWrapper label="Name">
+        <input
+          value={identity.name ?? ''}
+          onChange={(e) => update({ name: e.target.value })}
+          placeholder="Pick a name for this agent"
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
 
-      <div className="grid grid-cols-1 md:grid-cols-[84px_minmax(0,1fr)] gap-3 items-start">
-        <div className="w-[84px] h-[84px] rounded-full border overflow-hidden bg-black/20 flex items-center justify-center text-xs">
-          {identity.avatar ? <img src={identity.avatar} alt="avatar preview" className="w-full h-full object-cover" /> : 'avatar'}
-        </div>
-        <div className="space-y-2">
-          <input value={identity.avatar ?? ''} onChange={(e) => update({ avatar: e.target.value })} placeholder="Workspace-relative path, URL, or generated avatar" className="w-full rounded-md border px-3 py-2 text-sm" />
-          <div className="flex flex-wrap gap-2">
-            <input value={identity.name ?? ''} onChange={(e) => update({ name: e.target.value })} placeholder="Pick a name for this agent" className="flex-1 min-w-[220px] rounded-md border px-3 py-2 text-sm" />
-            <span className="rounded-full border px-2 py-1 text-xs">{identity.role || 'role'}</span>
-          </div>
-        </div>
-      </div>
+      <FieldWrapper label="Model">
+        {/* TODO: Model selector component */}
+        <input
+          placeholder="Select model"
+          disabled
+          style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }}
+        />
+      </FieldWrapper>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <input value={identity.creature ?? ''} onChange={(e) => update({ creature: e.target.value })} placeholder="AI assistant, orchestrator, dev agent, familiar…" className="rounded-md border px-3 py-2 text-sm" />
-        <input value={identity.role ?? ''} onChange={(e) => update({ role: e.target.value })} placeholder="What kind of agent is this?" className="rounded-md border px-3 py-2 text-sm" />
-        <input value={identity.emoji ?? ''} onChange={(e) => update({ emoji: e.target.value })} placeholder="Signature emoji" className="rounded-md border px-3 py-2 text-sm" />
-      </div>
+      <FieldWrapper label="Creature" helper="What kind of entity is this agent?">
+        <input
+          value={identity.creature ?? ''}
+          onChange={(e) => update({ creature: e.target.value })}
+          placeholder="AI assistant, orchestrator, dev agent, familiar, monitor…"
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
 
-      <input value={identity.vibe ?? ''} onChange={(e) => update({ vibe: e.target.value })} placeholder="warm, sharp, calm, direct, playful…" className="w-full rounded-md border px-3 py-2 text-sm" />
-      <textarea rows={3} value={identity.description ?? ''} onChange={(e) => update({ description: e.target.value })} placeholder="Short identity description" className="w-full rounded-md border px-3 py-2 text-sm" />
+      <FieldWrapper label="Role">
+        <input
+          value={identity.role ?? ''}
+          onChange={(e) => update({ role: e.target.value })}
+          placeholder="What kind of agent is this?"
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Vibe" helper="How does this agent come across?">
+        <input
+          value={identity.vibe ?? ''}
+          onChange={(e) => update({ vibe: e.target.value })}
+          placeholder="warm, sharp, calm, direct, playful, chaotic…"
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Emoji">
+        <input
+          value={identity.emoji ?? ''}
+          onChange={(e) => update({ emoji: e.target.value })}
+          placeholder="Signature emoji"
+          style={{ ...inputStyle, maxWidth: 120 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Avatar URL" helper="e.g. avatars/agent.png or https://…">
+        <input
+          value={identity.avatar ?? ''}
+          onChange={(e) => update({ avatar: e.target.value })}
+          placeholder="Workspace path or URL"
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Description">
+        <textarea
+          value={identity.description ?? ''}
+          onChange={(e) => update({ description: e.target.value })}
+          placeholder="A brief description of this agent's purpose."
+          style={{ ...textareaStyle, minHeight: 72 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Profile source">
+        <input
+          readOnly
+          value={profileSource}
+          style={{ ...inputStyle, color: 'var(--builder-text-muted)', cursor: 'default' }}
+        />
+      </FieldWrapper>
+
+      <ToggleRow
+        label="Agent enabled"
+        checked={agentEnabled}
+        onChange={(checked) => onChange({ ...value, isEnabled: checked })}
+      />
     </section>
   );
 }

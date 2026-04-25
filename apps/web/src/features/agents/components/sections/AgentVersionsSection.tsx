@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-
 import {
   applyCoreFiles,
   createVersion,
@@ -14,219 +13,301 @@ type Props = {
   agentId: string;
 };
 
+const FILES = ['IDENTITY.md', 'SOUL.md', 'USER.md', 'TOOLS.md', 'AGENTS.md', 'BOOTSTRAP.md'];
+
 export function AgentVersionsSection({ agentId }: Props) {
   const [generated, setGenerated] = useState<DeployPreview | null>(null);
   const [snapshots, setSnapshots] = useState<VersionSnapshot[]>([]);
-  const [selectedSnapshotId, setSelectedSnapshotId] = useState<string>('');
-  const [diffPreview, setDiffPreview] = useState<string>('');
-  const [previewTab, setPreviewTab] = useState<string>('');
+  const [activeVersion, setActiveVersion] = useState<string>('draft');
+  const [activeFile, setActiveFile] = useState<string>(FILES[0]);
+  const [isDiffMode, setIsDiffMode] = useState(false);
   const [busy, setBusy] = useState<string>('');
-  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     void (async () => {
       try {
         const versions = await getVersions();
         setSnapshots(versions);
-        if (!selectedSnapshotId && versions.length > 0) {
-          setSelectedSnapshotId(versions[0].id);
-        }
       } catch {
         setSnapshots([]);
       }
     })();
-  }, [selectedSnapshotId]);
-
-  useEffect(() => {
-    if (generated?.artifacts?.[0]?.name && !previewTab) {
-      setPreviewTab(generated.artifacts[0].name);
-    }
-  }, [generated, previewTab]);
+  }, []);
 
   const runGenerate = async () => {
     setBusy('generate');
-    setError('');
-    setPreviewTab('');
     try {
-      const result = await generateAgentCoreFiles(agentId);
-      setGenerated(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generate failed');
+      const preview = await generateAgentCoreFiles(agentId);
+      setGenerated(preview);
     } finally {
       setBusy('');
     }
   };
 
-  const runDiff = async () => {
-    setBusy('diff');
-    setError('');
-    try {
-      const response = await diffCoreFiles(selectedSnapshotId || undefined);
-      setDiffPreview(JSON.stringify(response.diffs ?? response, null, 2));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Diff failed');
-    } finally {
-      setBusy('');
-    }
+  const handleExport = async () => {
+    // TODO: Implement export functionality
   };
 
-  const runApply = async () => {
-    if (!generated) return;
-    setBusy('apply');
-    setError('');
-    try {
-      await applyCoreFiles({ artifacts: generated.artifacts, applyRuntime: false });
-      await createVersion(`agent-${agentId}-apply`);
-      const versions = await getVersions();
-      setSnapshots(versions);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Apply failed');
-    } finally {
-      setBusy('');
-    }
-  };
-
-  const runRollback = async () => {
-    if (!selectedSnapshotId) return;
+  const handleRollback = async () => {
+    if (!activeVersion || activeVersion === 'draft') return;
     setBusy('rollback');
-    setError('');
     try {
-      await rollbackVersion(selectedSnapshotId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Rollback failed');
+      await rollbackVersion(activeVersion);
+      await runGenerate();
     } finally {
       setBusy('');
     }
   };
 
-  const selectedArtifact = generated?.artifacts.find((a) => a.name === previewTab);
+  const handleApply = async () => {
+    setBusy('apply');
+    try {
+      if (activeVersion !== 'draft' && generated) {
+        await applyCoreFiles(agentId, generated);
+      }
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const toggleDiff = async () => {
+    if (!isDiffMode) {
+      setBusy('diff');
+      try {
+        const diff = await diffCoreFiles();
+        // Store diff result
+      } finally {
+        setBusy('');
+      }
+    }
+    setIsDiffMode(!isDiffMode);
+  };
 
   return (
-    <section className="space-y-3">
-      <h3 className="text-sm font-semibold">Versions</h3>
+    <div
+      style={{
+        display: 'flex',
+        gap: 0,
+        height: '100%',
+        minHeight: 400,
+      }}
+    >
+      {/* Left column: snapshots */}
+      <div
+        style={{
+          width: 200,
+          flexShrink: 0,
+          borderRight: '1px solid var(--builder-border-subtle)',
+          paddingRight: 16,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--builder-text-muted)',
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            marginBottom: 12,
+          }}
+        >
+          SNAPSHOTS
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-3">
-        {/* Left column — snapshots + actions */}
-        <aside className="rounded-md border p-2 space-y-2">
-          <p className="text-xs font-semibold uppercase opacity-60">Snapshots</p>
-          <select
-            className="w-full rounded-md border px-2 py-1.5 text-xs"
-            value={selectedSnapshotId}
-            onChange={(e) => setSelectedSnapshotId(e.target.value)}
+        {snapshots.map((v) => (
+          <div
+            key={v.id}
+            onClick={() => setActiveVersion(v.id)}
+            style={{
+              padding: '8px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              marginBottom: 2,
+              borderLeft: activeVersion === v.id ? '2px solid var(--builder-accent)' : '2px solid transparent',
+              background: activeVersion === v.id ? 'var(--builder-bg-active)' : 'transparent',
+              transition: 'var(--transition)',
+            }}
           >
-            <option value="">Current (working)</option>
-            {snapshots.map((snapshot) => (
-              <option key={snapshot.id} value={snapshot.id}>
-                {snapshot.label ?? snapshot.id} · {new Date(snapshot.createdAt).toLocaleString()}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              className="rounded border px-2 py-1 text-xs disabled:opacity-50"
-              onClick={() => void runGenerate()}
-              disabled={busy !== ''}
-            >
-              {busy === 'generate' ? 'Generating…' : 'Generate'}
-            </button>
-            <button
-              type="button"
-              className="rounded border px-2 py-1 text-xs disabled:opacity-50"
-              onClick={() => void runDiff()}
-              disabled={busy !== ''}
-            >
-              {busy === 'diff' ? 'Diffing…' : 'Diff'}
-            </button>
-            <button
-              type="button"
-              className="rounded border px-2 py-1 text-xs disabled:opacity-50"
-              onClick={() => void runApply()}
-              disabled={busy !== '' || !generated}
-            >
-              {busy === 'apply' ? 'Applying…' : 'Apply'}
-            </button>
-            <button
-              type="button"
-              className="rounded border px-2 py-1 text-xs disabled:opacity-50"
-              onClick={() => void runRollback()}
-              disabled={busy !== '' || !selectedSnapshotId}
-            >
-              {busy === 'rollback' ? 'Rolling back…' : 'Rollback'}
-            </button>
-            <button
-              type="button"
-              className="rounded border px-2 py-1 text-xs disabled:opacity-50"
-              onClick={() => {
-                if (!generated) return;
-                const blob = new Blob([JSON.stringify(generated.artifacts, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const anchor = document.createElement('a');
-                anchor.href = url;
-                anchor.download = `agent-${agentId}-core-files.json`;
-                anchor.click();
-                URL.revokeObjectURL(url);
-              }}
-              disabled={!generated}
-            >
-              Export
-            </button>
-          </div>
-
-          {error && (
-            <p className="text-xs rounded-md border p-1.5" style={{ color: 'var(--tone-danger-text, #dc2626)', background: 'rgba(239,68,68,0.08)' }}>
-              {error}
-            </p>
-          )}
-        </aside>
-
-        {/* Right column — file preview tabs + diff */}
-        <div className="space-y-3 min-w-0">
-          {/* Generated file tabs */}
-          {generated && (
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase opacity-60">Generated Core Files</p>
-              <div className="flex flex-wrap gap-0 border-b overflow-x-auto">
-                {generated.artifacts.map((art) => (
-                  <button
-                    key={art.name}
-                    type="button"
-                    className="px-2.5 py-1 text-xs whitespace-nowrap border-b-2 transition-colors"
-                    style={{
-                      borderBottomColor: previewTab === art.name ? 'var(--color-primary)' : 'transparent',
-                      color: previewTab === art.name ? 'var(--color-primary)' : 'var(--text-muted)',
-                      fontWeight: previewTab === art.name ? 600 : 400,
-                    }}
-                    onClick={() => setPreviewTab(art.name)}
-                  >
-                    {art.name}
-                  </button>
-                ))}
-              </div>
-              {selectedArtifact && (
-                <pre className="text-xs overflow-auto rounded-md border p-2 max-h-64 font-mono">
-                  {selectedArtifact.content}
-                </pre>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: activeVersion === v.id ? 'var(--builder-text-primary)' : 'var(--builder-text-secondary)',
+                }}
+              >
+                {v.label || v.id}
+              </span>
+              {v.isDraft && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    padding: '1px 6px',
+                    borderRadius: 20,
+                    background: 'var(--builder-accent-dim)',
+                    color: 'var(--builder-text-accent)',
+                    border: '1px solid var(--builder-border-accent)',
+                  }}
+                >
+                  DRAFT
+                </span>
               )}
             </div>
-          )}
+            {v.date && (
+              <div style={{ fontSize: 11, color: 'var(--builder-text-disabled)', marginTop: 2 }}>
+                {v.date}
+              </div>
+            )}
+          </div>
+        ))}
 
-          {!generated && (
-            <div className="rounded-md border p-3 text-xs opacity-50">
-              Click Generate to preview core files for this agent.
-            </div>
-          )}
+        <button
+          onClick={runGenerate}
+          disabled={busy === 'generate'}
+          style={{
+            marginTop: 12,
+            color: 'var(--builder-text-accent)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 12,
+            textAlign: 'left',
+            padding: '6px 10px',
+            opacity: busy === 'generate' ? 0.6 : 1,
+          }}
+        >
+          + Create snapshot
+        </button>
+      </div>
 
-          {/* Diff view */}
-          {diffPreview && (
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase opacity-60">Diff vs Deployed / Selected</p>
-              <pre className="text-xs overflow-auto rounded-md border p-2 max-h-64 font-mono">{diffPreview}</pre>
+      {/* Right column: preview */}
+      <div
+        style={{
+          flex: 1,
+          paddingLeft: 20,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* File tabs */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 4,
+            marginBottom: 12,
+            borderBottom: '1px solid var(--builder-border-subtle)',
+            paddingBottom: 8,
+            overflowX: 'auto',
+          }}
+        >
+          {FILES.map((file) => (
+            <button
+              key={file}
+              onClick={() => setActiveFile(file)}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 4,
+                fontSize: 11,
+                fontWeight: 500,
+                background: activeFile === file ? 'var(--builder-bg-tertiary)' : 'transparent',
+                border: `1px solid ${activeFile === file ? 'var(--builder-border-strong)' : 'transparent'}`,
+                color: activeFile === file ? 'var(--builder-text-primary)' : 'var(--builder-text-muted)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {file}
+            </button>
+          ))}
+        </div>
+
+        {/* Diff toggle & content */}
+        {isDiffMode ? (
+          <div style={{ display: 'flex', gap: 0, flex: 1 }}>
+            <div
+              style={{
+                flex: 1,
+                padding: 16,
+                background: 'rgba(252,129,129,0.04)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 12,
+                whiteSpace: 'pre-wrap',
+                color: 'var(--builder-text-primary)',
+                borderRight: '1px solid var(--builder-border-subtle)',
+                overflowY: 'auto',
+              }}
+            >
+              {/* Deployed content in red */}
             </div>
-          )}
+            <div
+              style={{
+                flex: 1,
+                padding: 16,
+                background: 'rgba(104,211,145,0.04)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 12,
+                whiteSpace: 'pre-wrap',
+                color: 'var(--builder-text-primary)',
+                overflowY: 'auto',
+              }}
+            >
+              {/* Draft content in green */}
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              flex: 1,
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--builder-border-subtle)',
+              borderRadius: 6,
+              padding: 16,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              color: 'var(--builder-text-primary)',
+              whiteSpace: 'pre-wrap',
+              overflowY: 'auto',
+              minHeight: 280,
+            }}
+          >
+            {generated?.artifacts?.find((a) => a.name === activeFile)?.content || (
+              <span style={{ color: 'var(--builder-text-disabled)' }}>
+                {`# ${activeFile}\n# (Fill in the ${activeFile.replace('.md', '')} section to generate this file.)`}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          {[
+            { label: isDiffMode ? '✕ Close diff' : '↔ Compare with deployed', action: toggleDiff },
+            { label: '↓ Export .zip', action: handleExport },
+            ...(activeVersion !== 'draft' ? [{ label: '↩ Rollback', action: handleRollback }] : []),
+            { label: '✓ Apply / Publish', action: handleApply },
+          ].map((btn) => (
+            <button
+              key={btn.label}
+              onClick={btn.action}
+              disabled={busy !== ''}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 12,
+                background: 'var(--builder-bg-tertiary)',
+                border: '1px solid var(--builder-border-color)',
+                color: 'var(--builder-text-secondary)',
+                cursor: busy !== '' ? 'not-allowed' : 'pointer',
+                transition: 'var(--transition)',
+                opacity: busy !== '' ? 0.5 : 1,
+              }}
+            >
+              {btn.label}
+            </button>
+          ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

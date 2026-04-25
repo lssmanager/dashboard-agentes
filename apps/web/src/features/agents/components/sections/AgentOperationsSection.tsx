@@ -1,4 +1,8 @@
 import type { AgentSpec } from '../../../../lib/types';
+import { ToggleRow } from '../ToggleRow';
+import { RadioGroup } from '../RadioGroup';
+import { FieldWrapper } from '../FieldWrapper';
+import { SectionHeader } from '../SectionHeader';
 
 type Props = {
   value: AgentSpec;
@@ -33,132 +37,176 @@ export function AgentOperationsSection({ value, onChange }: Props) {
   const updateStartup = (patch: Partial<NonNullable<typeof operations.startup>>) =>
     update({
       startup: {
-        ...(operations.startup ?? { readSoul: true, readUser: true, readDailyMemory: true, readLongTermMemoryInMainSessionOnly: true }),
+        ...(operations.startup ?? {}),
         ...patch,
       },
     });
   const updateMemory = (patch: Partial<NonNullable<typeof operations.memoryPolicy>>) =>
     update({
       memoryPolicy: {
-        ...(operations.memoryPolicy ?? { dailyNotesEnabled: true, longTermMemoryEnabled: true, memoryScope: 'main_session_only' }),
+        ...(operations.memoryPolicy ?? {}),
         ...patch,
       },
     });
   const updateSafety = (patch: Partial<NonNullable<typeof operations.safety>>) =>
     update({
       safety: {
-        ...(operations.safety ?? { destructiveCommandsRequireApproval: true, externalActionsRequireApproval: true, privateDataProtection: true, recoverableDeletePreferred: true }),
+        ...(operations.safety ?? {}),
         ...patch,
       },
     });
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--builder-bg-secondary)',
+    border: '1px solid var(--builder-border-color)',
+    borderRadius: 'var(--radius-md)',
+    padding: '10px 14px',
+    fontSize: 14,
+    color: 'var(--builder-text-primary)',
+    outline: 'none',
+    transition: 'var(--transition)',
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    ...inputStyle,
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    lineHeight: 1.6,
+  };
+
   return (
-    <section className="space-y-4">
-      <h3 className="text-sm font-semibold">Operations</h3>
-
-      {/* Session Startup */}
-      <div className="rounded-md border p-3 space-y-2">
-        <p className="text-xs font-semibold uppercase opacity-60">Session Startup</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.startup?.readSoul)} onChange={(e) => updateStartup({ readSoul: e.target.checked })} />
-            Read SOUL.md
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <SectionHeader title="SESSION STARTUP" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {[
+          { key: 'readSoul', label: 'Read SOUL.md' },
+          { key: 'readUser', label: 'Read USER.md' },
+          { key: 'readDailyMemory', label: 'Read daily memory' },
+          { key: 'readLongTermMemoryInMainSessionOnly', label: 'Long-term memory in main session only' },
+        ].map((item) => (
+          <label key={item.key} style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={Boolean((operations.startup as any)?.[item.key])}
+              onChange={(e) => updateStartup({ [item.key]: e.target.checked } as any)}
+              style={{ width: 16, height: 16 }}
+            />
+            <span style={{ fontSize: 13, color: 'var(--builder-text-primary)' }}>{item.label}</span>
           </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.startup?.readUser)} onChange={(e) => updateStartup({ readUser: e.target.checked })} />
-            Read USER.md
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.startup?.readDailyMemory)} onChange={(e) => updateStartup({ readDailyMemory: e.target.checked })} />
-            Read daily memory
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.startup?.readLongTermMemoryInMainSessionOnly)} onChange={(e) => updateStartup({ readLongTermMemoryInMainSessionOnly: e.target.checked })} />
-            Long-term memory in main session only
-          </label>
-        </div>
+        ))}
       </div>
 
-      {/* Memory Policy */}
-      <div className="rounded-md border p-3 space-y-2">
-        <p className="text-xs font-semibold uppercase opacity-60">Memory Policy</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.memoryPolicy?.dailyNotesEnabled)} onChange={(e) => updateMemory({ dailyNotesEnabled: e.target.checked })} />
-            Daily notes enabled
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.memoryPolicy?.longTermMemoryEnabled)} onChange={(e) => updateMemory({ longTermMemoryEnabled: e.target.checked })} />
-            Long-term memory enabled
-          </label>
-        </div>
-        <div className="space-y-1">
-          <p className="text-xs opacity-60">Memory scope</p>
-          <div className="flex flex-wrap gap-4 text-sm">
-            {(['main_session_only', 'shared_safe', 'disabled'] as const).map((opt) => (
-              <label key={opt} className="inline-flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name={`memoryScope-${value.id}`}
-                  value={opt}
-                  checked={(operations.memoryPolicy?.memoryScope ?? 'main_session_only') === opt}
-                  onChange={() => updateMemory({ memoryScope: opt })}
-                />
-                {opt.replace(/_/g, ' ')}
-              </label>
-            ))}
-          </div>
-        </div>
-        <textarea
-          rows={2}
-          className="w-full rounded-md border px-3 py-2 text-sm"
-          value={operations.memoryPolicy?.compactionPolicy ?? ''}
-          onChange={(e) => updateMemory({ compactionPolicy: e.target.value })}
-          placeholder="Compaction policy notes"
-        />
-      </div>
+      <div style={{ height: 1, background: 'var(--builder-border-subtle)', margin: '8px 0' }} />
 
-      {/* Safety & Red Lines */}
-      <div className="rounded-md border p-3 space-y-2">
-        <p className="text-xs font-semibold uppercase" style={{ color: '#f59e0b' }}>Safety &amp; Red Lines</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.safety?.destructiveCommandsRequireApproval)} onChange={(e) => updateSafety({ destructiveCommandsRequireApproval: e.target.checked })} />
-            Destructive commands require approval
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.safety?.externalActionsRequireApproval)} onChange={(e) => updateSafety({ externalActionsRequireApproval: e.target.checked })} />
-            External actions require approval
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.safety?.privateDataProtection)} onChange={(e) => updateSafety({ privateDataProtection: e.target.checked })} />
-            Private data protection
-          </label>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={Boolean(operations.safety?.recoverableDeletePreferred)} onChange={(e) => updateSafety({ recoverableDeletePreferred: e.target.checked })} />
-            Prefer recoverable delete
-          </label>
-        </div>
-      </div>
-
-      {/* Runtime — collapsible */}
-      <details className="rounded-md border overflow-hidden">
-        <summary className="px-3 py-2 text-xs font-semibold uppercase cursor-pointer select-none opacity-70 hover:opacity-100">
-          Runtime
-        </summary>
-        <div className="px-3 pb-3 pt-1 space-y-2">
+      <SectionHeader title="MEMORY POLICY" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
           <input
-            className="w-full rounded-md border px-3 py-2 text-sm"
+            type="checkbox"
+            checked={Boolean(operations.memoryPolicy?.dailyNotesEnabled)}
+            onChange={(e) => updateMemory({ dailyNotesEnabled: e.target.checked })}
+            style={{ width: 16, height: 16 }}
+          />
+          <span style={{ fontSize: 13, color: 'var(--builder-text-primary)' }}>Daily notes enabled</span>
+        </label>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={Boolean(operations.memoryPolicy?.longTermMemoryEnabled)}
+            onChange={(e) => updateMemory({ longTermMemoryEnabled: e.target.checked })}
+            style={{ width: 16, height: 16 }}
+          />
+          <span style={{ fontSize: 13, color: 'var(--builder-text-primary)' }}>Long-term memory enabled</span>
+        </label>
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--builder-text-muted)', marginBottom: 8 }}>Memory scope</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          {(['main_session_only', 'shared_safe', 'disabled'] as const).map((opt) => (
+            <label key={opt} style={{ display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name={`memoryScope-${value.id}`}
+                value={opt}
+                checked={(operations.memoryPolicy?.memoryScope ?? 'main_session_only') === opt}
+                onChange={() => updateMemory({ memoryScope: opt })}
+                style={{ width: 14, height: 14 }}
+              />
+              <span style={{ fontSize: 13, color: 'var(--builder-text-primary)' }}>{opt.replace(/_/g, ' ')}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <FieldWrapper label="Compaction policy">
+          <textarea
+            rows={2}
+            value={operations.memoryPolicy?.compactionPolicy ?? ''}
+            onChange={(e) => updateMemory({ compactionPolicy: e.target.value })}
+            placeholder="Compaction policy notes"
+            style={textareaStyle}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+          />
+        </FieldWrapper>
+      </div>
+
+      <div style={{ height: 1, background: 'var(--builder-border-subtle)', margin: '8px 0' }} />
+
+      <div>
+        <div style={{ fontSize: 11, color: 'var(--builder-status-warn)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
+          ⚠ Safety &amp; Red Lines
+        </div>
+        <div style={{ background: 'var(--builder-status-warn-dim)', border: '1px solid rgba(246,173,85,0.25)', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: 'var(--builder-text-muted)' }}>
+          ⚠ These are recommended defaults. Disabling increases risk.
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {[
+            { key: 'destructiveCommandsRequireApproval', label: 'Destructive commands require approval' },
+            { key: 'externalActionsRequireApproval', label: 'External actions require approval' },
+            { key: 'privateDataProtection', label: 'Private data protection' },
+            { key: 'recoverableDeletePreferred', label: 'Prefer recoverable delete' },
+          ].map((item) => (
+            <label key={item.key} style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={Boolean((operations.safety as any)?.[item.key])}
+                onChange={(e) => updateSafety({ [item.key]: e.target.checked } as any)}
+                style={{ width: 16, height: 16 }}
+              />
+              <span style={{ fontSize: 13, color: 'var(--builder-text-primary)' }}>{item.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ height: 1, background: 'var(--builder-border-subtle)', margin: '8px 0' }} />
+
+      <details style={{ borderRadius: 6, border: '1px solid var(--builder-border-color)', overflow: 'hidden' }}>
+        <summary style={{ padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer', color: 'var(--builder-text-muted)', userSelect: 'none' }}>
+          ▶ Runtime
+        </summary>
+        <div style={{ padding: '12px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <input
+            type="text"
             value={operations.retryPolicy ?? ''}
             onChange={(e) => update({ retryPolicy: e.target.value })}
             placeholder="Retry policy"
+            style={inputStyle}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
           />
           <textarea
             rows={3}
-            className="w-full rounded-md border px-3 py-2 text-sm"
             value={operations.runtimeHealthNotes ?? ''}
             onChange={(e) => update({ runtimeHealthNotes: e.target.value })}
             placeholder="Runtime health notes"
+            style={textareaStyle}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
           />
         </div>
       </details>

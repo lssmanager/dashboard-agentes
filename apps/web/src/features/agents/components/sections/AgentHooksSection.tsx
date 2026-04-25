@@ -1,167 +1,139 @@
 import type { AgentSpec } from '../../../../lib/types';
+import { FieldWrapper } from '../FieldWrapper';
+import { RadioGroup } from '../RadioGroup';
+import { ToggleRow } from '../ToggleRow';
+import { CronTable } from '../CronTable';
+import { EditableList } from '../EditableList';
 
 type Props = {
   value: AgentSpec;
   onChange: (next: AgentSpec) => void;
 };
 
+const DEFAULT_PROACTIVE_TASKS = [
+  'Summarize new messages daily at 9am',
+  'Check for urgent deadlines approaching',
+  'Remind about pending approvals',
+  'Weekly team update summary',
+];
+
 export function AgentHooksSection({ value, onChange }: Props) {
   const hooks = value.hooks ?? {
-    heartbeat: {
-      enabled: false,
-      promptSource: 'disabled',
-      checkEmail: true,
-      checkCalendar: true,
-      checkWeather: false,
-      checkMentions: true,
-      quietHoursStart: '23:00',
-      quietHoursEnd: '08:00',
-    },
-    lifecycleHooks: [],
-    cronHooks: [],
-    proactiveChecks: ['organize memory', 'check git status', 'update docs', 'commit changes'],
+    heartbeatEnabled: true,
+    promptSource: 'file',
+    quietHoursStart: '',
+    quietHoursEnd: '',
+    cronTasks: [],
   };
 
-  const update = (patch: Partial<typeof hooks>) => onChange({ ...value, hooks: { ...hooks, ...patch } });
-  const updateHeartbeat = (patch: Partial<NonNullable<typeof hooks.heartbeat>>) =>
-    update({ heartbeat: { ...(hooks.heartbeat ?? { enabled: false, promptSource: 'disabled' }), ...patch } });
+  const updateHooks = (patch: Partial<typeof hooks>) => {
+    onChange({ ...value, hooks: { ...hooks, ...patch } });
+  };
 
-  const heartbeat = hooks.heartbeat ?? { enabled: false, promptSource: 'disabled' };
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--builder-bg-secondary)',
+    border: '1px solid var(--builder-border-color)',
+    borderRadius: 'var(--radius-md)',
+    padding: '10px 14px',
+    fontSize: 14,
+    color: 'var(--builder-text-primary)',
+    outline: 'none',
+    transition: 'var(--transition)',
+  };
 
   return (
-    <section className="space-y-4">
-      <h3 className="text-sm font-semibold">Hooks</h3>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <ToggleRow
+        label="Enable Heartbeat"
+        checked={hooks.heartbeatEnabled !== false}
+        onChange={(checked) => updateHooks({ heartbeatEnabled: checked })}
+      />
 
-      {/* Heartbeat */}
-      <div className="rounded-md border p-3 space-y-3">
-        <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
-          <input
-            type="checkbox"
-            checked={Boolean(heartbeat.enabled)}
-            onChange={(e) => updateHeartbeat({ enabled: e.target.checked })}
-          />
-          Enable Heartbeat
-        </label>
+      <div style={hooks.heartbeatEnabled === false ? { opacity: 0.4, pointerEvents: 'none' } : {}}>
+        <RadioGroup
+          options={[
+            { value: 'file', label: 'HEARTBEAT.md file', description: 'Read from workspace HEARTBEAT.md on each cycle.' },
+            { value: 'inline', label: 'Inline config', description: 'Use the instructions defined below.' },
+            { value: 'disabled', label: 'Disabled', description: 'No prompt — agent skips heartbeat cycles.' },
+          ]}
+          selected={hooks.promptSource ?? 'file'}
+          onChange={(v) => updateHooks({ promptSource: v })}
+        />
 
-        {/* Prompt source — radio group */}
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase opacity-60">Prompt Source</p>
-          <div className="flex flex-wrap gap-4 text-sm">
-            {(['HEARTBEAT.md', 'inline', 'disabled'] as const).map((opt) => (
-              <label key={opt} className="inline-flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name={`promptSource-${value.id}`}
-                  value={opt}
-                  checked={heartbeat.promptSource === opt}
-                  onChange={() => updateHeartbeat({ promptSource: opt })}
-                />
-                <span>{opt}</span>
+        {(hooks.promptSource ?? 'file') === 'inline' && (
+          <div style={{ marginTop: 20 }}>
+            <FieldWrapper label="Heartbeat instructions">
+              <textarea
+                placeholder="Check email for urgent messages..."
+                style={{
+                  width: '100%',
+                  background: 'var(--builder-bg-secondary)',
+                  border: '1px solid var(--builder-border-color)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 14px',
+                  fontSize: 14,
+                  color: 'var(--builder-text-primary)',
+                  outline: 'none',
+                  transition: 'var(--transition)',
+                  minHeight: 80,
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  lineHeight: 1.6,
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+              />
+            </FieldWrapper>
+          </div>
+        )}
+
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 11, color: 'var(--builder-text-muted)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
+            PERIODIC CHECKS
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { id: 'email', label: 'Check email for urgent unread messages' },
+              { id: 'calendar', label: 'Check calendar for upcoming events (< 48h)' },
+              { id: 'weather', label: 'Check weather (if relevant)' },
+              { id: 'mentions', label: 'Check social mentions / notifications' },
+            ].map((check) => (
+              <label key={check.id} style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+                <input type="checkbox" style={{ width: 16, height: 16 }} />
+                <span style={{ fontSize: 13, color: 'var(--builder-text-primary)' }}>{check.label}</span>
               </label>
             ))}
           </div>
         </div>
 
-        {/* Periodic checks */}
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase opacity-60">Periodic Checks</p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={Boolean(heartbeat.checkEmail)}
-                onChange={(e) => updateHeartbeat({ checkEmail: e.target.checked })}
-              />
-              Email
-            </label>
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={Boolean(heartbeat.checkCalendar)}
-                onChange={(e) => updateHeartbeat({ checkCalendar: e.target.checked })}
-              />
-              Calendar
-            </label>
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={Boolean(heartbeat.checkWeather)}
-                onChange={(e) => updateHeartbeat({ checkWeather: e.target.checked })}
-              />
-              Weather
-            </label>
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={Boolean(heartbeat.checkMentions)}
-                onChange={(e) => updateHeartbeat({ checkMentions: e.target.checked })}
-              />
-              Mentions
-            </label>
-          </div>
+        <div style={{ marginTop: 20 }}>
+          <FieldWrapper label="Quiet hours" helper="No outgoing messages during these hours (local time).">
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input placeholder="23:00" style={{ ...inputStyle, width: 80 }} />
+              <span style={{ color: 'var(--builder-text-muted)', fontSize: 13 }}>to</span>
+              <input placeholder="08:00" style={{ ...inputStyle, width: 80 }} />
+            </div>
+          </FieldWrapper>
         </div>
 
-        {/* Quiet hours */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <p className="text-xs opacity-60">Quiet hours start</p>
-            <input
-              type="time"
-              className="w-full rounded-md border px-3 py-1.5 text-sm"
-              value={heartbeat.quietHoursStart ?? '23:00'}
-              onChange={(e) => updateHeartbeat({ quietHoursStart: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs opacity-60">Quiet hours end</p>
-            <input
-              type="time"
-              className="w-full rounded-md border px-3 py-1.5 text-sm"
-              value={heartbeat.quietHoursEnd ?? '08:00'}
-              onChange={(e) => updateHeartbeat({ quietHoursEnd: e.target.value })}
-            />
-          </div>
+        <div style={{ marginTop: 20 }}>
+          <EditableList
+            label="Proactive Tasks"
+            items={[]}
+            onChange={() => {}}
+            addLabel="+ Add task"
+            defaults={DEFAULT_PROACTIVE_TASKS}
+          />
         </div>
-      </div>
 
-      {/* Proactive tasks */}
-      <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase opacity-60">Proactive Tasks</p>
-        <p className="text-xs opacity-50">One task per line — what should this agent check periodically?</p>
-        <textarea
-          rows={4}
-          className="w-full rounded-md border px-3 py-2 text-sm"
-          value={(hooks.proactiveChecks ?? []).join('\n')}
-          onChange={(e) =>
-            update({ proactiveChecks: e.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })
-          }
-          placeholder="organize memory&#10;check git status&#10;update docs"
-        />
-      </div>
-
-      {/* Cron hooks */}
-      <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase opacity-60">Cron Hooks</p>
-        <p className="text-xs opacity-50">Format: cron expression :: task description</p>
-        <textarea
-          rows={4}
-          className="w-full rounded-md border px-3 py-2 text-sm font-mono"
-          value={(hooks.cronHooks ?? []).map((row) => `${row.schedule} :: ${row.task}`).join('\n')}
-          onChange={(e) =>
-            update({
-              cronHooks: e.target.value
-                .split('\n')
-                .map((line) => line.trim())
-                .filter(Boolean)
-                .map((line) => {
-                  const [schedule, ...taskParts] = line.split('::');
-                  return { schedule: schedule.trim(), task: taskParts.join('::').trim() };
-                })
-                .filter((row) => row.schedule && row.task),
-            })
-          }
-          placeholder="0 9 * * 1-5 :: Send daily standup summary"
-        />
+        <div style={{ marginTop: 20 }}>
+          <CronTable
+            label="Cron Hooks"
+            rows={hooks.cronTasks ?? []}
+            onChange={(rows) => updateHooks({ cronTasks: rows })}
+          />
+        </div>
       </div>
     </section>
   );

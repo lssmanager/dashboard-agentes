@@ -1,4 +1,7 @@
 import type { AgentSpec } from '../../../../lib/types';
+import { FieldWrapper } from '../FieldWrapper';
+import { EditableList } from '../EditableList';
+import { SectionHeader } from '../SectionHeader';
 
 type Props = { value: AgentSpec; onChange: (next: AgentSpec) => void };
 
@@ -15,13 +18,6 @@ const DEFAULT_BOUNDARIES = [
   'Ask before external actions.',
   'Never send half-baked replies to messaging surfaces.',
 ];
-
-function splitLines(input: string): string[] {
-  return input
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
 
 export function AgentBehaviorSection({ value, onChange }: Props) {
   const behavior = value.behavior ?? {
@@ -48,59 +44,155 @@ export function AgentBehaviorSection({ value, onChange }: Props) {
     onChange({ ...value, humanContext: { ...human, ...patch } });
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--builder-bg-secondary)',
+    border: '1px solid var(--builder-border-color)',
+    borderRadius: 'var(--radius-md)',
+    padding: '10px 14px',
+    fontSize: 14,
+    color: 'var(--builder-text-primary)',
+    outline: 'none',
+    transition: 'var(--transition)',
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    ...inputStyle,
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    lineHeight: 1.6,
+  };
+
   return (
-    <section className="space-y-3">
-      <h3 className="text-sm font-semibold">Prompts / Behavior</h3>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <FieldWrapper label="System Instructions">
+        <textarea
+          value={behavior.systemPrompt ?? ''}
+          onChange={(e) => updateBehavior({ systemPrompt: e.target.value })}
+          placeholder="Describe the agent's core mission and operating mode."
+          style={{ ...textareaStyle, minHeight: 100 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+        <div style={{ fontSize: 11, color: 'var(--builder-text-disabled)', marginTop: 4 }}>
+          {(behavior.systemPrompt ?? '').length} characters
+        </div>
+      </FieldWrapper>
 
-      <textarea
-        rows={5}
-        value={behavior.systemPrompt ?? ''}
-        onChange={(event) => updateBehavior({ systemPrompt: event.target.value })}
-        placeholder="Describe the agent's core mission and operating mode."
-        className="w-full rounded-md border px-3 py-2 text-sm"
+      <div style={{ height: 1, background: 'var(--builder-border-subtle)', margin: '8px 0' }} />
+
+      <FieldWrapper label="Personality Guide">
+        <textarea
+          value={behavior.personalityGuide ?? ''}
+          onChange={(e) => updateBehavior({ personalityGuide: e.target.value })}
+          placeholder="How should this agent sound and behave?"
+          style={{ ...textareaStyle, minHeight: 80 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <EditableList
+        label="Operating Principles"
+        helper="Core truths this agent operates by."
+        items={behavior.operatingPrinciples ?? DEFAULT_PRINCIPLES}
+        onChange={(items) => updateBehavior({ operatingPrinciples: items })}
+        addLabel="+ Add principle"
+        defaults={DEFAULT_PRINCIPLES}
       />
 
-      <textarea
-        rows={3}
-        value={behavior.personalityGuide ?? ''}
-        onChange={(event) => updateBehavior({ personalityGuide: event.target.value })}
-        placeholder="How should this agent sound and behave?"
-        className="w-full rounded-md border px-3 py-2 text-sm"
+      <EditableList
+        label="Boundaries"
+        helper="What this agent must always ask before doing."
+        items={behavior.boundaries ?? DEFAULT_BOUNDARIES}
+        onChange={(items) => updateBehavior({ boundaries: items })}
+        addLabel="+ Add boundary"
+        defaults={DEFAULT_BOUNDARIES}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase opacity-80">Operating Principles</p>
-          <textarea
-            rows={6}
-            value={(behavior.operatingPrinciples ?? DEFAULT_PRINCIPLES).join('\n')}
-            onChange={(e) => updateBehavior({ operatingPrinciples: splitLines(e.target.value) })}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase opacity-80">Boundaries</p>
-          <textarea
-            rows={6}
-            value={(behavior.boundaries ?? DEFAULT_BOUNDARIES).join('\n')}
-            onChange={(e) => updateBehavior({ boundaries: splitLines(e.target.value) })}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </div>
-      </div>
+      <FieldWrapper label="Response Style">
+        <input
+          value={behavior.responseStyle ?? 'adaptive'}
+          onChange={(e) => updateBehavior({ responseStyle: e.target.value })}
+          placeholder="Concise when needed, thorough when it matters..."
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
 
-      <details className="rounded-md border p-3" open>
-        <summary className="cursor-pointer text-sm font-medium">Human Context</summary>
-        <p className="text-xs opacity-75 mt-1">Keep this useful and respectful, not invasive.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-          <input value={human.humanName ?? ''} onChange={(e) => updateHuman({ humanName: e.target.value })} placeholder="Human name" className="rounded-md border px-3 py-2 text-sm" />
-          <input value={human.addressAs ?? ''} onChange={(e) => updateHuman({ addressAs: e.target.value })} placeholder="Address as" className="rounded-md border px-3 py-2 text-sm" />
-          <input value={human.pronouns ?? ''} onChange={(e) => updateHuman({ pronouns: e.target.value })} placeholder="Pronouns" className="rounded-md border px-3 py-2 text-sm" />
-          <input value={human.timezone ?? ''} onChange={(e) => updateHuman({ timezone: e.target.value })} placeholder="Timezone" className="rounded-md border px-3 py-2 text-sm" />
-          <textarea rows={2} value={human.notes ?? ''} onChange={(e) => updateHuman({ notes: e.target.value })} placeholder="Notes" className="md:col-span-2 rounded-md border px-3 py-2 text-sm" />
-          <textarea rows={3} value={human.context ?? ''} onChange={(e) => updateHuman({ context: e.target.value })} placeholder="What should this agent know about the human/team it supports?" className="md:col-span-2 rounded-md border px-3 py-2 text-sm" />
-        </div>
-      </details>
+      <div style={{ height: 1, background: 'var(--builder-border-subtle)', margin: '8px 0' }} />
+
+      <SectionHeader
+        title="HUMAN CONTEXT"
+        subtitle="What this agent knows about the person or team it supports."
+      />
+
+      <FieldWrapper label="Name">
+        <input
+          value={human.humanName ?? ''}
+          onChange={(e) => updateHuman({ humanName: e.target.value })}
+          placeholder="Human name"
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Address as">
+        <input
+          value={human.addressAs ?? ''}
+          onChange={(e) => updateHuman({ addressAs: e.target.value })}
+          placeholder="How should the agent address you?"
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Pronouns (optional)">
+        <input
+          value={human.pronouns ?? ''}
+          onChange={(e) => updateHuman({ pronouns: e.target.value })}
+          placeholder="they/them, he/him, she/her..."
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Timezone">
+        <input
+          value={human.timezone ?? ''}
+          onChange={(e) => updateHuman({ timezone: e.target.value })}
+          placeholder="e.g. America/New_York"
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Notes">
+        <textarea
+          value={human.notes ?? ''}
+          onChange={(e) => updateHuman({ notes: e.target.value })}
+          placeholder="Any additional notes..."
+          style={{ ...textareaStyle, minHeight: 60 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="Context">
+        <textarea
+          value={human.context ?? ''}
+          onChange={(e) => updateHuman({ context: e.target.value })}
+          placeholder="What should this agent know about the human/team it supports?"
+          style={{ ...textareaStyle, minHeight: 80 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
     </section>
   );
 }

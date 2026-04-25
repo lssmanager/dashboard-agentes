@@ -1,4 +1,8 @@
 import type { AgentSpec } from '../../../../lib/types';
+import { FieldWrapper } from '../FieldWrapper';
+import { RadioGroup } from '../RadioGroup';
+import { ToggleRow } from '../ToggleRow';
+import { MultiSelectChips } from '../MultiSelectChips';
 
 type Props = {
   value: AgentSpec;
@@ -6,68 +10,148 @@ type Props = {
   onChange: (next: AgentSpec) => void;
 };
 
-function splitCsv(input: string): string[] {
-  return input.split(',').map((item) => item.trim()).filter(Boolean);
-}
+const CHANNEL_OPTIONS = [
+  { id: 'email', label: 'Email' },
+  { id: 'slack', label: 'Slack' },
+  { id: 'discord', label: 'Discord' },
+  { id: 'matrix', label: 'Matrix' },
+];
 
-export function AgentRoutingSection({ value, onChange, availableChannels = [] }: Props) {
-  const routing = value.routingChannels ?? {
+export function AgentRoutingSection({ value, availableChannels = [], onChange }: Props) {
+  const routing = value.routing ?? {
     allowedChannels: [],
     defaultChannel: '',
     fallbackChannel: '',
-    groupChatMode: 'respond_when_mentioned',
-    reactionPolicy: 'limited',
-    maxReactionsPerMessage: 1,
+    groupChatBehavior: 'mention',
+    emojiReactions: true,
     avoidTripleTap: true,
-    platformFormattingRules: 'Discord: no markdown tables, wrap links in <>\nWhatsApp: no headers, use bold or CAPS',
-    responseTriggerPolicy: "Stay silent when: casual banter, someone already answered, response would just be 'yeah'",
   };
 
-  const update = (patch: Partial<typeof routing>) => {
-    onChange({ ...value, routingChannels: { ...routing, ...patch } });
+  const updateRouting = (patch: Partial<typeof routing>) => {
+    onChange({ ...value, routing: { ...routing, ...patch } });
   };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--builder-bg-secondary)',
+    border: '1px solid var(--builder-border-color)',
+    borderRadius: 'var(--radius-md)',
+    padding: '10px 14px',
+    fontSize: 14,
+    color: 'var(--builder-text-primary)',
+    outline: 'none',
+    transition: 'var(--transition)',
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    ...inputStyle,
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    lineHeight: 1.6,
+  };
+
+  const channelOptions = availableChannels.length > 0
+    ? availableChannels.map((c) => ({ id: c, label: c }))
+    : CHANNEL_OPTIONS;
 
   return (
-    <section className="space-y-3">
-      <h3 className="text-sm font-semibold">Routing & Channels</h3>
-
-      <input
-        className="w-full rounded-md border px-3 py-2 text-sm"
-        value={(routing.allowedChannels ?? []).join(', ')}
-        onChange={(e) => update({ allowedChannels: splitCsv(e.target.value) })}
-        placeholder="Where is this agent allowed to speak?"
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <MultiSelectChips
+        label="Allowed Channels"
+        selected={routing.allowedChannels ?? []}
+        onAdd={(id) => updateRouting({ allowedChannels: [...(routing.allowedChannels ?? []), id] })}
+        onRemove={(id) => updateRouting({ allowedChannels: (routing.allowedChannels ?? []).filter((c) => c !== id) })}
+        searchPlaceholder="Search channels…"
+        options={channelOptions}
       />
 
-      {availableChannels.length > 0 ? (
-        <div className="text-xs opacity-80">Available: {availableChannels.join(', ')}</div>
-      ) : null}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <input className="rounded-md border px-3 py-2 text-sm" value={routing.defaultChannel ?? ''} onChange={(e) => update({ defaultChannel: e.target.value })} placeholder="Default channel" />
-        <input className="rounded-md border px-3 py-2 text-sm" value={routing.fallbackChannel ?? ''} onChange={(e) => update({ fallbackChannel: e.target.value })} placeholder="Fallback channel" />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <select className="rounded-md border px-3 py-2 text-sm" value={routing.groupChatMode ?? 'respond_when_mentioned'} onChange={(e) => update({ groupChatMode: e.target.value as 'silent_by_default' | 'respond_when_mentioned' | 'active' })}>
-          <option value="silent_by_default">silent_by_default</option>
-          <option value="respond_when_mentioned">respond_when_mentioned</option>
-          <option value="active">active</option>
+      <FieldWrapper label="Default Channel">
+        <select
+          value={routing.defaultChannel ?? ''}
+          onChange={(e) => updateRouting({ defaultChannel: e.target.value })}
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        >
+          <option value="">Select default channel</option>
+          {channelOptions.map((c) => (
+            <option key={c.id} value={c.id}>{c.label}</option>
+          ))}
         </select>
+      </FieldWrapper>
 
-        <select className="rounded-md border px-3 py-2 text-sm" value={routing.reactionPolicy ?? 'limited'} onChange={(e) => update({ reactionPolicy: e.target.value as 'enabled' | 'disabled' | 'limited' })}>
-          <option value="enabled">enabled</option>
-          <option value="disabled">disabled</option>
-          <option value="limited">limited</option>
+      <FieldWrapper label="Fallback Channel">
+        <select
+          value={routing.fallbackChannel ?? ''}
+          onChange={(e) => updateRouting({ fallbackChannel: e.target.value })}
+          style={inputStyle}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        >
+          <option value="">Select fallback channel</option>
+          {channelOptions.map((c) => (
+            <option key={c.id} value={c.id}>{c.label}</option>
+          ))}
         </select>
+      </FieldWrapper>
+
+      <RadioGroup
+        options={[
+          { value: 'silent', label: 'Silent by default', description: 'Never speaks unless explicitly mentioned.' },
+          { value: 'mention', label: 'Respond when mentioned', description: 'Participates only when directly addressed or asked.' },
+          { value: 'active', label: 'Active participant', description: 'Contributes freely when it has genuine value to add.' },
+        ]}
+        selected={routing.groupChatBehavior ?? 'mention'}
+        onChange={(v) => updateRouting({ groupChatBehavior: v })}
+      />
+
+      <div>
+        <ToggleRow
+          label="Emoji Reactions"
+          checked={routing.emojiReactions !== false}
+          onChange={(checked) => updateRouting({ emojiReactions: checked })}
+        />
+        {routing.emojiReactions !== false && (
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', paddingLeft: 46 }}>
+            <span style={{ fontSize: 12, color: 'var(--builder-text-muted)' }}>
+              Max reactions per message:
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={5}
+              defaultValue={1}
+              style={{ ...inputStyle, width: 60, padding: '6px 10px' }}
+            />
+            <span style={{ fontSize: 11, color: 'var(--builder-text-disabled)' }}>Keep it at 1.</span>
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-4 text-sm">
-        <label className="inline-flex items-center gap-2"><input type="checkbox" checked={Boolean(routing.avoidTripleTap)} onChange={(e) => update({ avoidTripleTap: e.target.checked })} /> Avoid triple tap</label>
-        <label className="inline-flex items-center gap-2">Max reactions <input type="number" min={0} max={3} className="w-16 rounded-md border px-2 py-1 text-sm" value={routing.maxReactionsPerMessage ?? 1} onChange={(e) => update({ maxReactionsPerMessage: Number(e.target.value) || 1 })} /></label>
-      </div>
+      <ToggleRow
+        label="Avoid Triple-Tap"
+        checked={routing.avoidTripleTap !== false}
+        onChange={(checked) => updateRouting({ avoidTripleTap: checked })}
+        defaultChecked={true}
+      />
 
-      <textarea rows={3} className="w-full rounded-md border px-3 py-2 text-sm" value={routing.platformFormattingRules ?? ''} onChange={(e) => update({ platformFormattingRules: e.target.value })} placeholder="What channel-specific formatting rules apply?" />
-      <textarea rows={3} className="w-full rounded-md border px-3 py-2 text-sm" value={routing.responseTriggerPolicy ?? ''} onChange={(e) => update({ responseTriggerPolicy: e.target.value })} placeholder="When should this agent stay silent?" />
+      <FieldWrapper label="Platform Formatting Rules">
+        <textarea
+          placeholder="Markdown, HTML escaping, emoji support, etc."
+          style={{ ...textareaStyle, minHeight: 60, fontFamily: 'var(--font-mono)', fontSize: 12 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="When to Stay Silent">
+        <textarea
+          placeholder="Conditions where the agent should not respond…"
+          style={{ ...textareaStyle, minHeight: 80 }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-accent)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--builder-border-color)'; }}
+        />
+      </FieldWrapper>
     </section>
   );
 }
