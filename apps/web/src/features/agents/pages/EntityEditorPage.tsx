@@ -1429,25 +1429,26 @@ function EntityEditorPageContent() {
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  const requestedParentWorkspaceId = searchParams.get('parentWorkspaceId');
-  const requestedParentAgentId = searchParams.get('parentAgentId');
-  const requestedProfileId = searchParams.get('profileId');
-  const primaryFromQuery = searchParams.get('primary');
-  const sectionFromQuery = searchParams.get('section');
+  // ── Params normalizados — única fuente de verdad ──────────────────────
+  const mode               = (searchParams.get('mode') ?? 'edit') as 'edit' | 'create';
+  const entityType         = (searchParams.get('type') ?? 'agent') as BuilderCreateType;
+  const primary            = (searchParams.get('primary') ?? 'builder') as BuilderPrimaryTab;
+  const sectionFromQuery   = searchParams.get('section') ?? null;
+  const agentId            = searchParams.get('agentId') ?? null;
+  const parentAgentId      = searchParams.get('parentAgentId') ?? null;
+  const parentWorkspaceId  = searchParams.get('parentWorkspaceId') ?? null;
+  const requestedProfileId = searchParams.get('profileId') ?? null;
 
-  // Normalize: if mode=create is explicit, or if section is present without selectedNode and no explicit mode=edit,
-  // assume create mode. This prevents duplicate URLs for the same view.
-  const modeFromQuery = searchParams.get('mode');
-  const createMode = modeFromQuery === 'create' || (sectionFromQuery && !selectedNode && modeFromQuery !== 'edit');
+  const isCreateMode = mode === 'create';
+  // ─────────────────────────────────────────────────────────────────────
 
-  const createTypeRaw = searchParams.get('type');
-  const createTypeFromQuery: BuilderCreateType =
-    createTypeRaw === 'agency' ||
-    createTypeRaw === 'department' ||
-    createTypeRaw === 'workspace' ||
-    createTypeRaw === 'subagent'
-      ? createTypeRaw
-      : 'agent';
+  // Preserve old variable names for compatibility while they're being refactored
+  const createMode = isCreateMode;
+  const createTypeFromQuery = entityType;
+  const modeFromQuery = mode;
+  const primaryFromQuery = primary;
+  const requestedParentWorkspaceId = parentWorkspaceId;
+  const requestedParentAgentId = parentAgentId;
 
   const level = selectedNode?.level;
   const entityLevel: EntityLevel | null =
@@ -1477,12 +1478,12 @@ function EntityEditorPageContent() {
   }, [primaryFromQuery]);
 
   useEffect(() => {
-    if (
-      sectionFromQuery &&
-      BUILDER_SECTION_TABS.includes(sectionFromQuery as EntitySection) &&
-      sections.includes(sectionFromQuery as EntitySection)
-    ) {
-      setActiveSection(sectionFromQuery as EntitySection);
+    if (sectionFromQuery && BUILDER_SECTION_TABS.includes(sectionFromQuery as EntitySection)) {
+      // Accept sectionFromQuery even if sections is empty or not yet validated.
+      // This allows URL section params to work independently of entityLevel resolution.
+      if (sections.length === 0 || sections.includes(sectionFromQuery as EntitySection)) {
+        setActiveSection(sectionFromQuery as EntitySection);
+      }
     }
   }, [sectionFromQuery, sections]);
 
@@ -2072,44 +2073,6 @@ ${createLocalNotes || '<empty>'}
     );
   }
 
-  if (!entityLevel || !selectedNode) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <PageHeader
-          title="Agents Builder"
-          icon={SquarePen}
-          description="Edit Agency, Department, Workspace, Agent and Subagent configuration from a single surface."
-        />
-        {!scope.agencyId && (
-          <div
-            style={{
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--border-primary)',
-              background: 'var(--card-bg)',
-              padding: 20,
-              color: 'var(--text-muted)',
-              fontSize: 14,
-            }}
-          >
-            No agency selected. Create or connect an agency first.
-          </div>
-        )}
-        <div
-          style={{
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--border-primary)',
-            background: 'var(--card-bg)',
-            padding: 20,
-            color: 'var(--text-muted)',
-            fontSize: 14,
-          }}
-        >
-          Select an entity node in the hierarchy tree to start editing.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-6xl mx-auto h-full min-h-0 flex flex-col gap-6">
       <PageHeader
@@ -2158,8 +2121,8 @@ ${createLocalNotes || '<empty>'}
 
       <div className="rounded-xl border p-3 space-y-3" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-secondary)' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" onClick={() => setActivePrimaryTab('builder')} style={primaryTabStyle(activePrimaryTab === 'builder')}>Builder</button>
-          <button type="button" onClick={() => setActivePrimaryTab('profile')} style={primaryTabStyle(activePrimaryTab === 'profile')}>Profile</button>
+          <button type="button" onClick={() => { setActivePrimaryTab('builder'); setSearchParams(prev => { prev.set('primary', 'builder'); return prev; }, { replace: true }); }} style={primaryTabStyle(activePrimaryTab === 'builder')}>Builder</button>
+          <button type="button" onClick={() => { setActivePrimaryTab('profile'); setSearchParams(prev => { prev.set('primary', 'profile'); return prev; }, { replace: true }); }} style={primaryTabStyle(activePrimaryTab === 'profile')}>Profile</button>
         </div>
         {activePrimaryTab === 'builder' && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', overflowX: 'hidden' }}>
@@ -2167,7 +2130,7 @@ ${createLocalNotes || '<empty>'}
             <button
               key={section}
               type="button"
-              onClick={() => setActiveSection(section)}
+              onClick={() => { setActiveSection(section); setSearchParams(prev => { prev.set('section', section); return prev; }, { replace: true }); }}
               style={secondaryTabStyle(activeSection === section)}
             >
               {SECTION_LABEL[section]}
