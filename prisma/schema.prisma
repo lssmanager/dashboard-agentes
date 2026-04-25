@@ -1,5 +1,6 @@
 // Agent Visual Studio — Prisma Schema
-// Inspired by: LangGraph PostgresSaver, CrewAI role/goal/backstory, AutoGen GroupChat
+// Inspirado en patrones de: LangGraph (StateGraph+Checkpointer), CrewAI (role/goal/backstory),
+// AutoGen (GroupChat), Flowise (ChatFlow storage), microsoft/agent-framework (AgentCapability)
 
 generator client {
   provider = "prisma-client-js"
@@ -10,315 +11,363 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Hierarchy ────────────────────────────────────────────────────────────────
+// ─── Jerarquía de Orquestación ──────────────────────────────────────────────
+// Patrón: CrewAI Process.hierarchical + AutoGen GroupChat
 
 model Agency {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  logoUrl     String?
-  systemPrompt String      @default("")
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  departments Department[]
-  auditEvents AuditEvent[]
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  // CrewAI-inspired: role + goal + backstory en el orchestrator prompt
+  role         String   @default("Executive Orchestrator")
+  goal         String?  @db.Text
+  backstory    String?  @db.Text
+  systemPrompt String?  @db.Text
+  model        String   @default("openai/gpt-4o")
+  profileJson  Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  departments  Department[]
+  runs         Run[]
+  budgetPolicy BudgetPolicy?
+  modelPolicy  ModelPolicy?
 }
 
 model Department {
-  id          String      @id @default(cuid())
-  agencyId    String
-  name        String
-  description String?
-  systemPrompt String     @default("")
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  agency      Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  workspaces  Workspace[]
+  id           String     @id @default(uuid())
+  agencyId     String
+  agency       Agency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name         String
+  slug         String
+  role         String     @default("Department Manager")
+  goal         String?    @db.Text
+  backstory    String?    @db.Text
+  systemPrompt String?    @db.Text
+  model        String     @default("openai/gpt-4o")
+  profileJson  Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  workspaces   Workspace[]
+  budgetPolicy BudgetPolicy?
+  modelPolicy  ModelPolicy?
+  @@unique([agencyId, slug])
 }
 
 model Workspace {
-  id           String       @id @default(cuid())
+  id           String     @id @default(uuid())
   departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   name         String
-  description  String?
-  systemPrompt String       @default("")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  department   Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  slug         String
+  role         String     @default("Workspace Coordinator")
+  goal         String?    @db.Text
+  backstory    String?    @db.Text
+  systemPrompt String?    @db.Text
+  model        String     @default("openai/gpt-4o")
+  profileJson  Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   agents       Agent[]
+  budgetPolicy BudgetPolicy?
+  modelPolicy  ModelPolicy?
+  @@unique([departmentId, slug])
 }
 
 model Agent {
-  id           String       @id @default(cuid())
-  workspaceId  String
-  name         String
-  // CrewAI-inspired semantic fields
-  role         String       @default("")
-  goal         String       @default("")
-  backstory    String       @default("")
-  systemPrompt String       @default("")
-  modelId      String?
-  channelId    String?
-  executionMode AgentExecutionMode @default(SEQUENTIAL)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  subagents    Subagent[]
-  runs         Run[]
+  id              String          @id @default(uuid())
+  workspaceId     String
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String
+  // CrewAI-inspired fields
+  role            String          @default("specialist")
+  goal            String?         @db.Text
+  backstory       String?         @db.Text
+  // agent-framework: AgentCapability contract
+  capabilities    Json?           // { canDelegate: bool, canApprove: bool, maxTokens: int }
+  systemPrompt    String?         @db.Text
+  model           String          @default("openai/gpt-4o")
+  profileJson     Json?
+  skills          AgentSkill[]
+  subAgents       Agent[]         @relation("AgentSubAgents")
+  parentAgent     Agent?          @relation("AgentSubAgents", fields: [parentAgentId], references: [id])
+  parentAgentId   String?
   channelBindings ChannelBinding[]
-  llmProvider  LlmProvider? @relation(fields: [modelId], references: [id])
+  flows           Flow[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  budgetPolicy    BudgetPolicy?
+  modelPolicy     ModelPolicy?
+  @@unique([workspaceId, slug])
 }
 
-model Subagent {
-  id          String   @id @default(cuid())
-  agentId     String
-  name        String
-  role        String   @default("")
-  goal        String   @default("")
-  backstory   String   @default("")
-  systemPrompt String  @default("")
-  modelId     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  llmProvider LlmProvider? @relation(fields: [modelId], references: [id])
+// ─── Skills / Tools ──────────────────────────────────────────────────────────
+// Patrón: Semantic Kernel Skills + Flowise Tool nodes + n8n webhook bridge
+
+model Skill {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?      @db.Text
+  // 'mcp' | 'builtin' | 'n8n_webhook' | 'openapi' | 'function'
+  type        String
+  // Para mcp: { command, args, env }
+  // Para n8n_webhook: { webhookUrl, method }
+  // Para openapi: { specUrl, operationId }
+  // Para function: { module, functionName }
+  config      Json
+  schema      Json?        // JSON Schema del input esperado (SK-style)
+  // Semantic Kernel-inspired: skill versioning
+  version     String       @default("1.0.0")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  agents      AgentSkill[]
 }
 
-enum AgentExecutionMode {
-  SEQUENTIAL
-  HIERARCHICAL
+model AgentSkill {
+  agentId  String
+  skillId  String
+  agent    Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  skill    Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  @@id([agentId, skillId])
 }
 
-// ─── LLM Providers ────────────────────────────────────────────────────────────
-
-model LlmProvider {
-  id           String    @id @default(cuid())
-  name         String
-  providerType String    // openai | anthropic | openrouter | modelstudio | custom
-  baseUrl      String?
-  apiKeyEnc    String    // AES-256-GCM encrypted
-  defaultModel String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  agents       Agent[]
-  subagents    Subagent[]
-}
-
-// ─── Channels ─────────────────────────────────────────────────────────────────
-
-model ChannelConfig {
-  id           String    @id @default(cuid())
-  channelType  ChannelType
-  name         String
-  credentialsEnc String  // AES-256-GCM encrypted JSON
-  status       ChannelStatus @default(STOPPED)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  bindings     ChannelBinding[]
-}
-
-model ChannelBinding {
-  id              String        @id @default(cuid())
-  channelConfigId String
-  agentId         String
-  scopeType       String        // agency | department | workspace | agent
-  createdAt       DateTime      @default(now())
-  channelConfig   ChannelConfig @relation(fields: [channelConfigId], references: [id], onDelete: Cascade)
-  agent           Agent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
-
-  @@unique([channelConfigId, agentId])
-}
-
-enum ChannelType {
-  WEBCHAT
-  TELEGRAM
-  DISCORD
-  WHATSAPP
-  TEAMS
-}
-
-enum ChannelStatus {
-  RUNNING
-  STOPPED
-  ERROR
-  CONNECTING
-}
-
-// ─── Flows ────────────────────────────────────────────────────────────────────
+// ─── Flows (Visual Flow Builder) ─────────────────────────────────────────────
+// Patrón: Flowise ChatFlow storage + LangGraph StateGraph serialization
 
 model Flow {
-  id          String     @id @default(cuid())
-  agentId     String?
+  id          String   @id @default(uuid())
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
   name        String
   description String?
-  isActive    Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  nodes       FlowNode[]
-  edges       FlowEdge[]
+  // FlowSpec serializado — nodes[], edges[] compatible con React Flow
+  // Tipos de nodos: trigger, agent, tool, condition, loop, subagent, n8n_workflow,
+  //   human_approval (LangGraph interrupt pattern), state (LangGraph StateNode)
+  spec        Json
+  isActive    Boolean  @default(false)
+  // LangGraph-inspired: versioning del flow
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   runs        Run[]
 }
 
-model FlowNode {
-  id         String   @id @default(cuid())
-  flowId     String
-  nodeType   FlowNodeType
-  label      String
-  positionX  Float    @default(0)
-  positionY  Float    @default(0)
-  config     Json     @default("{}")
-  flow       Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  edgesFrom  FlowEdge[] @relation("EdgeSource")
-  edgesTo    FlowEdge[] @relation("EdgeTarget")
-}
-
-model FlowEdge {
-  id           String   @id @default(cuid())
-  flowId       String
-  sourceNodeId String
-  targetNodeId String
-  label        String?
-  condition    String?
-  flow         Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  sourceNode   FlowNode @relation("EdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
-  targetNode   FlowNode @relation("EdgeTarget", fields: [targetNodeId], references: [id], onDelete: Cascade)
-}
-
-enum FlowNodeType {
-  LLM_CALL
-  TOOL_CALL
-  CONDITION      // @router pattern (CrewAI-inspired)
-  LOOP
-  SUBAGENT
-  SUPERVISOR     // Process.hierarchical (CrewAI-inspired)
-  N8N_WORKFLOW
-  HUMAN_APPROVAL // interrupt() pattern (LangGraph-inspired)
-  STATE          // StateGraph node (LangGraph-inspired)
-  START
-  END
-}
-
-// ─── Runs & Checkpointing (LangGraph PostgresSaver pattern) ───────────────────
+// ─── Runs + Durable Execution ─────────────────────────────────────────────────
+// Patrón: LangGraph PostgresSaver + Checkpointer para durable execution
+// Si un run de 20 min falla en el min 19, se reanuda desde el último checkpoint
 
 model Run {
-  id          String     @id @default(cuid())
-  agentId     String?
-  flowId      String?
-  status      RunStatus  @default(PENDING)
-  inputData   Json       @default("{}")
-  outputData  Json?
-  errorMsg    String?
-  startedAt   DateTime?
+  id          String    @id @default(uuid())
+  flowId      String
+  flow        Flow      @relation(fields: [flowId], references: [id])
+  agencyId    String?
+  agency      Agency?   @relation(fields: [agencyId], references: [id])
+  status      String    @default("queued")
+  // 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'waiting_approval'
+  trigger     Json      // { type: 'manual'|'channel'|'schedule'|'replay:id', payload? }
+  error       String?
+  // LangGraph StateGraph: estado global del run que fluye entre nodos
+  state       Json?     @default("{}")
+  startedAt   DateTime  @default(now())
   completedAt DateTime?
-  createdAt   DateTime   @default(now())
-  agent       Agent?     @relation(fields: [agentId], references: [id])
-  flow        Flow?      @relation(fields: [flowId], references: [id])
   steps       RunStep[]
+  approvals   PendingApproval[]
+  metadata    Json?
+  createdAt   DateTime  @default(now())
 }
 
 model RunStep {
-  id              String      @id @default(cuid())
+  id              String    @id @default(uuid())
   runId           String
-  stepIndex       Int
+  run             Run       @relation(fields: [runId], references: [id], onDelete: Cascade)
   nodeId          String
   nodeType        String
-  status          StepStatus  @default(PENDING)
-  inputSnapshot   Json        @default("{}")
-  outputSnapshot  Json?
-  // LangGraph PostgresSaver pattern: full graph state snapshot for resume
-  checkpoint_data Json?
-  interruptReason String?     // populated when status = INTERRUPTED
-  errorMsg        String?
-  tokensUsed      Int         @default(0)
-  costUsd         Float       @default(0)
-  createdAt       DateTime    @default(now())
+  agentId         String?
+  status          String    @default("queued")
+  // 'queued' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting_approval'
+  input           Json?
+  output          Json?
+  error           String?
+  tokenUsage      Json?     // { input: number, output: number }
+  costUsd         Float     @default(0)
+  retryCount      Int       @default(0)
+  // LangGraph Checkpointer: snapshot del estado en este punto del grafo
+  checkpointData  Json?     // Estado del StateGraph serializado para reanudar
+  // LangGraph interrupt(): razón de la pausa para human-in-the-loop
+  interruptReason String?
+  startedAt       DateTime  @default(now())
   completedAt     DateTime?
-  run             Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
-  pendingApproval PendingApproval?
-
-  @@index([runId, stepIndex])
+  approval        PendingApproval?
 }
 
-enum RunStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  INTERRUPTED
-}
-
-enum StepStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  INTERRUPTED
-  SKIPPED
-}
-
-// ─── Human-in-the-Loop Approvals (LangGraph interrupt() pattern) ──────────────
-
+// LangGraph Human-in-the-Loop: interrupt() / resume()
+// Hermes-inspired: panel de Pending Actions con contexto visual
 model PendingApproval {
-  id           String          @id @default(cuid())
-  runStepId    String          @unique
-  title        String
-  description  String
-  contextData  Json            @default("{}")
-  status       ApprovalStatus  @default(PENDING)
-  resolvedBy   String?
-  resolvedNote String?
-  createdAt    DateTime        @default(now())
-  resolvedAt   DateTime?
-  runStep      RunStep         @relation(fields: [runStepId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  runId       String
+  run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  stepId      String   @unique
+  step        RunStep  @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  // Contexto visual para Operations panel (Hermes UX pattern)
+  title       String
+  description String?  @db.Text
+  context     Json?    // Datos que el aprobador necesita ver
+  // 'pending' | 'approved' | 'rejected'
+  status      String   @default("pending")
+  decidedBy   String?
+  decidedAt   DateTime?
+  decision    Json?    // Input del aprobador si modify está habilitado
+  createdAt   DateTime @default(now())
 }
 
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
+// ─── Gateway / Canales ───────────────────────────────────────────────────────
+// Auto-bind: al configurar un canal en un scope, se crea ChannelBinding automáticamente
+
+model ChannelConfig {
+  id                 String          @id @default(uuid())
+  // 'telegram' | 'whatsapp' | 'webchat' | 'discord' | 'teams' | 'webhook'
+  type               String
+  name               String
+  // Credenciales cifradas AES-256-GCM (solo MASTER_ENCRYPTION_KEY en .env)
+  secretsEncrypted   String          @db.Text
+  // Config no-sensible: webhookPath, parseMode, etc.
+  config             Json
+  status             String          @default("offline")
+  // 'offline' | 'online' | 'error' | 'qr_pending' (WhatsApp)
+  lastError          String?
+  isActive           Boolean         @default(false)
+  bindings           ChannelBinding[]
+  sessions           GatewaySession[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 }
 
-// ─── Budget ───────────────────────────────────────────────────────────────────
-
-model BudgetConfig {
-  id           String   @id @default(cuid())
-  scopeType    String   // agency | department | workspace | agent
-  scopeId      String
-  dailyLimitUsd  Float?
-  monthlyLimitUsd Float?
-  alertThreshold Float  @default(0.8)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@unique([scopeType, scopeId])
+model ChannelBinding {
+  id              String        @id @default(uuid())
+  channelConfigId String
+  channelConfig   ChannelConfig @relation(fields: [channelConfigId], references: [id], onDelete: Cascade)
+  agentId         String
+  agent           Agent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  // 'agency' | 'department' | 'workspace' | 'agent'
+  scopeLevel      String        @default("agent")
+  scopeId         String
+  isDefault       Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  @@unique([channelConfigId, agentId])
 }
 
-// ─── N8n Integrations ─────────────────────────────────────────────────────────
+model GatewaySession {
+  id              String        @id @default(uuid())
+  channelConfigId String
+  channelConfig   ChannelConfig @relation(fields: [channelConfigId], references: [id])
+  externalUserId  String
+  agentId         String
+  // Historial de conversación (compatible con OpenAI messages format)
+  messageHistory  Json          @default("[]")
+  state           String        @default("active")
+  // 'active' | 'paused' | 'closed'
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  @@unique([channelConfigId, externalUserId])
+}
+
+// ─── LLM Providers (zero-.env para el usuario final) ────────────────────────
+
+model LlmProvider {
+  id             String   @id @default(uuid())
+  name           String   // 'OpenAI', 'Qwen', 'DeepSeek', 'OpenRouter', 'Anthropic'
+  provider       String   // 'openai' | 'qwen' | 'deepseek' | 'openrouter' | 'anthropic'
+  baseUrl        String
+  apiKeyEncrypted String  @db.Text
+  isActive       Boolean  @default(true)
+  isDefault      Boolean  @default(false)
+  // Modelos disponibles cacheados
+  availableModels Json?   @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ─── n8n Integration ─────────────────────────────────────────────────────────
+// Bridge: n8n workflows como tools para agentes (Flowise tool node pattern)
+
+model N8nConnection {
+  id              String        @id @default(uuid())
+  name            String        @default("default")
+  baseUrl         String
+  apiKeyEncrypted String        @db.Text
+  isActive        Boolean       @default(true)
+  // Workflows sincronizados
+  workflows       N8nWorkflow[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
 
 model N8nWorkflow {
-  id           String   @id @default(cuid())
-  n8nWorkflowId String
-  name         String
-  description  String?
-  webhookUrl   String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String        @id @default(uuid())
+  connectionId   String
+  connection     N8nConnection @relation(fields: [connectionId], references: [id])
+  n8nWorkflowId  String
+  name           String
+  description    String?
+  // JSON Schema del input para usar como tool definition en LLM
+  inputSchema    Json?
+  webhookUrl     String?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  @@unique([connectionId, n8nWorkflowId])
 }
 
-// ─── Audit ────────────────────────────────────────────────────────────────────
+// ─── Budget / Model Policies ──────────────────────────────────────────────────
+// Heredan por jerarquía: Agency → Department → Workspace → Agent (más específico gana)
+
+model BudgetPolicy {
+  id          String     @id @default(uuid())
+  scopeType   String     // 'agency' | 'department' | 'workspace' | 'agent'
+  limitUsd    Float
+  periodDays  Int        @default(30)
+  alertAt     Float      @default(0.8)
+  agencyId    String?    @unique
+  agency      Agency?    @relation(fields: [agencyId], references: [id])
+  departmentId String?   @unique
+  department  Department? @relation(fields: [departmentId], references: [id])
+  workspaceId String?    @unique
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  agentId     String?    @unique
+  agent       Agent?     @relation(fields: [agentId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model ModelPolicy {
+  id            String     @id @default(uuid())
+  scopeType     String
+  primaryModel  String     @default("openai/gpt-4o")
+  fallbackModel String?
+  temperature   Float?     @default(0.7)
+  maxTokens     Int?       @default(4096)
+  agencyId      String?    @unique
+  agency        Agency?    @relation(fields: [agencyId], references: [id])
+  departmentId  String?    @unique
+  department    Department? @relation(fields: [departmentId], references: [id])
+  workspaceId   String?    @unique
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id])
+  agentId       String?    @unique
+  agent         Agent?     @relation(fields: [agentId], references: [id])
+  createdAt     DateTime   @default(now())
+}
+
+// ─── Audit ───────────────────────────────────────────────────────────────────
 
 model AuditEvent {
-  id         String   @id @default(cuid())
-  agencyId   String?
-  actor      String
-  action     String
-  resource   String
-  resourceId String?
-  metadata   Json     @default("{}")
-  createdAt  DateTime @default(now())
-  agency     Agency?  @relation(fields: [agencyId], references: [id])
-
-  @@index([agencyId, createdAt])
+  id        String   @id @default(uuid())
+  eventType String
+  scopeType String?
+  scopeId   String?
+  userId    String?
+  payload   Json
+  createdAt DateTime @default(now())
+  @@index([eventType, createdAt])
+  @@index([scopeType, scopeId, createdAt])
 }
