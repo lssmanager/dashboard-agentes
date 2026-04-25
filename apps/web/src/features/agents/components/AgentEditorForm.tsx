@@ -421,7 +421,7 @@ export function AgentEditorForm({ workspaceId, agent, onSaved, onError, agents =
         }}
       >
         {/* Header bar — spans full width */}
-        <div className="xl:col-span-3 rounded-md border px-3 py-2 space-y-2">
+        <div className={`${isReadinessTab ? 'xl:col-span-2' : 'xl:col-span-3'} rounded-md border px-3 py-2 space-y-2`}>
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Agent Builder</p>
             <div className="flex items-center gap-2">
