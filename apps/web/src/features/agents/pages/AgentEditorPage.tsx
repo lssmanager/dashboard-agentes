@@ -1,3 +1,9 @@
+/**
+ * @deprecated This component is no longer in use. All agent editing is handled by EntityEditorPage.tsx.
+ * This file remains for backward compatibility but should be removed.
+ * If you arrived here, check App.tsx routes — requests should be directed to /agents-builder instead.
+ */
+
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';

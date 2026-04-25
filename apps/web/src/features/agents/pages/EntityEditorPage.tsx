@@ -1429,7 +1429,17 @@ function EntityEditorPageContent() {
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  const createMode = searchParams.get('mode') === 'create';
+  const requestedParentWorkspaceId = searchParams.get('parentWorkspaceId');
+  const requestedParentAgentId = searchParams.get('parentAgentId');
+  const requestedProfileId = searchParams.get('profileId');
+  const primaryFromQuery = searchParams.get('primary');
+  const sectionFromQuery = searchParams.get('section');
+
+  // Normalize: if mode=create is explicit, or if section is present without selectedNode and no explicit mode=edit,
+  // assume create mode. This prevents duplicate URLs for the same view.
+  const modeFromQuery = searchParams.get('mode');
+  const createMode = modeFromQuery === 'create' || (sectionFromQuery && !selectedNode && modeFromQuery !== 'edit');
+
   const createTypeRaw = searchParams.get('type');
   const createTypeFromQuery: BuilderCreateType =
     createTypeRaw === 'agency' ||
@@ -1438,11 +1448,6 @@ function EntityEditorPageContent() {
     createTypeRaw === 'subagent'
       ? createTypeRaw
       : 'agent';
-  const requestedParentWorkspaceId = searchParams.get('parentWorkspaceId');
-  const requestedParentAgentId = searchParams.get('parentAgentId');
-  const requestedProfileId = searchParams.get('profileId');
-  const primaryFromQuery = searchParams.get('primary');
-  const sectionFromQuery = searchParams.get('section');
 
   const level = selectedNode?.level;
   const entityLevel: EntityLevel | null =
