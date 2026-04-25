@@ -1,7 +1,12 @@
 /**
- * @deprecated This component is no longer in use. All agent editing is handled by EntityEditorPage.tsx.
- * This file remains for backward compatibility but should be removed.
- * If you arrived here, check App.tsx routes — requests should be directed to /agents-builder instead.
+ * @deprecated
+ * Este componente fue reemplazado por EntityEditorPage.
+ * La ruta activa es /agents-builder (con searchParams: mode, type, primary, section).
+ * NO usar este componente para nuevas funcionalidades.
+ * Candidato para eliminación en el próximo sprint de limpieza.
+ *
+ * Reemplazado en: App.tsx — ruta /agents-builder → EntityEditorPage
+ * Ver: apps/web/src/features/agents/pages/EntityEditorPage.tsx
  */
 
 import { useState, useMemo, useEffect } from 'react';

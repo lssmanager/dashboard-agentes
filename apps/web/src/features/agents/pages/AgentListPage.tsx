@@ -115,7 +115,7 @@ export default function AgentListPage() {
           title="No agents yet"
           description="Create your first agent to get started."
           ctaLabel="Create Agent"
-          onCta={() => navigate('/agents/new')}
+          onCta={() => navigate('/agents-builder?mode=create&type=agent')}
         />
       ) : (
         <>
@@ -157,7 +157,7 @@ export default function AgentListPage() {
               />
             </div>
             <button
-              onClick={() => navigate('/agents/new')}
+              onClick={() => navigate('/agents-builder?mode=create&type=agent')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -205,7 +205,7 @@ export default function AgentListPage() {
                     } else {
                       selectByEntity('agent', agent.id);
                     }
-                    navigate(`/agents/${agent.id}`);
+                    navigate(`/agents-builder?agentId=${agent.id}&primary=builder&section=identity`);
                   }}
                 />
               ))}

@@ -410,7 +410,7 @@ export default function OverviewPage() {
                   key={agent.id}
                   agent={agent}
                   flows={flows}
-                  onClick={() => navigate(`/agents/${agent.id}`)}
+                  onClick={() => navigate(`/agents-builder?agentId=${agent.id}&primary=builder&section=identity`)}
                   onToggle={() => handleAgentToggle(agent.id)}
                 />
               ))}
